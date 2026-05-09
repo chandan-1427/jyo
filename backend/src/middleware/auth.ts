@@ -1,5 +1,5 @@
-import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
+import { getCookie } from "hono/cookie";
 import { jwtVerify } from "jose";
 
 type AuthUser = {
