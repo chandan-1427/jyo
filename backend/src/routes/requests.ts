@@ -243,3 +243,24 @@ requestRoutes.put("/:id/cancel", async (c) => {
 
   return c.json({ message: "Request cancelled" });
 });
+
+requestRoutes.get("/mine", async (c) => {
+  const { userId } = c.get("user");
+
+  const requests = await db
+    .select({
+      id: pickupRequests.id,
+      postId: pickupRequests.postId,
+      postTitle: foodPosts.title,
+      pickerName: pickupRequests.pickerName,
+      etaMinutes: pickupRequests.etaMinutes,
+      status: pickupRequests.status,
+      createdAt: pickupRequests.createdAt,
+    })
+    .from(pickupRequests)
+    .innerJoin(foodPosts, eq(pickupRequests.postId, foodPosts.id))
+    .where(eq(pickupRequests.pickerId, userId))
+    .orderBy(pickupRequests.createdAt);
+
+  return c.json({ requests });
+});

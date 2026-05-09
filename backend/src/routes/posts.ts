@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { db } from "../db/index.js";
-import { foodPosts, pickupRequests } from "../db/schema.js";
+import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, lte, gte } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
@@ -62,6 +62,7 @@ postRoutes.get("/", async (c) => {
     .select({
       id: foodPosts.id,
       posterId: foodPosts.posterId,
+      posterName: users.name,
       title: foodPosts.title,
       description: foodPosts.description,
       photoUrl: foodPosts.photoUrl,
@@ -73,6 +74,7 @@ postRoutes.get("/", async (c) => {
       createdAt: foodPosts.createdAt,
     })
     .from(foodPosts)
+    .innerJoin(users, eq(foodPosts.posterId, users.id))
     .where(
       and(
         or(
@@ -94,21 +96,39 @@ postRoutes.get("/", async (c) => {
   return c.json({ posts: nearbyPosts });
 });
 
+postRoutes.get("/mine", async (c) => {
+  const { userId } = c.get("user");
+
+  const posts = await db
+    .select()
+    .from(foodPosts)
+    .where(eq(foodPosts.posterId, userId))
+    .orderBy(foodPosts.createdAt);
+
+  return c.json({ posts });
+});
+
 // --- Get single post ---
 postRoutes.get("/:id", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
 
-  const [post] = await db
-    .select()
+  // Fetch post with poster name
+  const [result] = await db
+    .select({
+      post: foodPosts,
+      posterName: users.name,
+    })
     .from(foodPosts)
+    .innerJoin(users, eq(foodPosts.posterId, users.id))
     .where(eq(foodPosts.id, postId))
     .limit(1);
 
-  if (!post) {
+  if (!result) {
     return c.json({ error: "Post not found" }, 404);
   }
 
+  const { post, posterName } = result;
   const isPoster = post.posterId === userId;
 
   // Check if requester is the approved picker
@@ -119,15 +139,26 @@ postRoutes.get("/:id", async (c) => {
       .from(pickupRequests)
       .where(eq(pickupRequests.id, post.approvedRequestId))
       .limit(1);
-
     isApprovedPicker = approvedRequest?.pickerId === userId;
   }
 
-  // Hide location from everyone except poster and approved picker
-  if (!isPoster && !isApprovedPicker) {
-    const { pickupLat, pickupLng, ...safePost } = post;
-    return c.json({ post: safePost });
+  // Fetch pending request if poster is viewing pending_approval post
+  let pendingRequest = null;
+  if (isPoster && post.status === "pending_approval") {
+    const [req] = await db
+      .select()
+      .from(pickupRequests)
+      .where(eq(pickupRequests.postId, postId))
+      .orderBy(pickupRequests.createdAt)
+      .limit(1);
+    pendingRequest = req ?? null;
   }
 
-  return c.json({ post });
+  const showLocation = isPoster || isApprovedPicker;
+
+  const safePost = showLocation
+    ? { ...post, posterName }
+    : { ...post, posterName, pickupLat: null, pickupLng: null };
+
+  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest });
 });
