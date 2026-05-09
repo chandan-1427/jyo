@@ -1,1 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Work+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-geist: "Geist", sans-serif;
+  --font-work: "Work Sans", sans-serif;
+}
+
+@layer base {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) #1F1F1E;
+    scroll-behavior: smooth;
+  }
+
+  /* Chrome, Edge, Safari */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #1F1F1E;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border: 2px solid #1F1F1E;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: #1F1F1E;
+  }
+}
