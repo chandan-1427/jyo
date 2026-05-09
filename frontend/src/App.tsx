@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Profile from "./pages/Profile";
 import Feed from "./pages/Feed";
 import PostDetail from "./pages/PostDetail";
 import CreatePost from "./pages/CreatePost";
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/create" element={<CreatePost />} />
           <Route path="/my-posts" element={<MyPosts />} />
           <Route path="/my-requests" element={<MyRequests />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
 
         {/* Fallback */}
