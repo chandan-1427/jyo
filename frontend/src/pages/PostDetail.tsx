@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
 import type { FoodPost, PickupRequest } from "../types/api";
 import RequestModal from "../components/RequestModal";
 
