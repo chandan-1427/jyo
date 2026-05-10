@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Loader2, HandPlatter, ChevronRight, X } from "lucide-react";
 import { apiFetch } from "../lib/api";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type MyRequest = {
   id: string;
@@ -12,19 +15,23 @@ type MyRequest = {
   createdAt: string;
 };
 
-const statusStyles: Record<MyRequest["status"], string> = {
-  pending: "bg-yellow-50 text-yellow-600",
-  approved: "bg-green-50 text-green-600",
-  rejected: "bg-red-50 text-red-400",
-  cancelled: "bg-gray-100 text-gray-400",
+// ── Module level ──────────────────────────────────────────────────────────────
+
+const STATUS_STYLES: Record<MyRequest["status"], string> = {
+  pending:   "bg-amber-50 text-amber-600 border-amber-100",
+  approved:  "bg-emerald-50 text-emerald-600 border-emerald-100",
+  rejected:  "bg-red-50 text-red-400 border-red-100",
+  cancelled: "bg-neutral-100 text-neutral-400 border-neutral-200",
 };
 
-const statusLabels: Record<MyRequest["status"], string> = {
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
+const STATUS_LABELS: Record<MyRequest["status"], string> = {
+  pending:   "Pending",
+  approved:  "Approved",
+  rejected:  "Rejected",
   cancelled: "Cancelled",
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function MyRequests() {
   const navigate = useNavigate();
@@ -42,9 +49,7 @@ export default function MyRequests() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  useEffect(() => { fetchRequests(); }, []);
 
   const handleCancel = async (requestId: string) => {
     setCancellingId(requestId);
@@ -58,74 +63,110 @@ export default function MyRequests() {
     }
   };
 
+  // ── Loading ───────────────────────────────────────────────────────────────
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
-        Loading...
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-work">
+        <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
+        <p className="text-sm text-neutral-400">Loading your requests…</p>
       </div>
     );
   }
+
+  // ── Error ─────────────────────────────────────────────────────────────────
 
   if (error) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
-        {error}
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-work">
+        <p className="text-sm text-neutral-500 text-center max-w-xs">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
+        >
+          Try again
+        </button>
       </div>
     );
   }
 
-  return (
-    <div>
-      <h1 className="text-xl font-bold text-gray-800 mb-6">My Requests</h1>
+  // ── Page ──────────────────────────────────────────────────────────────────
 
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-1 font-work">
+
+      {/* Header */}
+      <div className="mb-8">
+        <p className="text-sm text-neutral-400 mb-1">
+          Your activity
+        </p>
+        <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
+          My Requests
+        </h1>
+      </div>
+
+      {/* Empty state */}
       {requests.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
-          <p className="text-2xl">🙋</p>
-          <p className="text-gray-500 text-sm">You haven't requested any food yet.</p>
+        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl bg-white">
+          <HandPlatter className="w-7 h-7 text-neutral-200" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-neutral-600">No requests yet</p>
+            <p className="text-sm text-neutral-400 mt-0.5">Find food near you and send a request.</p>
+          </div>
           <button
             onClick={() => navigate("/feed")}
-            className="text-orange-500 text-sm hover:underline mt-1"
+            className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors mt-1"
           >
             Browse nearby food
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {requests.map((req) => (
             <div
               key={req.id}
-              className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4"
+              className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 flex items-center gap-4 group"
             >
               {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p
-                  onClick={() => navigate(`/posts/${req.postId}`)}
-                  className="font-medium text-gray-800 truncate cursor-pointer hover:text-orange-500 transition"
-                >
+              <div
+                className="flex-1 min-w-0 cursor-pointer"
+                onClick={() => navigate(`/posts/${req.postId}`)}
+              >
+                <p className="text-sm font-medium text-neutral-900 truncate group-hover:text-neutral-600 transition-colors">
                   {req.postTitle}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {new Date(req.createdAt).toLocaleDateString()}
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  {new Date(req.createdAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Status badge */}
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusStyles[req.status]}`}>
-                  {statusLabels[req.status]}
+              {/* Status + cancel */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[11px] px-2.5 py-1 rounded-full font-medium border ${STATUS_STYLES[req.status]}`}>
+                  {STATUS_LABELS[req.status]}
                 </span>
 
-                {/* Cancel button — only for pending */}
                 {req.status === "pending" && (
                   <button
                     onClick={() => handleCancel(req.id)}
                     disabled={cancellingId === req.id}
-                    className="text-xs text-red-400 hover:text-red-500 transition disabled:opacity-50"
+                    title="Cancel request"
+                    className="cursor-pointer w-6 h-6 flex items-center justify-center rounded-full text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-40"
                   >
-                    {cancellingId === req.id ? "..." : "Cancel"}
+                    {cancellingId === req.id
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <X className="w-3.5 h-3.5" />
+                    }
                   </button>
                 )}
               </div>
+
+              {/* Chevron — only when clickable */}
+              <ChevronRight className="w-4 h-4 text-neutral-200 group-hover:text-neutral-400 transition-colors shrink-0 cursor-pointer" onClick={() => navigate(`/posts/${req.postId}`)} />
             </div>
           ))}
         </div>

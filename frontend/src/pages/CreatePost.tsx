@@ -133,11 +133,11 @@ export default function CreatePost() {
   const minEnd = form.pickupWindowStart || minStart;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 font-work">
+    <div className="max-w-5xl mx-auto px-6 py-1 font-work">
 
       {/* Page header */}
       <div className="mb-8">
-        <p className="text-[11px] font-semibold text-neutral-400 tracking-[0.2em] uppercase mb-1">
+        <p className="text-sm text-neutral-400 mb-1">
           Share with your community
         </p>
         <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">

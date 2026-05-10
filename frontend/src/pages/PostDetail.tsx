@@ -1,38 +1,207 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft, MapPin, Clock, Loader2, AlertCircle,
+  CheckCircle2, UtensilsCrossed, ExternalLink, TimerOff, Ban,
+} from "lucide-react";
 import { apiFetch } from "../lib/api";
 import type { FoodPost, PickupRequest } from "../types/api";
 import RequestModal from "../components/RequestModal";
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 type PostDetailData = {
-  post: FoodPost & {
-    pickupLat: number | null;
-    pickupLng: number | null;
-  };
+  post: FoodPost & { pickupLat: number | null; pickupLng: number | null };
   isPoster: boolean;
   isApprovedPicker: boolean;
   pendingRequest: PickupRequest | null;
 };
 
+// ── Module-level helpers ──────────────────────────────────────────────────────
+
 function formatWindow(start: string, end: string) {
-  const s = new Date(start);
-  const e = new Date(end);
-  return `${s.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} – ${e.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  const fmt = (d: Date) =>
+    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `${fmt(new Date(start))} – ${fmt(new Date(end))}`;
+}
+
+const STATUS_STYLES: Record<FoodPost["status"], string> = {
+  open:             "bg-emerald-50 text-emerald-600 border-emerald-100",
+  pending_approval: "bg-amber-50 text-amber-600 border-amber-100",
+  closed:           "bg-neutral-100 text-neutral-500 border-neutral-200",
+  expired:          "bg-red-50 text-red-400 border-red-100",
+};
+
+const STATUS_LABELS: Record<FoodPost["status"], string> = {
+  open:             "Open",
+  pending_approval: "Pending",
+  closed:           "Closed",
+  expired:          "Expired",
+};
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: FoodPost["status"] }) {
+  return (
+    <span className={`text-[11px] px-2.5 py-1 rounded-full font-medium border shrink-0 ${STATUS_STYLES[status]}`}>
+      {STATUS_LABELS[status]}
+    </span>
+  );
 }
 
 function MapsLink({ lat, lng }: { lat: number; lng: number }) {
-  const url = `https://www.google.com/maps?q=${lat},${lng}`;
   return (
     <a
-      href={url}
+      href={`https://www.google.com/maps?q=${lat},${lng}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 bg-orange-50 text-orange-500 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-orange-100 transition"
+      className="inline-flex items-center gap-2 border border-neutral-200 text-neutral-700 hover:border-neutral-400 hover:text-neutral-900 bg-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
     >
-      📍 Open in Google Maps
+      <MapPin className="w-4 h-4" />
+      Open in Google Maps
+      <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
     </a>
   );
 }
+
+function InfoBanner({
+  variant,
+  icon: Icon,
+  children,
+}: {
+  variant: "success" | "warning" | "muted" | "danger";
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
+  const styles = {
+    success: "bg-emerald-50 border-emerald-100 text-emerald-700",
+    warning: "bg-amber-50 border-amber-100 text-amber-700",
+    muted:   "bg-neutral-50 border-neutral-100 text-neutral-500",
+    danger:  "bg-red-50 border-red-100 text-red-500",
+  };
+  return (
+    <div className={`flex items-start gap-2.5 border rounded-lg px-4 py-3 text-sm ${styles[variant]}`}>
+      <Icon className="w-4 h-4 mt-px shrink-0" />
+      <p className="leading-snug">{children}</p>
+    </div>
+  );
+}
+
+function PosterView({
+  post, pendingRequest, actionLoading, actionError, onApprove, onReject,
+}: {
+  post: PostDetailData["post"];
+  pendingRequest: PickupRequest | null;
+  actionLoading: boolean;
+  actionError: string;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}) {
+  if (post.status === "open") {
+    return (
+      <p className="text-sm text-neutral-400 text-center py-4">
+        No one has requested this food yet.
+      </p>
+    );
+  }
+
+  if (post.status === "pending_approval" && pendingRequest) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-[13px] font-medium text-neutral-700">
+          Someone wants to pick this up
+        </p>
+
+        {/* Requester card */}
+        <div className="bg-white border border-neutral-100 rounded-xl p-4 flex gap-4 items-start">
+          {pendingRequest.selfieUrl ? (
+            <img
+              src={pendingRequest.selfieUrl}
+              alt="Picker selfie"
+              className="w-16 h-16 rounded-lg object-cover shrink-0"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
+              <UtensilsCrossed className="w-5 h-5 text-neutral-300" />
+            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-neutral-900">{pendingRequest.pickerName}</p>
+            <p className="text-sm text-neutral-400 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              ETA: {pendingRequest.etaMinutes} min
+            </p>
+          </div>
+        </div>
+
+        {actionError && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
+            <AlertCircle className="w-4 h-4 text-red-500 mt-px shrink-0" />
+            <p className="text-sm text-red-600 leading-snug">{actionError}</p>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => onApprove(pendingRequest.id)}
+            disabled={actionLoading}
+            className="flex-1 bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Approve
+          </button>
+          <button
+            onClick={() => onReject(pendingRequest.id)}
+            disabled={actionLoading}
+            className="flex-1 border border-neutral-200 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Reject
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (post.status === "closed") {
+    return <InfoBanner variant="success" icon={CheckCircle2}>This post has been fulfilled. Someone is on their way.</InfoBanner>;
+  }
+
+  if (post.status === "expired") {
+    return <InfoBanner variant="danger" icon={TimerOff}>This post has expired. Create a new post if the food is still available.</InfoBanner>;
+  }
+
+  return null;
+}
+
+function VisitorView({ status, onRequest }: { status: FoodPost["status"]; onRequest: () => void }) {
+  if (status === "open") {
+    return (
+      <button
+        onClick={onRequest}
+        className="w-full bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+      >
+        I'll pick it up
+      </button>
+    );
+  }
+
+  if (status === "pending_approval") {
+    return <InfoBanner variant="warning" icon={Clock}>Someone has already requested this food. Check back if it becomes available again.</InfoBanner>;
+  }
+
+  if (status === "closed") {
+    return <InfoBanner variant="muted" icon={Ban}>This food has already been claimed.</InfoBanner>;
+  }
+
+  if (status === "expired") {
+    return <InfoBanner variant="danger" icon={TimerOff}>This post has expired.</InfoBanner>;
+  }
+
+  return null;
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
@@ -56,16 +225,14 @@ export default function PostDetail() {
     }
   };
 
-  useEffect(() => {
-    fetchPost();
-  }, [id]);
+  useEffect(() => { fetchPost(); }, [id]);
 
   const handleApprove = async (requestId: string) => {
     setActionError("");
     setActionLoading(true);
     try {
       await apiFetch(`/requests/${requestId}/approve`, { method: "PUT" });
-      await fetchPost(); // refresh
+      await fetchPost();
     } catch (err: unknown) {
       if (err instanceof Error) setActionError(err.message);
     } finally {
@@ -78,7 +245,7 @@ export default function PostDetail() {
     setActionLoading(true);
     try {
       await apiFetch(`/requests/${requestId}/reject`, { method: "PUT" });
-      await fetchPost(); // refresh
+      await fetchPost();
     } catch (err: unknown) {
       if (err instanceof Error) setActionError(err.message);
     } finally {
@@ -86,21 +253,26 @@ export default function PostDetail() {
     }
   };
 
+  // ── Loading ─────────────────────────────────────────────────────────────────
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
-        Loading...
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-work">
+        <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
+        <p className="text-sm text-neutral-400">Loading post…</p>
       </div>
     );
   }
 
+  // ── Error ───────────────────────────────────────────────────────────────────
+
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <p className="text-gray-500 text-sm">{error || "Post not found"}</p>
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-work">
+        <p className="text-sm text-neutral-500 text-center">{error || "Post not found."}</p>
         <button
           onClick={() => navigate("/feed")}
-          className="text-sm text-orange-500 hover:underline"
+          className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
         >
           Back to Feed
         </button>
@@ -111,252 +283,98 @@ export default function PostDetail() {
   const { post, isPoster, isApprovedPicker, pendingRequest } = data;
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-5xl mx-auto px-6 py-1 font-work">
 
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
-        className="text-sm text-gray-400 hover:text-orange-400 transition mb-4 flex items-center gap-1"
+        className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-700 transition-colors mb-6"
       >
-        ← Back
+        <ArrowLeft className="w-3.5 h-3.5" />
+        Back
       </button>
 
-      {/* Photo */}
-      {post.photoUrl ? (
-        <img
-          src={post.photoUrl}
-          alt={post.title}
-          className="w-full h-56 object-cover rounded-2xl"
-        />
-      ) : (
-        <div className="w-full h-56 bg-orange-50 rounded-2xl flex items-center justify-center text-5xl">
-          🍱
-        </div>
-      )}
+      <div className="max-w-lg flex flex-col gap-6">
 
-      {/* Post info */}
-      <div className="mt-5">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-800">{post.title}</h1>
-          <StatusBadge status={post.status} />
-        </div>
-
-        {post.description && (
-          <p className="text-gray-500 text-sm mt-2">{post.description}</p>
+        {/* Photo */}
+        {post.photoUrl ? (
+          <img
+            src={post.photoUrl}
+            alt={post.title}
+            className="w-full h-60 object-cover rounded-xl"
+          />
+        ) : (
+          <div className="w-full h-60 bg-neutral-100 rounded-xl flex items-center justify-center">
+            <UtensilsCrossed className="w-10 h-10 text-neutral-300" />
+          </div>
         )}
 
-        <div className="mt-4 flex flex-col gap-2 text-sm text-gray-400">
-          <span>Posted by <span className="text-gray-600 font-medium">{post.posterName}</span></span>
-          <span>🕐 Pickup window: {formatWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
-        </div>
+        {/* Post info */}
+        <div className="bg-white border border-neutral-300 rounded-xl px-5 py-5 flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="font-geist font-semibold text-xl text-neutral-900 tracking-tight leading-tight">
+              {post.title}
+            </h1>
+            <StatusBadge status={post.status} />
+          </div>
 
-        {/* Location — only for poster and approved picker */}
-        {(isPoster || isApprovedPicker) && post.pickupLat && post.pickupLng && (
-          <div className="mt-4">
+          {post.description && (
+            <p className="text-sm leading-relaxed text-neutral-500">{post.description}</p>
+          )}
+
+          <div className="border-t border-neutral-300" />
+
+          <div className="flex flex-col gap-2.5 text-sm text-neutral-500">
+            <div className="flex items-center gap-2">
+              <span className="text-neutral-400">Posted by</span>
+              <span className="font-medium text-neutral-700">{post.posterName}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+              <span>Pickup window: {formatWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
+            </div>
+          </div>
+
+          {/* Maps link — poster and approved picker only */}
+          {(isPoster || isApprovedPicker) && post.pickupLat && post.pickupLng && (
             <MapsLink lat={post.pickupLat} lng={post.pickupLng} />
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Action section */}
+        <div className="flex flex-col gap-4">
+
+          {/* Approved picker banner */}
+          {isApprovedPicker && (
+            <InfoBanner variant="success" icon={CheckCircle2}>
+              Your request was approved. Head to the location above to collect the food.
+            </InfoBanner>
+          )}
+
+          {isPoster && (
+            <PosterView
+              post={post}
+              pendingRequest={pendingRequest}
+              actionLoading={actionLoading}
+              actionError={actionError}
+              onApprove={handleApprove}
+              onReject={handleReject}
+            />
+          )}
+
+          {!isPoster && !isApprovedPicker && (
+            <VisitorView status={post.status} onRequest={() => setShowModal(true)} />
+          )}
+        </div>
       </div>
 
-      <div className="border-t border-gray-100 mt-6 pt-6">
-
-        {/* POSTER VIEW */}
-        {isPoster && (
-          <PosterView
-            post={post}
-            pendingRequest={pendingRequest}
-            actionLoading={actionLoading}
-            actionError={actionError}
-            onApprove={handleApprove}
-            onReject={handleReject}
-          />
-        )}
-
-        {/* APPROVED PICKER VIEW */}
-        {isApprovedPicker && (
-          <div className="bg-green-50 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
-            ✅ Your request was approved. Head to the location above to pick up the food.
-          </div>
-        )}
-
-        {/* VISITOR VIEW */}
-        {!isPoster && !isApprovedPicker && (
-          <VisitorView
-            status={post.status}
-            onRequest={() => setShowModal(true)}
-          />
-        )}
-      </div>
-
-      {/* Request Modal */}
       {showModal && (
         <RequestModal
           postId={post.id}
           onClose={() => setShowModal(false)}
-          onSuccess={() => {
-            setShowModal(false);
-            fetchPost();
-          }}
+          onSuccess={() => { setShowModal(false); fetchPost(); }}
         />
       )}
     </div>
   );
-}
-
-// --- Sub components ---
-
-function StatusBadge({ status }: { status: FoodPost["status"] }) {
-  const map = {
-    open: "bg-green-50 text-green-600",
-    pending_approval: "bg-yellow-50 text-yellow-600",
-    closed: "bg-gray-100 text-gray-500",
-    expired: "bg-red-50 text-red-400",
-  };
-  const label = {
-    open: "Open",
-    pending_approval: "Pending",
-    closed: "Closed",
-    expired: "Expired",
-  };
-  return (
-    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${map[status]}`}>
-      {label[status]}
-    </span>
-  );
-}
-
-function PosterView({
-  post,
-  pendingRequest,
-  actionLoading,
-  actionError,
-  onApprove,
-  onReject,
-}: {
-  post: PostDetailData["post"];
-  pendingRequest: PickupRequest | null;
-  actionLoading: boolean;
-  actionError: string;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-}) {
-  if (post.status === "open") {
-    return (
-      <p className="text-sm text-gray-400 text-center py-4">
-        No one has requested this food yet.
-      </p>
-    );
-  }
-
-  if (post.status === "pending_approval" && pendingRequest) {
-    return (
-      <div className="flex flex-col gap-4">
-        <h3 className="font-semibold text-gray-700">Someone wants to pick this up</h3>
-
-        {/* Requester info */}
-        <div className="bg-orange-50 rounded-xl p-4 flex gap-4 items-start">
-          {pendingRequest.selfieUrl && (
-            <img
-              src={pendingRequest.selfieUrl}
-              alt="Picker selfie"
-              className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-            />
-          )}
-          <div className="flex flex-col gap-1">
-            <p className="font-medium text-gray-800">{pendingRequest.pickerName}</p>
-            <p className="text-sm text-gray-500">
-              ETA: {pendingRequest.etaMinutes} minutes
-            </p>
-          </div>
-        </div>
-
-        {actionError && (
-          <p className="text-sm text-red-500 bg-red-50 px-4 py-2 rounded-lg">
-            {actionError}
-          </p>
-        )}
-
-        {/* Approve / Reject */}
-        <div className="flex gap-3">
-          <button
-            onClick={() => onApprove(pendingRequest.id)}
-            disabled={actionLoading}
-            className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50"
-          >
-            {actionLoading ? "..." : "Approve"}
-          </button>
-          <button
-            onClick={() => onReject(pendingRequest.id)}
-            disabled={actionLoading}
-            className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-gray-50 transition disabled:opacity-50"
-          >
-            {actionLoading ? "..." : "Reject"}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (post.status === "closed") {
-    return (
-      <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-500">
-        ✅ This post has been fulfilled. Someone is on their way.
-      </div>
-    );
-  }
-
-  if (post.status === "expired") {
-    return (
-      <div className="bg-red-50 rounded-xl px-4 py-3 text-sm text-red-400">
-        ⏰ This post has expired. Create a new post if the food is still available.
-      </div>
-    );
-  }
-
-  return null;
-}
-
-function VisitorView({
-  status,
-  onRequest,
-}: {
-  status: FoodPost["status"];
-  onRequest: () => void;
-}) {
-  if (status === "open") {
-    return (
-      <button
-        onClick={onRequest}
-        className="w-full bg-orange-500 text-white rounded-xl py-3 text-sm font-semibold hover:bg-orange-600 transition"
-      >
-        I'll pick it up
-      </button>
-    );
-  }
-
-  if (status === "pending_approval") {
-    return (
-      <div className="bg-yellow-50 rounded-xl px-4 py-3 text-sm text-yellow-700">
-        ⏳ Someone has already requested this food. Check back if it becomes available again.
-      </div>
-    );
-  }
-
-  if (status === "closed") {
-    return (
-      <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-500">
-        This food has already been claimed.
-      </div>
-    );
-  }
-
-  if (status === "expired") {
-    return (
-      <div className="bg-red-50 rounded-xl px-4 py-3 text-sm text-red-400">
-        This post has expired.
-      </div>
-    );
-  }
-
-  return null;
 }

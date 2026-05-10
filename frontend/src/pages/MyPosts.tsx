@@ -1,21 +1,26 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus, Loader2, UtensilsCrossed, ChevronRight } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import type { FoodPost } from "../types/api";
 
-const statusStyles: Record<FoodPost["status"], string> = {
-  open: "bg-green-50 text-green-600",
-  pending_approval: "bg-yellow-50 text-yellow-600",
-  closed: "bg-gray-100 text-gray-500",
-  expired: "bg-red-50 text-red-400",
+// ── Module level ──────────────────────────────────────────────────────────────
+
+const STATUS_STYLES: Record<FoodPost["status"], string> = {
+  open:             "bg-emerald-50 text-emerald-600 border-emerald-100",
+  pending_approval: "bg-amber-50 text-amber-600 border-amber-100",
+  closed:           "bg-neutral-100 text-neutral-500 border-neutral-200",
+  expired:          "bg-red-50 text-red-400 border-red-100",
 };
 
-const statusLabels: Record<FoodPost["status"], string> = {
-  open: "Open",
+const STATUS_LABELS: Record<FoodPost["status"], string> = {
+  open:             "Open",
   pending_approval: "Pending",
-  closed: "Closed",
-  expired: "Expired",
+  closed:           "Closed",
+  expired:          "Expired",
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function MyPosts() {
   const navigate = useNavigate();
@@ -32,78 +37,112 @@ export default function MyPosts() {
       .finally(() => setLoading(false));
   }, []);
 
+  // ── Loading ─────────────────────────────────────────────────────────────────
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
-        Loading...
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-work">
+        <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
+        <p className="text-sm text-neutral-400">Loading your posts…</p>
       </div>
     );
   }
+
+  // ── Error ───────────────────────────────────────────────────────────────────
 
   if (error) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
-        {error}
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-work">
+        <p className="text-sm text-neutral-500 text-center max-w-xs">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
+        >
+          Try again
+        </button>
       </div>
     );
   }
 
+  // ── Page ────────────────────────────────────────────────────────────────────
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-800">My Posts</h1>
+    <div className="max-w-5xl mx-auto px-6 py-1 font-work">
+
+      {/* Header */}
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <p className="text-sm text-neutral-400 mb-1">
+            Your activity
+          </p>
+          <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
+            My Posts
+          </h1>
+        </div>
         <button
           onClick={() => navigate("/create")}
-          className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition"
+          className="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150"
         >
-          + Post Food
+          <Plus className="w-3.5 h-3.5" />
+          Post Food
         </button>
       </div>
 
+      {/* Empty state */}
       {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
-          <p className="text-2xl">🍱</p>
-          <p className="text-gray-500 text-sm">You haven't posted any food yet.</p>
+        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl bg-white">
+          <UtensilsCrossed className="w-7 h-7 text-neutral-200" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-neutral-600">No posts yet</p>
+            <p className="text-sm text-neutral-400 mt-0.5">Share food with your community.</p>
+          </div>
           <button
             onClick={() => navigate("/create")}
-            className="text-orange-500 text-sm hover:underline mt-1"
+            className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors mt-1"
           >
             Post your first one
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {posts.map((post) => (
             <div
               key={post.id}
               onClick={() => navigate(`/posts/${post.id}`)}
-              className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition cursor-pointer flex items-center gap-4"
+              className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 flex items-center gap-4 cursor-pointer hover:border-neutral-200 hover:bg-neutral-50 transition-colors duration-150 group"
             >
               {/* Thumbnail */}
               {post.photoUrl ? (
                 <img
                   src={post.photoUrl}
                   alt={post.title}
-                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                  className="w-14 h-14 rounded-lg object-cover shrink-0"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center text-2xl flex-shrink-0">
-                  🍱
+                <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
+                  <UtensilsCrossed className="w-5 h-5 text-neutral-300" />
                 </div>
               )}
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 truncate">{post.title}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {new Date(post.createdAt).toLocaleDateString()}
+                <p className="text-sm font-medium text-neutral-900 truncate">{post.title}</p>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  {new Date(post.createdAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
                 </p>
               </div>
 
-              {/* Status */}
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex-shrink-0 ${statusStyles[post.status]}`}>
-                {statusLabels[post.status]}
+              {/* Status badge */}
+              <span className={`text-[11px] px-2.5 py-1 rounded-full font-medium border shrink-0 ${STATUS_STYLES[post.status]}`}>
+                {STATUS_LABELS[post.status]}
               </span>
+
+              {/* Chevron */}
+              <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-400 transition-colors shrink-0" />
             </div>
           ))}
         </div>

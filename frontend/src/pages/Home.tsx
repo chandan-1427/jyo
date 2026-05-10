@@ -201,7 +201,7 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="px-6 border-t border-neutral-300 py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <footer className="px-6 border-t border-neutral-300 py-1 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-sm text-neutral-400">
             Built to reduce food wastage through local community sharing.
           </p>

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { apiFetch } from "../lib/api";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type ProfileData = {
   id: string;
@@ -11,8 +14,45 @@ type ProfileData = {
   createdAt: string;
 };
 
-export default function Profile() {
+// ── Module level ──────────────────────────────────────────────────────────────
 
+const inputClass = [
+  "w-full rounded-lg border border-neutral-200 bg-neutral-50",
+  "px-3.5 py-2.5 text-sm text-neutral-900",
+  "placeholder:text-neutral-400",
+  "outline-none",
+  "transition-[border-color,background-color,box-shadow] duration-200 ease-in-out",
+  "focus:border-neutral-300 focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
+].join(" ");
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline gap-2">
+        <label className="text-[13px] font-medium text-neutral-700">{label}</label>
+        {hint && <span className="text-[12px] text-neutral-400">{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
+  const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
+  if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function Profile() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -42,9 +82,7 @@ export default function Profile() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setSuccess(false);
   };
@@ -54,7 +92,6 @@ export default function Profile() {
     setError("");
     setSuccess(false);
     setSaving(true);
-
     try {
       const data = await apiFetch("/users/me", {
         method: "PUT",
@@ -69,109 +106,134 @@ export default function Profile() {
     }
   };
 
+  // ── Loading ───────────────────────────────────────────────────────────────
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
-        Loading...
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-work">
+        <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
+        <p className="text-sm text-neutral-400">Loading your profile…</p>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-lg mx-auto">
-      <h1 className="text-xl font-bold text-gray-800 mb-6">My Profile</h1>
+  // ── Page ──────────────────────────────────────────────────────────────────
 
-      {/* Read-only info */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm mb-6">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Email</p>
-          <p className="text-sm text-gray-700">{profile?.email}</p>
-        </div>
-        <div className="flex flex-col gap-1 mt-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Member since</p>
-          <p className="text-sm text-gray-700">
-            {profile ? new Date(profile.createdAt).toLocaleDateString() : "—"}
-          </p>
-        </div>
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-1 font-work">
+
+      {/* Header */}
+      <div className="mb-8">
+        <p className="text-sm text-neutral-400 mb-1">
+          Account
+        </p>
+        <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
+          My Profile
+        </h1>
       </div>
 
-      {/* Editable form */}
-      {error && (
-        <p className="text-sm text-red-500 bg-red-50 px-4 py-2 rounded-lg mb-4">
-          {error}
-        </p>
-      )}
+      <div className="max-w-lg flex flex-col gap-5">
 
-      {success && (
-        <p className="text-sm text-green-600 bg-green-50 px-4 py-2 rounded-lg mb-4">
-          Profile updated successfully.
-        </p>
-      )}
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-5 shadow-sm flex flex-col gap-4">
-
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-600">Name</label>
-          <input
-            name="name"
-            type="text"
-            value={form.name}
-            onChange={handleChange}
-            required
-            className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-orange-400 transition"
-          />
+        {/* Read-only info */}
+        <div className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-4 flex items-center justify-around">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs text-neutral-400">Email</p>
+            <p className="text-sm text-neutral-700">{profile?.email}</p>
+          </div>
+          <div className="w-px h-8 bg-neutral-200 shrink-0" />
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs text-neutral-400">Member since</p>
+            <p className="text-sm text-neutral-700">
+              {profile
+                ? new Date(profile.createdAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "—"}
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-600">Phone</label>
-          <input
-            name="phone"
-            type="tel"
-            value={form.phone}
-            onChange={handleChange}
-            required
-            className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-orange-400 transition"
-          />
-        </div>
+        {/* Error */}
+        {error && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
+            <AlertCircle className="w-4 h-4 text-red-500 mt-px shrink-0" />
+            <p className="text-sm text-red-600 leading-snug">{error}</p>
+          </div>
+        )}
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-600">
-            Area / Locality{" "}
-            <span className="text-gray-300 font-normal">(optional)</span>
-          </label>
-          <input
-            name="locationText"
-            type="text"
-            value={form.locationText}
-            onChange={handleChange}
-            placeholder="e.g. Balaji Nagar, Tirupati"
-            className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-orange-400 transition"
-          />
-        </div>
+        {/* Success */}
+        {success && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-3">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-px shrink-0" />
+            <p className="text-sm text-emerald-600 leading-snug">Profile updated successfully.</p>
+          </div>
+        )}
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-600">
-            About you{" "}
-            <span className="text-gray-300 font-normal">(optional)</span>
-          </label>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            placeholder="A short note about yourself — students, families, anyone is welcome"
-            rows={3}
-            className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-orange-400 transition resize-none"
-          />
-        </div>
+        {/* Editable form */}
+        <form onSubmit={handleSubmit} className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-5 flex flex-col gap-4">
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
-      </form>
+          <Field label="Name">
+            <input
+              name="name"
+              type="text"
+              value={form.name}
+              onChange={handleChange}
+              autoComplete="name"
+              required
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Phone">
+            <input
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={form.phone}
+              onChange={handleChange}
+              onKeyDown={allowOnlyDigits}
+              autoComplete="tel"
+              required
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Area / Locality" hint="optional">
+            <input
+              name="locationText"
+              type="text"
+              value={form.locationText}
+              onChange={handleChange}
+              placeholder="e.g. Balaji Nagar, Tirupati"
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="About you" hint="optional">
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              placeholder="A short note about yourself — students, families, anyone is welcome"
+              rows={3}
+              className={`${inputClass} resize-none`}
+            />
+          </Field>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+        </form>
+
+      </div>
     </div>
   );
 }

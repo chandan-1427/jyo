@@ -67,12 +67,12 @@ export default function Feed() {
   // ── Feed ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 font-work">
+    <div className="max-w-5xl mx-auto px-6 py-1 font-work">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <p className="text-[11px] font-semibold text-neutral-400 tracking-[0.2em] uppercase mb-1">
+          <p className="text-sm text-neutral-400 mb-1">
             Within 10 km · Tirupati
           </p>
           <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
@@ -81,7 +81,7 @@ export default function Feed() {
         </div>
         <button
           onClick={() => coords && fetchPosts(coords)}
-          className="text-sm text-neutral-400 hover:text-neutral-800 transition-colors duration-150"
+          className="cursor-pointer text-sm text-neutral-400 hover:text-neutral-800 transition-colors duration-150"
         >
           Refresh
         </button>
