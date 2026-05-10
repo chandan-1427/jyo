@@ -42,7 +42,7 @@ const NOTES = {
 
 function EyebrowLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-geist font-semibold text-neutral-400 tracking-[0.2em] uppercase mb-4">
+    <p className="text-md text-neutral-400 font-geist tracking-wide mb-1">
       {children}
     </p>
   );
