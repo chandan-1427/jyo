@@ -9,7 +9,7 @@ const STEPS = [
   {
     step: "01",
     title: "Post food",
-    desc: "Have extra food? Post it with a photo, a short description, and a pickup time window — how long you can wait for someone to collect it.",
+    desc: "Have extra food? Post it with a photo, a short description, and a pickup time window - how long you can wait for someone to collect it.",
   },
   {
     step: "02",
@@ -26,7 +26,7 @@ const STEPS = [
 const NOTES = {
   "Important to know": [
     "Currently available only within and around Tirupati.",
-    "All pickups are self-collected — no delivery involved.",
+    "All pickups are self-collected - no delivery involved.",
     "No payments or money involved at any step.",
     "Exact pickup location is shared only after the poster approves a request.",
   ],
@@ -124,7 +124,7 @@ export default function Home() {
             </p>
 
             <p className="text-base leading-relaxed text-neutral-500 mb-8">
-              And if you're a student — how many times did you sleep on an empty stomach because money
+              And if you're a student - how many times did you sleep on an empty stomach because money
               was short, or your PG just didn't provide a proper meal?
             </p>
 
@@ -201,7 +201,7 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="px-6 border-t border-neutral-300 py-1 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <footer className="px-6 border-t border-neutral-300 py-10 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-sm text-neutral-400">
             Built to reduce food wastage through local community sharing.
           </p>
