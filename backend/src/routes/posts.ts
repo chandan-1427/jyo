@@ -4,6 +4,8 @@ import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, lte, gte } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
+import { uploadFile } from "../lib/storage.js";
+import crypto from "crypto";
 
 export const postRoutes = new Hono();
 
@@ -161,4 +163,21 @@ postRoutes.get("/:id", async (c) => {
     : { ...post, posterName, pickupLat: null, pickupLng: null };
 
   return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest });
+});
+
+postRoutes.post("/upload", async (c) => {
+  const body = await c.req.parseBody();
+  const file = body["file"];
+
+  if (!file || typeof file === "string") {
+    return c.json({ error: "No file provided" }, 400);
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const ext = file.name.split(".").pop();
+  const filename = `${crypto.randomUUID()}.${ext}`;
+
+  const url = await uploadFile(buffer, filename, file.type, "food-photos");
+
+  return c.json({ url });
 });

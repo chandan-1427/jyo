@@ -19,7 +19,6 @@ export default function Feed() {
     }
   }, []);
 
-  // On mount — get location then fetch posts
   useEffect(() => {
     getCurrentLocation()
       .then((c) => {
@@ -32,28 +31,32 @@ export default function Feed() {
       .finally(() => setLoading(false));
   }, [fetchPosts]);
 
-  // Auto-refresh every 60 seconds
   useEffect(() => {
     if (!coords) return;
     const interval = setInterval(() => fetchPosts(coords), 60_000);
     return () => clearInterval(interval);
   }, [coords, fetchPosts]);
 
+  // ── Loading ───────────────────────────────────────────────────────────────
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
-        Detecting your location...
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-work">
+        <div className="w-5 h-5 rounded-full border-2 border-neutral-200 border-t-neutral-500 animate-spin" />
+        <p className="text-sm text-neutral-400">Detecting your location…</p>
       </div>
     );
   }
 
+  // ── Error ─────────────────────────────────────────────────────────────────
+
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-        <p className="text-gray-500 text-sm">{error}</p>
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-work">
+        <p className="text-sm text-neutral-500 text-center max-w-xs">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="text-sm text-orange-500 hover:underline"
+          className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
         >
           Try again
         </button>
@@ -61,14 +64,24 @@ export default function Feed() {
     );
   }
 
+  // ── Feed ──────────────────────────────────────────────────────────────────
+
   return (
-    <div>
+    <div className="max-w-5xl mx-auto px-6 py-8 font-work">
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-800">Nearby Food</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-[11px] font-semibold text-neutral-400 tracking-[0.2em] uppercase mb-1">
+            Within 10 km · Tirupati
+          </p>
+          <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
+            Nearby Food
+          </h1>
+        </div>
         <button
           onClick={() => coords && fetchPosts(coords)}
-          className="text-sm text-orange-500 hover:underline"
+          className="text-sm text-neutral-400 hover:text-neutral-800 transition-colors duration-150"
         >
           Refresh
         </button>
@@ -76,10 +89,10 @@ export default function Feed() {
 
       {/* Empty state */}
       {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
+        <div className="flex flex-col items-center justify-center py-24 gap-2 border border-neutral-100 rounded-xl bg-white">
           <p className="text-2xl">🍽️</p>
-          <p className="text-gray-500 text-sm">No food posts nearby right now.</p>
-          <p className="text-gray-400 text-xs">Check back soon or post your own!</p>
+          <p className="text-sm font-medium text-neutral-600 mt-1">No food posts nearby right now.</p>
+          <p className="text-sm text-neutral-400">Check back soon or post your own!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

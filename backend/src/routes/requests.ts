@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
+import { uploadFile } from "../lib/storage.js";
+import crypto from "crypto";
 
 export const requestRoutes = new Hono();
 
@@ -263,4 +265,21 @@ requestRoutes.get("/mine", async (c) => {
     .orderBy(pickupRequests.createdAt);
 
   return c.json({ requests });
+});
+
+requestRoutes.post("/upload-selfie", async (c) => {
+  const body = await c.req.parseBody();
+  const file = body["file"];
+
+  if (!file || typeof file === "string") {
+    return c.json({ error: "No file provided" }, 400);
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const ext = file.name.split(".").pop();
+  const filename = `${crypto.randomUUID()}.${ext}`;
+
+  const url = await uploadFile(buffer, filename, file.type, "selfies");
+
+  return c.json({ url });
 });

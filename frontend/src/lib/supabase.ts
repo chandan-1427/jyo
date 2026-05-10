@@ -1,26 +1,25 @@
-import { createClient } from "@supabase/supabase-js";
-
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
-
+// src/lib/supabase.ts
 export async function uploadImage(
   file: File,
   bucket: "food-photos" | "selfies"
 ): Promise<string> {
-  const ext = file.name.split(".").pop();
-  const filename = `${crypto.randomUUID()}.${ext}`;
+  const formData = new FormData();
+  formData.append("file", file);
 
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(filename, file, { upsert: false });
+  const endpoint =
+    bucket === "food-photos"
+      ? "/posts/upload"
+      : "/requests/upload-selfie";
 
-  if (error) throw new Error(`Upload failed: ${error.message}`);
+  const res = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
+    method: "POST",
+    credentials: "include", // send auth cookie
+    body: formData,         // no Content-Type header — browser sets it with boundary
+  });
 
-  const { data } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(filename);
+  const data = await res.json();
 
-  return data.publicUrl;
+  if (!res.ok) throw new Error(data.error || "Upload failed");
+
+  return data.url;
 }
