@@ -1,8 +1,15 @@
 export default function SplashScreen() {
   return (
-    <div className="min-h-screen bg-orange-50 flex flex-col items-center justify-center gap-3">
-      <h1 className="text-4xl font-bold text-orange-500">Jyos</h1>
-      <p className="text-sm text-gray-400">Loading...</p>
+    <div className="min-h-screen bg-white font-work flex flex-col items-center justify-center gap-4">
+      <div className="flex flex-col items-center gap-3 animate-pulse">
+        <h1 className="font-geist font-semibold text-5xl text-neutral-900 tracking-tight">
+          Jyo<span className="text-[#2D6A4F]">.</span>
+        </h1>
+        
+        <p className="text-sm text-neutral-400 tracking-wide">
+          Loading...
+        </p>
+      </div>
     </div>
   );
 }
