@@ -10,12 +10,14 @@ export const authRoutes = new Hono();
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
 
+const isProd = process.env.NODE_ENV === "production";
+
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "Lax" as const,
+  secure: isProd,
+  sameSite: isProd ? "None" as const : "Lax" as const,
   path: "/",
-  maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
+  maxAge: 60 * 60 * 24 * 7,
 };
 
 // --- Register ---
