@@ -24,6 +24,8 @@ app.use(
 );
 
 // --- Routes ---
+app.get("/", (c) => c.json({ status: "ok" }));
+
 app.route("/auth", authRoutes);
 app.route("/users", userRoutes);
 app.route("/posts", postRoutes);

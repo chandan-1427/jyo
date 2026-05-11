@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Layout from "./components/Layout";
+import SplashScreen from "./components/SplashScreen";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -14,13 +15,13 @@ import MyRequests from "./pages/MyRequests";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <SplashScreen />;
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <SplashScreen />;
   return !user ? <>{children}</> : <Navigate to="/feed" replace />;
 }
 
