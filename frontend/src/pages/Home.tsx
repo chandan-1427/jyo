@@ -157,7 +157,8 @@ export default function Home() {
               src={pic1}
               alt="Food sharing in Tirupati"
               loading="eager"
-              decoding="async"
+              decoding="sync"
+              fetchPriority="high"
               onLoad={() => setImgLoaded(true)}
               className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
             />
