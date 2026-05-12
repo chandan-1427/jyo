@@ -56,7 +56,7 @@ export default function Feed() {
         <p className="text-sm text-neutral-500 text-center max-w-xs">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
+          className="cursor-pointer text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
         >
           Try again
         </button>
