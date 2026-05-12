@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import { SignJWT, jwtVerify } from "jose";
+import { setCookie, deleteCookie } from "hono/cookie";
+import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
