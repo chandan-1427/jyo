@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import pic1 from "../assets/pic1.jpg";
+import pic1 from "../assets/pic1.webp";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
