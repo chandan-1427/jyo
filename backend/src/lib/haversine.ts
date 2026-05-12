@@ -14,3 +14,10 @@ export function haversineDistance(
     Math.sin(dLng / 2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+const TIRUPATI_CENTER = { lat: 13.6288, lng: 79.4192 };
+const TIRUPATI_RADIUS_KM = 20; // generous radius covering all of Tirupati district
+
+export function isWithinTirupati(lat: number, lng: number): boolean {
+  return haversineDistance(lat, lng, TIRUPATI_CENTER.lat, TIRUPATI_CENTER.lng) <= TIRUPATI_RADIUS_KM;
+}

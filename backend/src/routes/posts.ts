@@ -3,7 +3,7 @@ import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, lte, gte } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
-import { haversineDistance } from "../lib/haversine.js";
+import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
 import { uploadFile } from "../lib/storage.js";
 import crypto from "crypto";
 
@@ -28,6 +28,14 @@ postRoutes.post("/", async (c) => {
 
   if (!title || !pickupLat || !pickupLng || !pickupWindowStart || !pickupWindowEnd) {
     return c.json({ error: "Missing required fields" }, 400);
+  }
+
+  // Comment this line if you want to allow posts outside Tirupati (for testing or future expansion)
+  if (!isWithinTirupati(pickupLat, pickupLng)) {
+    return c.json(
+      { error: "Jyos is currently only available in Tirupati. Your location is outside the service area." },
+      400
+    );
   }
 
   const [post] = await db

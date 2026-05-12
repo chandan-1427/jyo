@@ -95,6 +95,6 @@ authRoutes.post("/login", async (c) => {
 
 // --- Logout ---
 authRoutes.post("/logout", (c) => {
-  deleteCookie(c, "token", { path: "/" });
+  deleteCookie(c, "token", cookieOptions);
   return c.json({ message: "Logged out successfully" });
 });
