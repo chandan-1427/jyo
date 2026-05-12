@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Suspense } from "react";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Layout from "./components/Layout";
 import SplashScreen from "./components/SplashScreen";
@@ -12,14 +13,15 @@ import PostDetail from "./pages/PostDetail";
 import CreatePost from "./pages/CreatePost";
 import MyPosts from "./pages/MyPosts";
 import MyRequests from "./pages/MyRequests";
+import NotFound from "./pages/NotFound";
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
+function AuthGuard() {
   const { user, loading } = useAuth();
   if (loading) return <SplashScreen />;
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  return user ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
+function GuestGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <SplashScreen />;
   return !user ? <>{children}</> : <Navigate to="/feed" replace />;
@@ -28,25 +30,31 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+      <Suspense fallback={<SplashScreen />}>
+        <Routes>
 
-        {/* Protected — all wrapped in Layout */}
-        <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-          <Route path="/feed" element={<Feed />} />
-          <Route path="/posts/:id" element={<PostDetail />} />
-          <Route path="/create" element={<CreatePost />} />
-          <Route path="/my-posts" element={<MyPosts />} />
-          <Route path="/my-requests" element={<MyRequests />} />
-          <Route path="/profile" element={<Profile />} />
-        </Route>
+          {/* Public */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login"    element={<GuestGuard><Login /></GuestGuard>} />
+          <Route path="/register" element={<GuestGuard><Register /></GuestGuard>} />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Protected */}
+          <Route element={<AuthGuard />}>
+            <Route element={<Layout />}>
+              <Route path="/feed"        element={<Feed />} />
+              <Route path="/posts/:id"   element={<PostDetail />} />
+              <Route path="/create"      element={<CreatePost />} />
+              <Route path="/my-posts"    element={<MyPosts />} />
+              <Route path="/my-requests" element={<MyRequests />} />
+              <Route path="/profile"     element={<Profile />} />
+            </Route>
+          </Route>
+
+          {/* Catches everything — logged in or not */}
+          <Route path="*" element={<NotFound />} />
+
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
