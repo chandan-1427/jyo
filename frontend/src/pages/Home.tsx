@@ -50,7 +50,7 @@ function EyebrowLabel({ children }: { children: React.ReactNode }) {
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-white border border-neutral-300 rounded-xl p-8 ${className}`}>
+    <div className={`px-6 py-2 ${className}`}>
       {children}
     </div>
   );
@@ -177,12 +177,14 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-4">
             {STEPS.map(({ step, title, desc }) => (
               <Card key={step}>
-                <p className="text-[11px] font-semibold text-neutral-400 tracking-[0.15em] uppercase mb-4">
-                  {step}
-                </p>
-                <h3 className="font-geist font-semibold text-base text-neutral-900 mb-2 tracking-tight">
-                  {title}
-                </h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-[12px] font-semibold text-neutral-400 tracking- uppercase">
+                    {step}
+                  </p>
+                  <h3 className="font-geist font-semibold text-base text-neutral-900">
+                    {title}
+                  </h3>
+                </div>
                 <p className="text-sm leading-relaxed text-neutral-500">{desc}</p>
               </Card>
             ))}
@@ -193,7 +195,7 @@ export default function Home() {
         <section className="px-6 grid md:grid-cols-2 gap-4 pb-20">
           {Object.entries(NOTES).map(([heading, items]) => (
             <Card key={heading}>
-              <h3 className="font-geist font-semibold text-base text-neutral-900 mb-5 tracking-tight">
+              <h3 className="font-geist font-semibold text-base text-neutral-900 mb-5">
                 {heading}
               </h3>
               <BulletList items={items} />
@@ -203,7 +205,7 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="px-6 border-t border-neutral-300 py-10 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-sm text-neutral-400">
+          <p className="text-sm text-neutral-500">
             Built to reduce food wastage through local community sharing.
           </p>
           <p className="text-sm font-medium text-neutral-900">
