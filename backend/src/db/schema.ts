@@ -7,6 +7,7 @@ import {
   timestamp,
   doublePrecision,
   integer,
+  boolean
 } from "drizzle-orm/pg-core";
 
 // --- Enums ---
@@ -33,6 +34,10 @@ export const users = pgTable("users", {
   phone:        text("phone").notNull(),
   locationText: text("location_text"),
   description:  text("description"),
+  emailVerified:      boolean("email_verified").notNull().default(false),
+  verificationToken:  text("verification_token"),
+  resetToken:         text("reset_token"),
+  resetTokenExpiry:   timestamp("reset_token_expiry"),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -14,6 +14,9 @@ import CreatePost from "./pages/CreatePost";
 import MyPosts from "./pages/MyPosts";
 import MyRequests from "./pages/MyRequests";
 import NotFound from "./pages/NotFound";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function AuthGuard() {
   const { user, loading } = useAuth();
@@ -37,6 +40,9 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login"    element={<GuestGuard><Login /></GuestGuard>} />
           <Route path="/register" element={<GuestGuard><Register /></GuestGuard>} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Protected */}
           <Route element={<AuthGuard />}>
