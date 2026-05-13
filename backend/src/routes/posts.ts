@@ -33,7 +33,7 @@ postRoutes.post("/", async (c) => {
   // Comment this line if you want to allow posts outside Tirupati (for testing or future expansion)
   if (!isWithinTirupati(pickupLat, pickupLng)) {
     return c.json(
-      { error: "Jyos is currently only available in Tirupati. Your location is outside the service area." },
+      { error: "Jyo is currently only available in Tirupati. Your location is outside the service area." },
       400
     );
   }
