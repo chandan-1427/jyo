@@ -27,6 +27,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showMobileNotifs, setShowMobileNotifs] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -45,7 +46,7 @@ export default function Navbar() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  // Close notif dropdown on outside click
+  // Close desktop notif dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
@@ -90,6 +91,28 @@ export default function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Shared list rendered in both desktop dropdown and mobile panel
+  const NotificationsList = () =>
+    notifications.length === 0 ? (
+      <p className="text-sm text-neutral-400 text-center py-6">No notifications yet</p>
+    ) : (
+      <div className="divide-y divide-neutral-50">
+        {notifications.map((n) => (
+          <div
+            key={n.id}
+            className={`px-4 py-3 text-sm transition-colors ${
+              n.read ? "text-neutral-400 bg-white" : "text-neutral-700 bg-[#2D6A4F]/5"
+            }`}
+          >
+            <p className="leading-snug">{n.message}</p>
+            <p className="text-xs text-neutral-300 mt-1">
+              {new Date(n.createdAt).toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+
   return (
     <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 font-work">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -123,7 +146,7 @@ export default function Navbar() {
         <div className="hidden sm:flex items-center gap-4">
           <span className="text-sm text-neutral-400">{user?.name}</span>
 
-          {/* Notification bell */}
+          {/* Desktop notification bell + dropdown */}
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => {
@@ -140,35 +163,14 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Dropdown */}
             {showNotifs && (
               <div className="absolute right-0 top-10 w-80 bg-white rounded-xl border border-neutral-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)] z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-neutral-100">
                   <p className="text-[13px] font-semibold text-neutral-700">Notifications</p>
                 </div>
-                {notifications.length === 0 ? (
-                  <p className="text-sm text-neutral-400 text-center py-6">
-                    No notifications yet
-                  </p>
-                ) : (
-                  <div className="max-h-72 overflow-y-auto divide-y divide-neutral-50">
-                    {notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className={`px-4 py-3 text-sm transition-colors ${
-                          n.read
-                            ? "text-neutral-400 bg-white"
-                            : "text-neutral-700 bg-[#2D6A4F]/5"
-                        }`}
-                      >
-                        <p className="leading-snug">{n.message}</p>
-                        <p className="text-xs text-neutral-300 mt-1">
-                          {new Date(n.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="max-h-72 overflow-y-auto">
+                  <NotificationsList />
+                </div>
               </div>
             )}
           </div>
@@ -183,16 +185,54 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile hamburger */}
-        <button
-          className="cursor-pointer sm:hidden flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors duration-150"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </button>
+        {/* Mobile: bell + hamburger */}
+        <div className="sm:hidden flex items-center gap-1">
+          {/* Mobile notification bell */}
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              setShowMobileNotifs((prev) => {
+                const next = !prev;
+                if (next && unreadCount > 0) handleMarkAllRead();
+                return next;
+              });
+            }}
+            className="cursor-pointer relative flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors duration-150"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-[#2D6A4F] text-white text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Hamburger */}
+          <button
+            className="cursor-pointer flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors duration-150"
+            onClick={() => {
+              setShowMobileNotifs(false);
+              setMenuOpen((prev) => !prev);
+            }}
+          >
+            {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile notifications panel */}
+      {showMobileNotifs && (
+        <div className="sm:hidden bg-white border-t border-neutral-100">
+          <div className="px-4 py-3 border-b border-neutral-100">
+            <p className="text-[13px] font-semibold text-neutral-700">Notifications</p>
+          </div>
+          <div className="max-h-72 overflow-y-auto">
+            <NotificationsList />
+          </div>
+        </div>
+      )}
+
+      {/* Mobile nav menu */}
       {menuOpen && (
         <div className="sm:hidden bg-white border-t border-neutral-100 px-4 py-4 flex flex-col gap-4">
           {navLinks.map((link) => (
