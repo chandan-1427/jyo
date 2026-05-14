@@ -152,8 +152,8 @@ export default function Login() {
             </Link>
           </p>
 
-          <p className="text-sm text-gray-400 text-center mt-3">
-            <Link to="/forgot-password" className="text-orange-500 hover:underline">
+          <p className="text-[13px] text-neutral-500 text-center mt-3">
+            <Link to="/forgot-password" className="font-medium text-neutral-900 hover:underline underline-offset-2">
               Forgot password?
             </Link>
           </p>
