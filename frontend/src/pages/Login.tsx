@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../lib/api";
 
@@ -124,12 +124,16 @@ export default function Login() {
 
           {/* Unverified email state */}
           {needsVerification && (
-            <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 flex flex-col gap-2">
-              <p className="text-sm text-neutral-600 leading-snug">
-                Your email is not verified. Please check your inbox for the verification link.
-              </p>
+            <div className="mt-[-15px] mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-3">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-px" />
+                <p className="text-sm text-amber-800 leading-snug">
+                  Your email is not verified. Please check your inbox for the verification link.
+                </p>
+              </div>
+
               {resendMessage ? (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 pl-6">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0" />
                   <p className="text-sm text-[#2D6A4F] font-medium">{resendMessage}</p>
                 </div>
@@ -137,9 +141,19 @@ export default function Login() {
                 <button
                   onClick={handleResendVerification}
                   disabled={resendLoading}
-                  className="cursor-pointer text-sm font-medium text-neutral-900 hover:underline underline-offset-2 text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="cursor-pointer ml-6 w-fit flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 hover:text-amber-900 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {resendLoading ? "Sending…" : "Resend verification email"}
+                  {resendLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-3.5 h-3.5" />
+                      Resend verification email
+                    </>
+                  )}
                 </button>
               )}
             </div>
