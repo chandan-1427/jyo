@@ -114,7 +114,7 @@ export default function Navbar() {
     );
 
   return (
-    <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 font-work">
+    <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 font-geist font-medium tracking-wide">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
 
         {/* Brand */}

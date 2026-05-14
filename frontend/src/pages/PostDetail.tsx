@@ -257,7 +257,7 @@ export default function PostDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-work">
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-geist font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
         <p className="text-sm text-neutral-400">Loading post…</p>
       </div>
@@ -268,7 +268,7 @@ export default function PostDetail() {
 
   if (error || !data) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-work">
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-geist font-medium tracking-wide">
         <p className="text-sm text-neutral-500 text-center">{error || "Post not found."}</p>
         <button
           onClick={() => navigate("/feed")}
@@ -283,7 +283,7 @@ export default function PostDetail() {
   const { post, isPoster, isApprovedPicker, pendingRequest } = data;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1 font-work">
+    <div className="max-w-5xl mx-auto px-6 py-1 font-geist font-medium tracking-wide">
 
       {/* Back */}
       <button
