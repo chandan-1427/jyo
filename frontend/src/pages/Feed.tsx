@@ -1,13 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { getCurrentLocation, type Coords } from "../lib/location";
 import type { FoodPost } from "../types/api";
 import PostCard from "../components/PostCard";
+import { MapPin, RefreshCw, Loader2, UtensilsCrossed } from "lucide-react";
 
 export default function Feed() {
   const [posts, setPosts] = useState<FoodPost[]>([]);
   const [coords, setCoords] = useState<Coords | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const fetchPosts = useCallback(async (c: Coords) => {
@@ -37,12 +40,19 @@ export default function Feed() {
     return () => clearInterval(interval);
   }, [coords, fetchPosts]);
 
+  const handleRefresh = async () => {
+    if (!coords || refreshing) return;
+    setRefreshing(true);
+    await fetchPosts(coords);
+    setRefreshing(false);
+  };
+
   // ── Loading ───────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-work">
-        <div className="w-5 h-5 rounded-full border-2 border-neutral-200 border-t-neutral-500 animate-spin" />
+      <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-3 font-work">
+        <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
         <p className="text-sm text-neutral-400">Detecting your location…</p>
       </div>
     );
@@ -52,8 +62,11 @@ export default function Feed() {
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-work">
-        <p className="text-sm text-neutral-500 text-center max-w-xs">{error}</p>
+      <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-4 font-work">
+        <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 max-w-sm w-full">
+          <span className="mt-px text-red-500 text-sm shrink-0">!</span>
+          <p className="text-sm text-red-600 leading-snug">{error}</p>
+        </div>
         <button
           onClick={() => window.location.reload()}
           className="cursor-pointer text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
@@ -67,32 +80,46 @@ export default function Feed() {
   // ── Feed ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1 font-work">
+    <div className="max-w-4xl mx-auto px-4 py-8 font-geist font-medium tracking-wide">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <p className="text-sm text-neutral-400 mb-1">
-            Within 10 km · Tirupati
-          </p>
+          <div className="flex items-center gap-1.5 mb-1">
+            <MapPin className="w-3.5 h-3.5 text-neutral-400" />
+            <p className="text-sm text-neutral-400">Within 10 km · Tirupati</p>
+          </div>
           <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
             Nearby Food
           </h1>
         </div>
+
         <button
-          onClick={() => coords && fetchPosts(coords)}
-          className="cursor-pointer text-sm text-neutral-400 hover:text-neutral-800 transition-colors duration-150"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-neutral-400 hover:text-neutral-700 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed mt-1"
         >
-          Refresh
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
       {/* Empty state */}
       {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-2 border border-neutral-100 rounded-xl bg-white">
-          <p className="text-2xl">🍽️</p>
-          <p className="text-sm font-medium text-neutral-600 mt-1">No food posts nearby right now.</p>
-          <p className="text-sm text-neutral-400">Check back soon or post your own!</p>
+        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl bg-white">
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-neutral-100">
+            <UtensilsCrossed className="w-5 h-5 text-neutral-400" />
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-sm font-medium text-neutral-700">No food posts nearby right now</p>
+            <p className="text-sm text-neutral-400">Check back soon or post your own!</p>
+          </div>
+          <Link
+            to="/create"
+            className="mt-1 text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
+          >
+            Post food
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
