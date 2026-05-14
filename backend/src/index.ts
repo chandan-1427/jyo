@@ -12,11 +12,19 @@ import { startExpiryJob } from "./jobs/expiry.js";
 
 const app = new Hono();
 
-// --- Middleware ---
+const allowedOrigins = [
+  "https://jyo.co.in",
+  "https://www.jyo.co.in",
+  "http://localhost:5173", // keep for local dev
+];
+
 app.use(
   "*",
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin) => {
+      if (!origin || allowedOrigins.includes(origin)) return origin;
+      return null;
+    },
     credentials: true,
     allowHeaders: ["Content-Type"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],

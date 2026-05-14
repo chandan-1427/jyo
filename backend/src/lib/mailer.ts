@@ -1,20 +1,16 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendMail(to: string, subject: string, html: string) {
-  await transporter.sendMail({
-    from: `"Jyos" <${process.env.SMTP_USER}>`,
+  const { error } = await resend.emails.send({
+    from: "Jyos <noreply@jyo.co.in>",
     to,
     subject,
     html,
   });
+
+  if (error) throw new Error(`Resend error: ${error.message}`);
 }
 
 // --- Notification emails (fire and forget) ---
@@ -28,8 +24,10 @@ export function notifyPoster(
     request_cancelled: "A pickup request was cancelled",
   };
   const messages = {
-    request_received: "Someone has requested to pick up your food post on Jyos. Open the app to review and approve.",
-    request_cancelled: "A picker has cancelled their request on your food post. It is now open for others.",
+    request_received:
+      "Someone has requested to pick up your food post on Jyos. Open the app to review and approve.",
+    request_cancelled:
+      "A picker has cancelled their request on your food post. It is now open for others.",
   };
   sendMail(email, subjects[event], `<p>${messages[event]}</p>`)
     .catch((err) => console.error("[MAILER] notifyPoster failed:", err));
@@ -44,8 +42,10 @@ export function notifyPicker(
     request_rejected: "Your pickup request was rejected",
   };
   const messages = {
-    request_approved: "Your request was approved. Open the app to see the pickup location and head there now.",
-    request_rejected: "Your request was rejected by the poster. Check the feed for other food posts nearby.",
+    request_approved:
+      "Your request was approved. Open the app to see the pickup location and head there now.",
+    request_rejected:
+      "Your request was rejected by the poster. Check the feed for other food posts nearby.",
   };
   sendMail(email, subjects[event], `<p>${messages[event]}</p>`)
     .catch((err) => console.error("[MAILER] notifyPicker failed:", err));
@@ -61,7 +61,7 @@ export async function sendVerificationEmail(email: string, token: string) {
     `
       <p>Welcome to Jyos!</p>
       <p>Please verify your email address by clicking the link below:</p>
-      <a href="${link}">${link}</a>
+      <a href="${link}" style="color:#f97316;font-weight:bold;">Verify Email</a>
       <p>This link does not expire.</p>
     `
   );
@@ -75,7 +75,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     `
       <p>You requested a password reset for your Jyos account.</p>
       <p>Click the link below to reset your password. This link expires in 1 hour.</p>
-      <a href="${link}">${link}</a>
+      <a href="${link}" style="color:#f97316;font-weight:bold;">Reset Password</a>
       <p>If you did not request this, ignore this email.</p>
     `
   );
