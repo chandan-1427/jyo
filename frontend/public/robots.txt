@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /feed
+Disallow: /posts/
+Disallow: /create
+Disallow: /my-posts
+Disallow: /my-requests
+Disallow: /profile
+
+Sitemap: https://jyo.co.in/sitemap.xml
