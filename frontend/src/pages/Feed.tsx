@@ -51,7 +51,7 @@ export default function Feed() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-3 font-work">
+      <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-3 font-geist font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
         <p className="text-sm text-neutral-400">Detecting your location…</p>
       </div>
@@ -62,7 +62,7 @@ export default function Feed() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-4 font-work">
+      <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-4 font-geist font-medium tracking-wide">
         <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 max-w-sm w-full">
           <span className="mt-px text-red-500 text-sm shrink-0">!</span>
           <p className="text-sm text-red-600 leading-snug">{error}</p>

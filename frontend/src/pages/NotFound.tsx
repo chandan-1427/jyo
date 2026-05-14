@@ -10,7 +10,7 @@ export default function NotFound() {
   const label = user ? "Back to Feed" : "Back to Home";
   
   return (
-    <div className="min-h-screen bg-white font-work flex flex-col items-center justify-center gap-1">
+    <div className="min-h-screen bg-white font-geist font-medium tracking-wide flex flex-col items-center justify-center gap-1">
       <div className="flex flex-col items-center gap-1">
         <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
           Jyo<span className="text-[#2D6A4F]">.</span>
