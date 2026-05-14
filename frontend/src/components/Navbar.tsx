@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../lib/api";
 import { supabase } from "../lib/supabase";
+import { Bell, Menu, X, LogOut } from "lucide-react";
 
 type Notification = {
   id: string;
@@ -26,6 +27,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -43,12 +45,22 @@ export default function Navbar() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  // Close notif dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifs(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   useEffect(() => {
     if (!user) return;
 
     fetchNotifications();
 
-    // Supabase realtime listener
     const channel = supabase
       .channel("notifications")
       .on(
@@ -79,24 +91,27 @@ export default function Navbar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
+    <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 font-work">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
 
         {/* Brand */}
-        <Link to="/feed" className="text-xl font-bold text-orange-500">
-          Jyos
+        <Link
+          to="/feed"
+          className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
+        >
+          Jyo<span className="text-[#2D6A4F]">.</span>
         </Link>
 
-        {/* Desktop links */}
+        {/* Desktop nav links */}
         <div className="hidden sm:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className={`text-sm font-medium transition ${
+              className={`text-sm font-medium transition-colors duration-150 ${
                 isActive(link.path)
-                  ? "text-orange-500"
-                  : "text-gray-500 hover:text-orange-400"
+                  ? "text-neutral-900"
+                  : "text-neutral-400 hover:text-neutral-700"
               }`}
             >
               {link.label}
@@ -104,22 +119,22 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Right side */}
+        {/* Desktop right side */}
         <div className="hidden sm:flex items-center gap-4">
-          <span className="text-sm text-gray-400">{user?.name}</span>
+          <span className="text-sm text-neutral-400">{user?.name}</span>
 
           {/* Notification bell */}
-          <div className="relative">
+          <div className="relative" ref={notifRef}>
             <button
               onClick={() => {
                 setShowNotifs(!showNotifs);
                 if (!showNotifs && unreadCount > 0) handleMarkAllRead();
               }}
-              className="relative text-gray-500 hover:text-orange-400 transition"
+              className="cursor-pointer relative flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors duration-150"
             >
-              🔔
+              <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 bg-[#2D6A4F] text-white text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center leading-none">
                   {unreadCount}
                 </span>
               )}
@@ -127,25 +142,27 @@ export default function Navbar() {
 
             {/* Dropdown */}
             {showNotifs && (
-              <div className="absolute right-0 top-8 w-80 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm font-semibold text-gray-700">Notifications</p>
+              <div className="absolute right-0 top-10 w-80 bg-white rounded-xl border border-neutral-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)] z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-neutral-100">
+                  <p className="text-[13px] font-semibold text-neutral-700">Notifications</p>
                 </div>
                 {notifications.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">
+                  <p className="text-sm text-neutral-400 text-center py-6">
                     No notifications yet
                   </p>
                 ) : (
-                  <div className="max-h-72 overflow-y-auto">
+                  <div className="max-h-72 overflow-y-auto divide-y divide-neutral-50">
                     {notifications.map((n) => (
                       <div
                         key={n.id}
-                        className={`px-4 py-3 border-b border-gray-50 text-sm ${
-                          n.read ? "text-gray-400" : "text-gray-700 bg-orange-50"
+                        className={`px-4 py-3 text-sm transition-colors ${
+                          n.read
+                            ? "text-neutral-400 bg-white"
+                            : "text-neutral-700 bg-[#2D6A4F]/5"
                         }`}
                       >
-                        {n.message}
-                        <p className="text-xs text-gray-300 mt-0.5">
+                        <p className="leading-snug">{n.message}</p>
+                        <p className="text-xs text-neutral-300 mt-1">
                           {new Date(n.createdAt).toLocaleString()}
                         </p>
                       </div>
@@ -156,46 +173,49 @@ export default function Navbar() {
             )}
           </div>
 
+          {/* Logout */}
           <button
             onClick={handleLogout}
-            className="text-sm font-medium text-orange-500 hover:text-orange-600 transition"
+            className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-neutral-400 hover:text-neutral-700 transition-colors duration-150"
           >
+            <LogOut className="w-3.5 h-3.5" />
             Logout
           </button>
         </div>
 
         {/* Mobile hamburger */}
         <button
-          className="sm:hidden text-gray-500 hover:text-orange-400 transition"
+          className="cursor-pointer sm:hidden flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors duration-150"
           onClick={() => setMenuOpen(!menuOpen)}
         >
-          {menuOpen ? "✕" : "☰"}
+          {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
         </button>
       </div>
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="sm:hidden bg-white border-t border-gray-100 px-4 py-4 flex flex-col gap-4">
+        <div className="sm:hidden bg-white border-t border-neutral-100 px-4 py-4 flex flex-col gap-4">
           {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
               onClick={() => setMenuOpen(false)}
-              className={`text-sm font-medium transition ${
+              className={`text-sm font-medium transition-colors duration-150 ${
                 isActive(link.path)
-                  ? "text-orange-500"
-                  : "text-gray-500 hover:text-orange-400"
+                  ? "text-neutral-900"
+                  : "text-neutral-400 hover:text-neutral-700"
               }`}
             >
               {link.label}
             </Link>
           ))}
-          <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
-            <span className="text-sm text-gray-400">{user?.name}</span>
+          <div className="border-t border-neutral-100 pt-4 flex items-center justify-between">
+            <span className="text-sm text-neutral-400">{user?.name}</span>
             <button
               onClick={handleLogout}
-              className="text-sm font-medium text-orange-500 hover:text-orange-600 transition"
+              className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-neutral-400 hover:text-neutral-700 transition-colors duration-150"
             >
+              <LogOut className="w-3.5 h-3.5" />
               Logout
             </button>
           </div>
