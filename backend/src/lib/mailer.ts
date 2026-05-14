@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendMail(to: string, subject: string, html: string) {
   const { error } = await resend.emails.send({
-    from: "Jyos <noreply@jyo.co.in>",
+    from: "Jyo <noreply@jyo.co.in>",
     to,
     subject,
     html,
@@ -25,7 +25,7 @@ export function notifyPoster(
   };
   const messages = {
     request_received:
-      "Someone has requested to pick up your food post on Jyos. Open the app to review and approve.",
+      "Someone has requested to pick up your food post on Jyo. Open the app to review and approve.",
     request_cancelled:
       "A picker has cancelled their request on your food post. It is now open for others.",
   };
@@ -171,9 +171,9 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   const link = `${process.env.APP_URL}/reset-password?token=${token}`;
   await sendMail(
     email,
-    "Reset your Jyos password",
+    "Reset your Jyo password",
     `
-      <p>You requested a password reset for your Jyos account.</p>
+      <p>You requested a password reset for your Jyo account.</p>
       <p>Click the link below to reset your password. This link expires in 1 hour.</p>
       <a href="${link}" style="color:#f97316;font-weight:bold;">Reset Password</a>
       <p>If you did not request this, ignore this email.</p>
