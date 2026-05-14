@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../lib/api";
+import { Link } from "react-router-dom";
+import { CheckCircle2, XCircle, Loader2, Mail } from "lucide-react";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -28,24 +30,114 @@ export default function VerifyEmail() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-orange-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-sm text-center">
-        <h1 className="text-xl font-bold text-gray-800 mb-3">Email Verification</h1>
-        {status === "loading" && <p className="text-gray-400 text-sm">Verifying...</p>}
-        {status === "success" && (
-          <>
-            <p className="text-green-600 text-sm mb-4">{message}</p>
-            <button
-              onClick={() => navigate("/login")}
-              className="bg-orange-500 text-white rounded-xl px-6 py-2.5 text-sm font-semibold hover:bg-orange-600 transition"
+    <div className="min-h-screen bg-white font-work flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-[360px]">
+
+          {/* Brand */}
+          <div className="mb-8">
+            <Link
+              to="/"
+              className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
             >
-              Go to Login
-            </button>
-          </>
-        )}
-        {status === "error" && (
-          <p className="text-red-500 text-sm">{message}</p>
-        )}
+              Jyo<span className="text-[#2D6A4F]">.</span>
+            </Link>
+          </div>
+
+          {/* Loading */}
+          {status === "loading" && (
+            <div className="flex flex-col items-center text-center gap-4 py-4">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-neutral-100">
+                <Loader2 className="w-7 h-7 text-neutral-400 animate-spin" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <h1 className="font-geist text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                  Verifying your email
+                </h1>
+                <p className="text-sm text-neutral-500">
+                  Please wait while we confirm your address…
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Success */}
+          {status === "success" && (
+            <div className="flex flex-col items-center text-center gap-4 py-4">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#2D6A4F]/10">
+                <CheckCircle2 className="w-7 h-7 text-[#2D6A4F]" />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <h1 className="font-geist text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                  Email verified!
+                </h1>
+                <p className="text-sm text-neutral-500 leading-relaxed">
+                  {message || "Your email has been successfully verified. You can now log in to your account."}
+                </p>
+              </div>
+
+              <div className="w-full rounded-lg border border-neutral-100 bg-neutral-50 px-4 py-3 flex items-start gap-2.5">
+                <Mail className="w-4 h-4 text-[#2D6A4F] mt-px shrink-0" />
+                <p className="text-[13px] text-neutral-600 leading-snug text-left">
+                  Your account is now active and ready to use. Welcome to the Jyo community!
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate("/login")}
+                className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150"
+              >
+                Go to login
+              </button>
+            </div>
+          )}
+
+          {/* Error */}
+          {status === "error" && (
+            <div className="flex flex-col items-center text-center gap-4 py-4">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-50">
+                <XCircle className="w-7 h-7 text-red-400" />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <h1 className="font-geist text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                  Verification failed
+                </h1>
+                <p className="text-sm text-neutral-500 leading-relaxed">
+                  {message || "We couldn't verify your email. The link may have expired or already been used."}
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
+                <span className="mt-px text-red-500 text-sm shrink-0">!</span>
+                <p className="text-sm text-red-600 leading-snug text-left">
+                  Verification links expire after 24 hours. Try registering again to get a new link.
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate("/register")}
+                className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150"
+              >
+                Register again
+              </button>
+
+              <div className="w-full border-t border-neutral-100" />
+
+              <p className="text-[13px] text-neutral-500">
+                Already verified?{" "}
+                <Link
+                  to="/login"
+                  className="font-medium text-neutral-900 hover:underline underline-offset-2"
+                >
+                  Log in
+                </Link>
+              </p>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
