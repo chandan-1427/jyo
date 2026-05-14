@@ -7,6 +7,7 @@ import { authRoutes } from "./routes/auth.js";
 import { userRoutes } from "./routes/users.js";
 import { postRoutes } from "./routes/posts.js";
 import { requestRoutes } from "./routes/requests.js";
+import { notificationRoutes } from "./routes/notifications.js";
 
 import { startExpiryJob } from "./jobs/expiry.js";
 
@@ -38,6 +39,7 @@ app.route("/auth", authRoutes);
 app.route("/users", userRoutes);
 app.route("/posts", postRoutes);
 app.route("/requests", requestRoutes);
+app.route("/notifications", notificationRoutes);
 
 // --- Start ---
 const port = Number(process.env.PORT) || 3000;

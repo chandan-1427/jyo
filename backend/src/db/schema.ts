@@ -68,3 +68,12 @@ export const pickupRequests = pgTable("pickup_requests", {
   status:     requestStatusEnum("status").notNull().default("pending"),
   createdAt:  timestamp("created_at").notNull().defaultNow(),
 });
+
+// --- Notifications ---
+export const notifications = pgTable("notifications", {
+  id:        uuid("id").primaryKey().defaultRandom(),
+  userId:    uuid("user_id").notNull().references(() => users.id),
+  message:   text("message").notNull(),
+  read:      boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

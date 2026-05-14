@@ -1,8 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../lib/api";
+import { supabase } from "../lib/supabase";
 
-const NAV_LINKS = [
+type Notification = {
+  id: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+};
+
+const navLinks = [
   { label: "Feed", path: "/feed" },
   { label: "Post Food", path: "/create" },
   { label: "My Posts", path: "/my-posts" },
@@ -10,28 +19,59 @@ const NAV_LINKS = [
   { label: "Profile", path: "/profile" },
 ];
 
-function Avatar({ name }: { name: string }) {
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-  return (
-    <div className="w-7 h-7 rounded-full bg-neutral-800 text-white flex items-center justify-center text-[11px] font-semibold select-none shrink-0">
-      {initials}
-    </div>
-  );
-}
-
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await apiFetch("/notifications");
+      setNotifications(data.notifications);
+    } catch {
+      // fail silently
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    await apiFetch("/notifications/read-all", { method: "PUT" });
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetchNotifications();
+
+    // Supabase realtime listener
+    const channel = supabase
+      .channel("notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newNotif = payload.new as Notification;
+          setNotifications((prev) => [newNotif, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const handleLogout = async () => {
-    setMenuOpen(false);
     await logout();
     navigate("/");
   };
@@ -39,110 +79,124 @@ export default function Navbar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="bg-white font-work sticky top-0 z-50 border-b border-neutral-100">
+    <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
+      <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
 
-      {/* ── Single row: brand | links (center) | user (right) ── */}
-      <div className="max-w-5xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-
-        {/* Left — Brand */}
-        <Link
-          to="/feed"
-          className="font-geist font-semibold text-[1.35rem] sm:text-[1.15rem] text-neutral-900 tracking-tight"
-        >
-          Jyo<span className="text-[#2D6A4F]">.</span>
+        {/* Brand */}
+        <Link to="/feed" className="text-xl font-bold text-orange-500">
+          Jyos
         </Link>
 
-        {/* Desktop center nav */}
-        <div className="hidden sm:flex items-center gap-0.5">
-          {NAV_LINKS.map(({ label, path }) => (
+        {/* Desktop links */}
+        <div className="hidden sm:flex items-center gap-6">
+          {navLinks.map((link) => (
             <Link
-              key={path}
-              to={path}
-              className={`px-3 py-1.5 rounded-md text-sm transition-colors duration-150 ${
-                isActive(path)
-                  ? "bg-neutral-100 text-neutral-900 font-medium"
-                  : "text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50"
+              key={link.path}
+              to={link.path}
+              className={`text-sm font-medium transition ${
+                isActive(link.path)
+                  ? "text-orange-500"
+                  : "text-gray-500 hover:text-orange-400"
               }`}
             >
-              {label}
+              {link.label}
             </Link>
           ))}
         </div>
 
-        {/* Desktop right user */}
-        <div className="hidden sm:flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Avatar name={user?.name ?? "U"} />
+        {/* Right side */}
+        <div className="hidden sm:flex items-center gap-4">
+          <span className="text-sm text-gray-400">{user?.name}</span>
 
-            <span className="text-sm text-neutral-500">
-              {user?.name}
-            </span>
+          {/* Notification bell */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowNotifs(!showNotifs);
+                if (!showNotifs && unreadCount > 0) handleMarkAllRead();
+              }}
+              className="relative text-gray-500 hover:text-orange-400 transition"
+            >
+              🔔
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Dropdown */}
+            {showNotifs && (
+              <div className="absolute right-0 top-8 w-80 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-700">Notifications</p>
+                </div>
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">
+                    No notifications yet
+                  </p>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`px-4 py-3 border-b border-gray-50 text-sm ${
+                          n.read ? "text-gray-400" : "text-gray-700 bg-orange-50"
+                        }`}
+                      >
+                        {n.message}
+                        <p className="text-xs text-gray-300 mt-0.5">
+                          {new Date(n.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-
-          <span className="text-neutral-200 select-none">|</span>
 
           <button
             onClick={handleLogout}
-            className="px-3 py-1.5 rounded-md text-sm cursor-pointer text-neutral-400 hover:text-red-500 hover:bg-red-100/40 transition-colors duration-150"
+            className="text-sm font-medium text-orange-500 hover:text-orange-600 transition"
           >
-            Log out
+            Logout
           </button>
         </div>
 
-        {/* Mobile menu button */}
+        {/* Mobile hamburger */}
         <button
+          className="sm:hidden text-gray-500 hover:text-orange-400 transition"
           onClick={() => setMenuOpen(!menuOpen)}
-          className="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors"
-          aria-label="Toggle menu"
         >
-          {menuOpen ? (
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
+          {menuOpen ? "✕" : "☰"}
         </button>
       </div>
 
-      {/* ── Mobile drawer ── */}
+      {/* Mobile menu */}
       {menuOpen && (
-        <div className="sm:hidden border-t border-neutral-100 bg-white">
-
-          {/* User row */}
-          <div className="px-4 py-3 flex items-center gap-2.5 border-b border-neutral-100">
-            <Avatar name={user?.name ?? "U"} />
-            <span className="text-sm text-neutral-600">{user?.name}</span>
-          </div>
-
-          {/* Nav links */}
-          <div className="px-2 py-2">
-            {NAV_LINKS.map(({ label, path }) => (
-              <Link
-                key={path}
-                to={path}
-                onClick={() => setMenuOpen(false)}
-                className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
-                  isActive(path)
-                    ? "bg-neutral-100 text-neutral-900 font-medium"
-                    : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Log out */}
-          <div className="px-2 py-2 border-t border-neutral-100">
+        <div className="sm:hidden bg-white border-t border-gray-100 px-4 py-4 flex flex-col gap-4">
+          {navLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              onClick={() => setMenuOpen(false)}
+              className={`text-sm font-medium transition ${
+                isActive(link.path)
+                  ? "text-orange-500"
+                  : "text-gray-500 hover:text-orange-400"
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
+            <span className="text-sm text-gray-400">{user?.name}</span>
             <button
               onClick={handleLogout}
-              className="flex w-full items-center px-3 py-2 rounded-md text-sm text-red-500 hover:bg-red-50 transition-colors"
+              className="text-sm font-medium text-orange-500 hover:text-orange-600 transition"
             >
-              Log out
+              Logout
             </button>
           </div>
         </div>

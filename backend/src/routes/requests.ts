@@ -6,6 +6,8 @@ import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
 import { uploadFile } from "../lib/storage.js";
+import { createNotification } from "../lib/notify.js";
+
 import crypto from "crypto";
 
 export const requestRoutes = new Hono();
@@ -74,6 +76,10 @@ requestRoutes.post("/", async (c) => {
     .from(users)
     .where(eq(users.id, post.posterId))
     .limit(1);
+  
+  createNotification(post.posterId, "Someone wants to pick up your food. Review their request.")
+    .catch(console.error);
+  notifyPoster(poster.email, "request_received");
 
   await notifyPoster(poster.email, "request_received");
 
@@ -132,6 +138,10 @@ requestRoutes.put("/:id/approve", async (c) => {
     .where(eq(users.id, request.pickerId))
     .limit(1);
 
+  createNotification(request.pickerId, "Your pickup request was approved. Check the post for the location.")
+    .catch(console.error);
+  notifyPicker(picker.email, "request_approved");
+
   await notifyPicker(picker.email, "request_approved");
 
   return c.json({ message: "Request approved" });
@@ -185,6 +195,10 @@ requestRoutes.put("/:id/reject", async (c) => {
     .from(users)
     .where(eq(users.id, request.pickerId))
     .limit(1);
+
+  createNotification(request.pickerId, "Your pickup request was rejected.")
+    .catch(console.error);
+  notifyPicker(picker.email, "request_rejected");
 
   await notifyPicker(picker.email, "request_rejected");
 
@@ -240,6 +254,10 @@ requestRoutes.put("/:id/cancel", async (c) => {
     .from(users)
     .where(eq(users.id, post.posterId))
     .limit(1);
+
+  createNotification(post.posterId, "A picker cancelled their request. Your post is open again.")
+    .catch(console.error);
+  notifyPoster(poster.email, "request_cancelled");
 
   await notifyPoster(poster.email, "request_cancelled");
 
