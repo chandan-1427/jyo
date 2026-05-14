@@ -90,7 +90,7 @@ authRoutes.post("/login", async (c) => {
   }
 
   if (!user.emailVerified) {
-    return c.json({ error: "Please verify your email before logging in." }, 403);
+    return c.json({ error: "Please verify your email before logging in. Check your inbox for the verification link." }, 403);
   }
 
   // Create JWT
