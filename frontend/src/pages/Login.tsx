@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../lib/api";
 
@@ -35,11 +35,17 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setNeedsVerification(false);
+    setResendMessage("");
     setLoading(true);
+
     try {
       const data = await apiFetch("/auth/login", {
         method: "POST",
@@ -48,9 +54,33 @@ export default function Login() {
       login(data.user);
       navigate("/feed");
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      if (err instanceof Error) {
+        // Check if it's an unverified email error
+        if (err.message.includes("verify your email")) {
+          setNeedsVerification(true);
+        } else {
+          setError(err.message);
+        }
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    setResendMessage("");
+
+    try {
+      const data = await apiFetch("/auth/resend-verification", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setResendMessage(data.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) setResendMessage(err.message);
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -89,6 +119,29 @@ export default function Login() {
             <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
               <span className="mt-px text-red-500 text-sm shrink-0">!</span>
               <p className="text-sm text-red-600 leading-snug">{error}</p>
+            </div>
+          )}
+
+          {/* Unverified email state */}
+          {needsVerification && (
+            <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 flex flex-col gap-2">
+              <p className="text-sm text-neutral-600 leading-snug">
+                Your email is not verified. Please check your inbox for the verification link.
+              </p>
+              {resendMessage ? (
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0" />
+                  <p className="text-sm text-[#2D6A4F] font-medium">{resendMessage}</p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleResendVerification}
+                  disabled={resendLoading}
+                  className="cursor-pointer text-sm font-medium text-neutral-900 hover:underline underline-offset-2 text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {resendLoading ? "Sending…" : "Resend verification email"}
+                </button>
+              )}
             </div>
           )}
 

@@ -205,3 +205,40 @@ authRoutes.post("/reset-password", async (c) => {
 
   return c.json({ message: "Password reset successfully. You can now log in." });
 });
+
+// Resend verification email
+authRoutes.post("/resend-verification", async (c) => {
+  const { email } = await c.req.json();
+
+  if (!email) {
+    return c.json({ error: "Email is required" }, 400);
+  }
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  // Always return success even if user not found
+  if (!user) {
+    return c.json({ message: "If that email is registered you will receive a new verification link." });
+  }
+
+  if (user.emailVerified) {
+    return c.json({ error: "This email is already verified. Please log in." }, 400);
+  }
+
+  // Generate new token
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+
+  await db
+    .update(users)
+    .set({ verificationToken })
+    .where(eq(users.id, user.id));
+
+  sendVerificationEmail(email, verificationToken)
+    .catch((err) => console.error("[MAILER] Resend verification failed:", err));
+
+  return c.json({ message: "Verification email sent. Please check your inbox." });
+});
