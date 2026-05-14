@@ -55,7 +55,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-work flex flex-col">
+    <div className="min-h-screen bg-white font-geist font-medium flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-[360px]">
 
@@ -146,14 +146,14 @@ export default function Login() {
             Don't have an account?{" "}
             <Link
               to="/register"
-              className="font-medium text-neutral-900 hover:underline underline-offset-2"
+              className="font-medium text-neutral-900 tracking-wide hover:underline underline-offset-2"
             >
               Register
             </Link>
           </p>
 
           <p className="text-[13px] text-neutral-500 text-center mt-3">
-            <Link to="/forgot-password" className="font-medium text-neutral-900 hover:underline underline-offset-2">
+            <Link to="/forgot-password" className="font-medium text-neutral-900 hover:underline underline-offset-2 tracking-wide">
               Forgot password?
             </Link>
           </p>
