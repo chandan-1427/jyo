@@ -17,11 +17,11 @@ export function getCurrentLocation(): Promise<Coords> {
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => {
         // In development — fall back to Tirupati coords silently
-        if (import.meta.env.DEV) {
-          console.warn("[DEV] Location failed, using Tirupati fallback:", err.message);
-          resolve(DEV_FALLBACK_COORDS);
-          return;
-        }
+        // if (import.meta.env.DEV) {
+        //   console.warn("[DEV] Location failed, using Tirupati fallback:", err.message);
+        //   resolve(DEV_FALLBACK_COORDS);
+        //   return;
+        // }
 
         // In production — surface the real error to the user
         switch (err.code) {
