@@ -5,7 +5,7 @@ export type Coords = {
 
 // Tirupati center — only used in development
 const DEV_FALLBACK_COORDS: Coords = { lat: 13.6288, lng: 79.4192 };
-
+console.log(DEV_FALLBACK_COORDS);
 export function getCurrentLocation(): Promise<Coords> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
