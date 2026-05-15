@@ -31,12 +31,12 @@ postRoutes.post("/", async (c) => {
   }
 
   // Comment this line if you want to allow posts outside Tirupati (for testing or future expansion)
-  // if (!isWithinTirupati(pickupLat, pickupLng)) {
-  //   return c.json(
-  //     { error: "Jyo is currently only available in Tirupati. Your location is outside the service area." },
-  //     400
-  //   );
-  // }
+  if (!isWithinTirupati(pickupLat, pickupLng)) {
+    return c.json(
+      { error: "Jyo is currently only available in Tirupati. Your location is outside the service area." },
+      400
+    );
+  }
 
   const [post] = await db
     .insert(foodPosts)
