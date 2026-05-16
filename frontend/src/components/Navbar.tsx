@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Bell, Menu, X, LogOut } from "lucide-react";
+import { formatDateTime } from "../lib/format";
 
 type Notification = {
   id: string;
@@ -105,8 +106,8 @@ export default function Navbar() {
             }`}
           >
             <p className="leading-snug">{n.message}</p>
-            <p className="text-xs text-neutral-300 mt-1">
-              {new Date(n.createdAt).toLocaleString()}
+            <p className="text-xs text-gray-300 mt-0.5">
+              {formatDateTime(n.createdAt)}
             </p>
           </div>
         ))}

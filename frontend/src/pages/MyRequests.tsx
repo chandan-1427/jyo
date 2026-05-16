@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, HandPlatter, ChevronRight, X } from "lucide-react";
 import { apiFetch } from "../lib/api";
+import { formatDate } from "../lib/format";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -136,11 +137,7 @@ export default function MyRequests() {
                   {req.postTitle}
                 </p>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  {new Date(req.createdAt).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                  {formatDate(req.createdAt)}
                 </p>
               </div>
 

@@ -7,6 +7,7 @@ import {
 import { apiFetch } from "../lib/api";
 import type { FoodPost, PickupRequest } from "../types/api";
 import RequestModal from "../components/RequestModal";
+import { formatPickupWindow } from "../lib/format";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -19,18 +20,12 @@ type PostDetailData = {
 
 // ── Module-level helpers ──────────────────────────────────────────────────────
 
-function formatWindow(start: string, end: string) {
-  const fmt = (d: Date) =>
-    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return `${fmt(new Date(start))} – ${fmt(new Date(end))}`;
-}
-
 const STATUS_STYLES: Record<FoodPost["status"], string> = {
   open:             "bg-emerald-50 text-emerald-600 border-emerald-100",
   pending_approval: "bg-amber-50 text-amber-600 border-amber-100",
   closed:           "bg-neutral-100 text-neutral-500 border-neutral-200",
   expired:          "bg-red-50 text-red-400 border-red-100",
-  completed: "bg-green-50 text-green-700",
+  completed:        "bg-blue-50 text-blue-600 border-blue-100",
 };
 
 const STATUS_LABELS: Record<FoodPost["status"], string> = {
@@ -38,7 +33,7 @@ const STATUS_LABELS: Record<FoodPost["status"], string> = {
   pending_approval: "Pending",
   closed:           "Closed",
   expired:          "Expired",
-  completed: "Completed",
+  completed:        "Completed",
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -366,7 +361,7 @@ export default function PostDetail() {
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-              <span>Pickup window: {formatWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
+              <span>🕐 Pickup window: {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
             </div>
           </div>
 

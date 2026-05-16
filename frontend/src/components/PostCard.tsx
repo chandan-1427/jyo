@@ -1,15 +1,10 @@
 import { Link } from "react-router-dom";
 import type { FoodPost } from "../types/api";
+import { formatPickupWindow } from "../lib/format";
 
 type Props = {
   post: FoodPost;
 };
-
-function formatWindow(start: string, end: string) {
-  const s = new Date(start);
-  const e = new Date(end);
-  return `${s.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} – ${e.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-}
 
 export default function PostCard({ post }: Props) {
   return (
@@ -49,7 +44,7 @@ export default function PostCard({ post }: Props) {
 
         <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
           <span>by {post.posterName}</span>
-          <span>🕐 {formatWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
+          <span>🕐 {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
         </div>
       </div>
     </Link>

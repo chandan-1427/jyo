@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Loader2, UtensilsCrossed, ChevronRight } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import type { FoodPost } from "../types/api";
+import { formatDate } from "../lib/format";
 
 // ── Module level ──────────────────────────────────────────────────────────────
 
@@ -11,6 +12,7 @@ const STATUS_STYLES: Record<FoodPost["status"], string> = {
   pending_approval: "bg-amber-50 text-amber-600 border-amber-100",
   closed:           "bg-neutral-100 text-neutral-500 border-neutral-200",
   expired:          "bg-red-50 text-red-400 border-red-100",
+  completed:        "bg-blue-50 text-blue-600 border-blue-100",
 };
 
 const STATUS_LABELS: Record<FoodPost["status"], string> = {
@@ -18,6 +20,7 @@ const STATUS_LABELS: Record<FoodPost["status"], string> = {
   pending_approval: "Pending",
   closed:           "Closed",
   expired:          "Expired",
+  completed:        "Completed",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,12 +130,8 @@ export default function MyPosts() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-neutral-900 truncate">{post.title}</p>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  {new Date(post.createdAt).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {formatDate(post.createdAt)}
                 </p>
               </div>
 
