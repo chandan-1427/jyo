@@ -1,6 +1,8 @@
+const IST = "Asia/Calcutta";
+
 export function formatDateTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleString("en-IN", {
+  return new Date(dateStr).toLocaleString("en-IN", {
+    timeZone: IST,
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -11,8 +13,8 @@ export function formatDateTime(dateStr: string): string {
 }
 
 export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-IN", {
+  return new Date(dateStr).toLocaleDateString("en-IN", {
+    timeZone: IST,
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -22,19 +24,22 @@ export function formatDate(dateStr: string): string {
 export function formatPickupWindow(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
-  const dateStr = s.toLocaleDateString("en-IN", {
+  const date = s.toLocaleDateString("en-IN", {
+    timeZone: IST,
     day: "numeric",
     month: "short",
   });
   const startTime = s.toLocaleTimeString("en-IN", {
+    timeZone: IST,
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   });
   const endTime = e.toLocaleTimeString("en-IN", {
+    timeZone: IST,
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   });
-  return `${dateStr}, ${startTime} - ${endTime}`;
+  return `${date}, ${startTime} – ${endTime}`;
 }

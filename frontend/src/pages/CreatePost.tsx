@@ -105,11 +105,21 @@ export default function CreatePost() {
       return;
     }
 
-    // Convert local datetime strings to proper ISO with timezone
-    const start = new Date(form.pickupWindowStart);
-    const end = new Date(form.pickupWindowEnd);
+    const toIST = (localStr: string) => {
+      // datetime-local gives "2026-05-16T21:21" in device local time
+      // We treat it as IST regardless of device timezone
+      const [date, time] = localStr.split("T");
+      const [year, month, day] = date.split("-").map(Number);
+      const [hour, minute] = time.split(":").map(Number);
+      // IST is UTC+5:30
+      const utcMs = Date.UTC(year, month - 1, day, hour - 5, minute - 30);
+      return new Date(utcMs).toISOString();
+    };
 
-    if (end <= start) {
+    const start = toIST(form.pickupWindowStart);
+    const end = toIST(form.pickupWindowEnd);
+
+    if (new Date(end) <= new Date(start)) {
       setError("Pickup end time must be after start time.");
       return;
     }
