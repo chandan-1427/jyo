@@ -164,14 +164,18 @@ function PosterView({
   if (post.status === "closed") {
     return (
       <div className="flex flex-col gap-3">
-        <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-500">
-          Pickup approved. Waiting for the picker to arrive.
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-2.5">
+          <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-px" />
+          <p className="text-sm text-amber-800 leading-snug">
+            Pickup approved. Waiting for the picker to arrive.
+          </p>
         </div>
         <button
           onClick={onComplete}
-          className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-gray-50 transition"
+          className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-150"
         >
-          Food has been collected — Stop sharing location
+          <CheckCircle2 className="w-4 h-4 text-[#2D6A4F]" />
+          Food has been collected - Stop sharing location
         </button>
       </div>
     );
@@ -179,8 +183,11 @@ function PosterView({
 
   if (post.status === "completed") {
     return (
-      <div className="bg-green-50 rounded-xl px-4 py-3 text-sm text-green-700">
-        Food successfully shared. Location is no longer visible.
+      <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-4 py-3 flex items-start gap-2.5">
+        <CheckCircle2 className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-px" />
+        <p className="text-sm text-neutral-600 leading-snug">
+          Food successfully shared. Location is no longer visible.
+        </p>
       </div>
     );
   }
@@ -318,7 +325,7 @@ export default function PostDetail() {
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-700 transition-colors mb-6"
+        className="cursor-pointer flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-700 transition-colors mb-6"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Back
