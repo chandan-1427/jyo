@@ -9,9 +9,14 @@ import { getCurrentLocation, type Coords } from "../lib/location";
 
 // Returns current datetime in "YYYY-MM-DDTHH:MM" format for min attribute
 function nowLocal(): string {
-  const d = new Date();
-  d.setSeconds(0, 0);
-  return d.toISOString().slice(0, 16);
+  const now = new Date();
+  // Get local time components
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 const inputClass = [
@@ -105,19 +110,8 @@ export default function CreatePost() {
       return;
     }
 
-    const toIST = (localStr: string) => {
-      // datetime-local gives "2026-05-16T21:21" in device local time
-      // We treat it as IST regardless of device timezone
-      const [date, time] = localStr.split("T");
-      const [year, month, day] = date.split("-").map(Number);
-      const [hour, minute] = time.split(":").map(Number);
-      // IST is UTC+5:30
-      const utcMs = Date.UTC(year, month - 1, day, hour - 5, minute - 30);
-      return new Date(utcMs).toISOString();
-    };
-
-    const start = toIST(form.pickupWindowStart);
-    const end = toIST(form.pickupWindowEnd);
+    const start = new Date(form.pickupWindowStart).toISOString();
+    const end = new Date(form.pickupWindowEnd).toISOString();
 
     if (new Date(end) <= new Date(start)) {
       setError("Pickup end time must be after start time.");
