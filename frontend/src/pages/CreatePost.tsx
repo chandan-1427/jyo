@@ -130,10 +130,13 @@ export default function CreatePost() {
       await apiFetch("/posts", {
         method: "POST",
         body: JSON.stringify({
-          ...form,
+          title: form.title,
+          description: form.description,
           photoUrl,
           pickupLat: coords.lat,
           pickupLng: coords.lng,
+          pickupWindowStart: start,   // ← IST converted
+          pickupWindowEnd: end,       // ← IST converted
         }),
       });
       navigate("/my-posts");
