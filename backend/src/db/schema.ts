@@ -16,6 +16,7 @@ export const postStatusEnum = pgEnum("post_status", [
   "pending_approval",
   "closed",
   "expired",
+  "completed",
 ]);
 
 export const requestStatusEnum = pgEnum("request_status", [

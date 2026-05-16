@@ -104,8 +104,13 @@ export default function CreatePost() {
       setError("Please add a photo of the food.");
       return;
     }
-    if (new Date(form.pickupWindowEnd) <= new Date(form.pickupWindowStart)) {
-      setError("Pickup end time must be after the start time.");
+
+    // Convert local datetime strings to proper ISO with timezone
+    const start = new Date(form.pickupWindowStart);
+    const end = new Date(form.pickupWindowEnd);
+
+    if (end <= start) {
+      setError("Pickup end time must be after start time.");
       return;
     }
 

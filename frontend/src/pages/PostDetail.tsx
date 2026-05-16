@@ -30,6 +30,7 @@ const STATUS_STYLES: Record<FoodPost["status"], string> = {
   pending_approval: "bg-amber-50 text-amber-600 border-amber-100",
   closed:           "bg-neutral-100 text-neutral-500 border-neutral-200",
   expired:          "bg-red-50 text-red-400 border-red-100",
+  completed: "bg-green-50 text-green-700",
 };
 
 const STATUS_LABELS: Record<FoodPost["status"], string> = {
@@ -37,6 +38,7 @@ const STATUS_LABELS: Record<FoodPost["status"], string> = {
   pending_approval: "Pending",
   closed:           "Closed",
   expired:          "Expired",
+  completed: "Completed",
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -88,7 +90,7 @@ function InfoBanner({
 }
 
 function PosterView({
-  post, pendingRequest, actionLoading, actionError, onApprove, onReject,
+  post, pendingRequest, actionLoading, actionError, onApprove, onReject, onComplete,
 }: {
   post: PostDetailData["post"];
   pendingRequest: PickupRequest | null;
@@ -96,6 +98,7 @@ function PosterView({
   actionError: string;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onComplete: () => void;
 }) {
   if (post.status === "open") {
     return (
@@ -164,7 +167,27 @@ function PosterView({
   }
 
   if (post.status === "closed") {
-    return <InfoBanner variant="success" icon={CheckCircle2}>This post has been fulfilled. Someone is on their way.</InfoBanner>;
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-500">
+          Pickup approved. Waiting for the picker to arrive.
+        </div>
+        <button
+          onClick={onComplete}
+          className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-gray-50 transition"
+        >
+          Food has been collected — Stop sharing location
+        </button>
+      </div>
+    );
+  }
+
+  if (post.status === "completed") {
+    return (
+      <div className="bg-green-50 rounded-xl px-4 py-3 text-sm text-green-700">
+        Food successfully shared. Location is no longer visible.
+      </div>
+    );
   }
 
   if (post.status === "expired") {
@@ -245,6 +268,18 @@ export default function PostDetail() {
     setActionLoading(true);
     try {
       await apiFetch(`/requests/${requestId}/reject`, { method: "PUT" });
+      await fetchPost();
+    } catch (err: unknown) {
+      if (err instanceof Error) setActionError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    setActionLoading(true);
+    try {
+      await apiFetch(`/posts/${post.id}/complete`, { method: "PUT" });
       await fetchPost();
     } catch (err: unknown) {
       if (err instanceof Error) setActionError(err.message);
@@ -359,6 +394,7 @@ export default function PostDetail() {
               actionError={actionError}
               onApprove={handleApprove}
               onReject={handleReject}
+              onComplete={handleComplete}
             />
           )}
 

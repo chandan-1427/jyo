@@ -7,7 +7,7 @@ export type FoodPost = {
   photoUrl: string | null;
   pickupWindowStart: string;
   pickupWindowEnd: string;
-  status: "open" | "pending_approval" | "closed" | "expired";
+  status: "open" | "pending_approval" | "closed" | "expired" | "completed";
   createdAt: string;
 };
 

@@ -22,6 +22,13 @@
       "when": 1778746461089,
       "tag": "0002_easy_paibok",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778936945107,
+      "tag": "0003_sloppy_gamora",
+      "breakpoints": true
     }
   ]
 }

@@ -164,7 +164,7 @@ postRoutes.get("/:id", async (c) => {
     pendingRequest = req ?? null;
   }
 
-  const showLocation = isPoster || isApprovedPicker;
+  const showLocation = (isPoster || isApprovedPicker) && post.status === "closed";
 
   const safePost = showLocation
     ? { ...post, posterName }
@@ -188,4 +188,35 @@ postRoutes.post("/upload", async (c) => {
   const url = await uploadFile(buffer, filename, file.type, "food-photos");
 
   return c.json({ url });
+});
+
+// Poster marks food as received/completed
+postRoutes.put("/:id/complete", async (c) => {
+  const { userId } = c.get("user");
+  const postId = c.req.param("id");
+
+  const [post] = await db
+    .select()
+    .from(foodPosts)
+    .where(eq(foodPosts.id, postId))
+    .limit(1);
+
+  if (!post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  if (post.posterId !== userId) {
+    return c.json({ error: "Unauthorized" }, 403);
+  }
+
+  if (post.status !== "closed") {
+    return c.json({ error: "Post must be closed before completing" }, 400);
+  }
+
+  await db
+    .update(foodPosts)
+    .set({ status: "completed" })
+    .where(eq(foodPosts.id, postId));
+
+  return c.json({ message: "Post marked as completed" });
 });
