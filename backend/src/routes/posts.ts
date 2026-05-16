@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
-import { eq, or, and, lte, gte } from "drizzle-orm";
+import { eq, or, and, gte } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
 import { uploadFile } from "../lib/storage.js";
@@ -61,8 +61,6 @@ postRoutes.get("/", async (c) => {
   const userLat = parseFloat(c.req.query("lat") ?? "");
   const userLng = parseFloat(c.req.query("lng") ?? "");
 
-  console.log(`[FEED] lat:${userLat} lng:${userLng}`);
-
   if (isNaN(userLat) || isNaN(userLng)) {
     return c.json({ error: "lat and lng query parameters are required" }, 400);
   }
@@ -93,13 +91,9 @@ postRoutes.get("/", async (c) => {
           eq(foodPosts.status, "open"),
           eq(foodPosts.status, "pending_approval")
         ),
-        lte(foodPosts.pickupWindowStart, now),
         gte(foodPosts.pickupWindowEnd, now)
       )
     );
-
-  console.log(`[FEED] posts before filter: ${posts.length}`);
-
 
   // Filter by 10 km radius and strip exact location from response
   const nearbyPosts = posts
@@ -107,8 +101,6 @@ postRoutes.get("/", async (c) => {
       haversineDistance(userLat, userLng, post.pickupLat, post.pickupLng) <= 10
     )
     .map(({ pickupLat, pickupLng, ...rest }) => rest); // hide exact location
-
-  console.log(`[FEED] posts after filter: ${nearbyPosts.length}`);
   
   return c.json({ posts: nearbyPosts });
 });
