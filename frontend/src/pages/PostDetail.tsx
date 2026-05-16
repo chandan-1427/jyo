@@ -361,7 +361,7 @@ export default function PostDetail() {
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-              <span>🕐 Pickup window: {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
+              <span>Pickup window: {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
             </div>
           </div>
 

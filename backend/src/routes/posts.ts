@@ -61,6 +61,8 @@ postRoutes.get("/", async (c) => {
   const userLat = parseFloat(c.req.query("lat") ?? "");
   const userLng = parseFloat(c.req.query("lng") ?? "");
 
+  console.log(`[FEED] lat:${userLat} lng:${userLng}`);
+
   if (isNaN(userLat) || isNaN(userLng)) {
     return c.json({ error: "lat and lng query parameters are required" }, 400);
   }
@@ -96,6 +98,9 @@ postRoutes.get("/", async (c) => {
       )
     );
 
+  console.log(`[FEED] posts before filter: ${posts.length}`);
+
+
   // Filter by 10 km radius and strip exact location from response
   const nearbyPosts = posts
     .filter((post) =>
@@ -103,6 +108,8 @@ postRoutes.get("/", async (c) => {
     )
     .map(({ pickupLat, pickupLng, ...rest }) => rest); // hide exact location
 
+  console.log(`[FEED] posts after filter: ${nearbyPosts.length}`);
+  
   return c.json({ posts: nearbyPosts });
 });
 
