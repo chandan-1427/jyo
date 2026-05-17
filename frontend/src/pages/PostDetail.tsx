@@ -172,10 +172,10 @@ function PosterView({
         </div>
         <button
           onClick={onComplete}
-          className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-150"
+          className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg border border-[#2D6A4F]/30 bg-[#2D6A4F]/5 px-4 py-2.5 text-sm font-medium text-[#2D6A4F] hover:bg-[#2D6A4F]/10 transition-colors duration-150"
         >
-          <CheckCircle2 className="w-4 h-4 text-[#2D6A4F]" />
-          Food has been collected - Stop sharing location
+          <CheckCircle2 className="w-4 h-4" />
+          Food has been collected — Stop sharing location
         </button>
       </div>
     );
@@ -185,7 +185,7 @@ function PosterView({
     return (
       <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-4 py-3 flex items-start gap-2.5">
         <CheckCircle2 className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-px" />
-        <p className="text-sm text-neutral-600 leading-snug">
+        <p className="text-sm text-[#2D6A4F] leading-snug">
           Food successfully shared. Location is no longer visible.
         </p>
       </div>
