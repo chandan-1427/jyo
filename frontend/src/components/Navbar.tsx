@@ -118,10 +118,10 @@ export default function Navbar() {
     <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 font-geist font-medium tracking-wide">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
 
-        {/* Brand */}
+{/* Brand */}
         <Link
           to="/feed"
-          className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
+          className="font-geist font-semibold text-[1.3rem] sm:text-[1.1rem] text-neutral-900 tracking-tight"
         >
           Jyo<span className="text-[#2D6A4F]">.</span>
         </Link>
@@ -200,7 +200,7 @@ export default function Navbar() {
             }}
             className="cursor-pointer relative flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors duration-150"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-[#2D6A4F] text-white text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center leading-none">
                 {unreadCount}
@@ -216,7 +216,7 @@ export default function Navbar() {
               setMenuOpen((prev) => !prev);
             }}
           >
-            {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
