@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import pic1 from "../assets/pic1.webp";
+import { Mail } from "lucide-react";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -21,11 +22,16 @@ const STEPS = [
     title: "Approve and collect",
     desc: "You review the requests and approve one person. They come and collect the food from your location within the time window.",
   },
+  {
+    step: "04",
+    title: "Stop sharing location",
+    desc: "Once the food is collected or the time window completes, you can stop sharing the location. So your location is visible for a limited time, ensuring your privacy and safety.",
+  },
 ];
 
 const NOTES = {
   "Important to know": [
-    "Currently available only within and around Tirupati.",
+    "Currently available only within and around Tirupati. Example areas covered: Tirupati city, Tiruchanur, Renigunta, Alipiri, SV University, Karakambadi side, and Chandragiri.",
     "All pickups are self-collected - no delivery involved.",
     "No payments or money involved at any step.",
     "Exact pickup location is shared only after the poster approves a request.",
@@ -208,9 +214,20 @@ export default function Home() {
           <p className="text-sm text-neutral-500">
             Built to reduce food wastage through local community sharing.
           </p>
-          <p className="text-sm font-medium text-neutral-900">
-            Jyo <span className="text-neutral-500 mx-1">·</span> Tirupati
-          </p>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://mail.google.com/mail/?view=cm&to=chandandakka@gmail.com&su=Jyo Support"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-150"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              Contact Support
+            </a>
+            <p className="text-sm font-medium text-neutral-900">
+              Jyo <span className="text-neutral-500 mx-1">·</span> Tirupati
+            </p>
+          </div>
         </footer>
 
       </main>
