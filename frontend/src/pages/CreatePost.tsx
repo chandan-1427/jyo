@@ -190,7 +190,7 @@ export default function CreatePost() {
               <span className="text-sm text-neutral-400 group-hover:text-neutral-500 transition-colors">
                 Tap to add a food photo
               </span>
-              <input type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
+              <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
             </label>
           )}
         </Field>
