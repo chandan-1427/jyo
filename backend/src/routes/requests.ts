@@ -48,7 +48,7 @@ requestRoutes.post("/", async (c) => {
 
   // Picker must be within 10 km
   const distance = haversineDistance(lat, lng, post.pickupLat, post.pickupLng);
-  if (distance > 10) {
+  if (distance > 20) {
     return c.json({ error: "You are too far from this post to request it" }, 400);
   }
 

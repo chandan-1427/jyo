@@ -98,7 +98,7 @@ postRoutes.get("/", async (c) => {
   // Filter by 10 km radius and strip exact location from response
   const nearbyPosts = posts
     .filter((post) =>
-      haversineDistance(userLat, userLng, post.pickupLat, post.pickupLng) <= 10
+      haversineDistance(userLat, userLng, post.pickupLat, post.pickupLng) <= 20
     )
     .map(({ pickupLat, pickupLng, ...rest }) => rest); // hide exact location
   

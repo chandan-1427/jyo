@@ -87,7 +87,7 @@ export default function Feed() {
         <div>
           <div className="flex items-center gap-1.5 mb-1">
             <MapPin className="w-3.5 h-3.5 text-neutral-400" />
-            <p className="text-sm text-neutral-400">Within 10 km · Tirupati</p>
+            <p className="text-sm text-neutral-400">Within 20 km · from Tirupati bus stand</p>
           </div>
           <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
             Nearby Food

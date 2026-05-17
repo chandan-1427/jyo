@@ -15,7 +15,7 @@ const STEPS = [
   {
     step: "02",
     title: "Nearby users request",
-    desc: "Anyone within 10 km can request to pick up the food. They share their name, selfie, and estimated arrival time for your review.",
+    desc: "Anyone within 20 km from bus stand can request to pick up the food. They share their name, selfie, and estimated arrival time for your review.",
   },
   {
     step: "03",
