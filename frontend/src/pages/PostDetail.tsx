@@ -127,7 +127,7 @@ function PosterView({
             <p className="text-sm font-medium text-neutral-900">{pendingRequest.pickerName}</p>
             <p className="text-sm text-neutral-400 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
-              ETA: {pendingRequest.etaMinutes} min
+              Estimated Arrival Time for picker: {pendingRequest.etaMinutes} min
             </p>
           </div>
         </div>
