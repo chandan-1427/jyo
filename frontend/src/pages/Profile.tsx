@@ -135,12 +135,15 @@ export default function Profile() {
       <div className="max-w-lg flex flex-col gap-5">
 
         {/* Read-only info */}
-        <div className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-4 flex items-center justify-around">
+        <div className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-around gap-3 sm:gap-0">
           <div className="flex flex-col gap-0.5">
             <p className="text-xs text-neutral-400">Email</p>
             <p className="text-sm text-neutral-700">{profile?.email}</p>
           </div>
-          <div className="w-px h-8 bg-neutral-200 shrink-0" />
+
+          {/* Horizontal divider on mobile, vertical on sm+ */}
+          <div className="w-full h-px sm:w-px sm:h-8 bg-neutral-200 shrink-0" />
+
           <div className="flex flex-col gap-0.5">
             <p className="text-xs text-neutral-400">Member since</p>
             <p className="text-sm text-neutral-700">
