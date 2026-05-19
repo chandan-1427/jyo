@@ -105,7 +105,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
           {/* ETA */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-600">
-              ETA (minutes)
+              Estimated Time to Arrive (minutes)
             </label>
             <input
               type="number"
