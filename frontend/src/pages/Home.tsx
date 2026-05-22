@@ -216,7 +216,7 @@ export default function Home() {
           </p>
           <div className="flex items-center gap-4">
             <a
-              href="https://mail.google.com/mail/?view=cm&to=chandandakka@gmail.com&su=Jyo Support"
+              href="https://mail.google.com/mail/?view=cm&to=jyofoodsharing@gmail.com&su=Jyo Support"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-150"
