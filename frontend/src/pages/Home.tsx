@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import pic1 from "../assets/pic1.webp";
 import { Mail } from "lucide-react";
 
-// ── Data ──────────────────────────────────────────────────────────────────────
+import { LinkButton } from "../components/ui/LinkButton";
 
 const STEPS = [
   {
@@ -103,12 +103,7 @@ export default function Home() {
             >
               Log in
             </Link>
-            <Link
-              to="/register"
-              className="text-sm font-medium bg-neutral-900 hover:bg-neutral-700 text-white px-5 py-2 rounded-lg transition-colors duration-150"
-            >
-              Join Community
-            </Link>
+            <LinkButton as="link" to="/register" label="Join Community" />
           </div>
         </div>
       </header>
@@ -138,13 +133,8 @@ export default function Home() {
               We built Jyo to bridge these two worlds. No delivery, no payment. Just people sharing with people.
             </p>
 
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/register"
-                className="text-sm font-medium bg-neutral-900 hover:bg-neutral-700 text-white px-6 py-2.5 rounded-lg transition-colors duration-150"
-              >
-                Get started
-              </Link>
+            <div className="flex flex-wrap gap-3 items-center">
+              <LinkButton as="link" to="/register" label="Get Started" />
               <Link
                 to="/login"
                 className="text-sm font-medium border border-neutral-200 hover:border-neutral-400 text-neutral-700 px-6 py-2.5 rounded-lg transition-colors duration-150"

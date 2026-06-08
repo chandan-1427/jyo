@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 
+import { LinkButton } from "../components/ui/LinkButton";
+
 // ── Module level — never inside the component ─────────────────────────────────
 
 const inputClass = [
@@ -222,13 +224,14 @@ export default function Register() {
                   </div>
                 </Field>
 
-                <button
+                <LinkButton
+                  as="button"
                   type="submit"
+                  label="Create account"
+                  loading={loading}
+                  loadingLabel="Creating account…"
                   disabled={loading}
-                  className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {loading ? "Creating account…" : "Create account"}
-                </button>
+                />
 
               </form>
 

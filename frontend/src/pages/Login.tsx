@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../lib/api";
+import { LinkButton } from "../components/ui/LinkButton";
 
 // ── Module level ──────────────────────────────────────────────────────────────
 
@@ -195,13 +196,14 @@ export default function Login() {
               </div>
             </Field>
 
-            <button
+            <LinkButton
+              as="button"
               type="submit"
+              label="Log in"
+              loading={loading}
+              loadingLabel="Logging in…"
               disabled={loading}
-              className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {loading ? "Logging in…" : "Log in"}
-            </button>
+            />
 
           </form>
 
