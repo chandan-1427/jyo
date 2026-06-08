@@ -2,19 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
-
 import { LinkButton } from "../components/ui/LinkButton";
-
-// ── Module level — never inside the component ─────────────────────────────────
-
-const inputClass = [
-  "w-full rounded-lg border border-neutral-200 bg-neutral-50",
-  "px-3.5 py-2.5 text-sm text-neutral-900",
-  "placeholder:text-neutral-400",
-  "outline-none",
-  "transition-[border-color,background-color,box-shadow] duration-200 ease-in-out",
-  "focus:border-neutral-300 focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
-].join(" ");
+import { PasswordInput } from "../components/ui/PasswordInput";
+import { Input } from "../components/ui/Input";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -36,7 +26,6 @@ export default function Register() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
@@ -161,7 +150,7 @@ export default function Register() {
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
                 <Field label="Full name">
-                  <input
+                  <Input
                     name="name"
                     type="text"
                     value={form.name}
@@ -169,12 +158,11 @@ export default function Register() {
                     placeholder="Your full name"
                     autoComplete="name"
                     required
-                    className={inputClass}
                   />
                 </Field>
 
                 <Field label="Email">
-                  <input
+                  <Input
                     name="email"
                     type="email"
                     value={form.email}
@@ -182,12 +170,11 @@ export default function Register() {
                     placeholder="you@example.com"
                     autoComplete="email"
                     required
-                    className={inputClass}
                   />
                 </Field>
 
                 <Field label="Phone number">
-                  <input
+                  <Input
                     name="phone"
                     type="tel"
                     inputMode="numeric"
@@ -198,30 +185,18 @@ export default function Register() {
                     placeholder="10-digit mobile number"
                     autoComplete="tel"
                     required
-                    className={inputClass}
                   />
                 </Field>
 
                 <Field label="Password">
-                  <div className="relative">
-                    <input
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      value={form.password}
-                      onChange={handleChange}
-                      placeholder="Create a password"
-                      autoComplete="new-password"
-                      required
-                      className={`${inputClass} pr-16`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors select-none"
-                    >
-                      {showPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
+                  <PasswordInput
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Create a password"
+                    autoComplete="new-password"
+                    required
+                  />
                 </Field>
 
                 <LinkButton

@@ -4,17 +4,8 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-re
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../lib/api";
 import { LinkButton } from "../components/ui/LinkButton";
-
-// ── Module level ──────────────────────────────────────────────────────────────
-
-const inputClass = [
-  "w-full rounded-lg border border-neutral-200 bg-neutral-50",
-  "px-3.5 py-2.5 text-sm text-neutral-900",
-  "placeholder:text-neutral-400",
-  "outline-none",
-  "transition-[border-color,background-color,box-shadow] duration-200 ease-in-out",
-  "focus:border-neutral-300 focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
-].join(" ");
+import { PasswordInput } from "../components/ui/PasswordInput";
+import { Input } from "../components/ui/Input";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -33,7 +24,6 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
@@ -164,36 +154,25 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
             <Field label="Email">
-              <input
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 autoComplete="email"
                 required
-                className={inputClass}
               />
             </Field>
 
             <Field label="Password">
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  required
-                  className={`${inputClass} pr-16`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors select-none"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
+              <PasswordInput
+                name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="current-password"
+                required
+              />
             </Field>
 
             <LinkButton
