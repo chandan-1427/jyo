@@ -1,9 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Work+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-geist: "Geist", sans-serif;
-  --font-work: "Work Sans", sans-serif;
+  --font-geist: "Geist Variable", sans-serif;
 }
 
 @layer base {
