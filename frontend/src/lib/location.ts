@@ -16,14 +16,14 @@ export function getCurrentLocation(): Promise<Coords> {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => {
-        // In development — fall back to Tirupati coords silently
-        if (import.meta.env.DEV) {
+        // In local — fall back to Tirupati coords silently
+        if (import.meta.env.VITE_APP_ENV !== "production") {
           console.warn("[DEV] Location failed, using Tirupati fallback:", err.message);
           resolve(DEV_FALLBACK_COORDS);
           return;
         }
 
-        // In production — surface the real error to the user
+        // In production — surface the real error
         switch (err.code) {
           case err.PERMISSION_DENIED:
             reject(new Error("Location permission denied. Please allow location access to see nearby food."));
