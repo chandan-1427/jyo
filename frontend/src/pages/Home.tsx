@@ -5,6 +5,7 @@ import pic1 from "../assets/pic1.webp";
 import { Mail } from "lucide-react";
 
 import { LinkButton } from "../components/ui/LinkButton";
+import { Logo } from "../components/ui/Logo";
 
 const STEPS = [
   {
@@ -90,12 +91,7 @@ export default function Home() {
       {/* Navbar */}
       <header className="mt-[-40px] sticky top-0 z-50 bg-white border-b border-neutral-100">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link
-            to="/"
-            className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
-          >
-            Jyo<span className="text-[#2D6A4F]">.</span>
-          </Link>
+          <Logo />
           <div className="flex items-center gap-6">
             <Link
               to="/login"

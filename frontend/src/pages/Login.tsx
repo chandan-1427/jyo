@@ -6,6 +6,7 @@ import { apiFetch } from "../lib/api";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { Input } from "../components/ui/Input";
+import { Logo } from "../components/ui/Logo";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -91,12 +92,7 @@ export default function Login() {
               Back
             </button>
 
-            <Link
-              to="/"
-              className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
-            >
-              Jyo<span className="text-[#2D6A4F]">.</span>
-            </Link>
+            <Logo />
             <h1 className="mt-5 font-geist text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
               Welcome back
             </h1>

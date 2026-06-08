@@ -5,6 +5,7 @@ import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { Input } from "../components/ui/Input";
+import { Logo } from "../components/ui/Logo";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -66,12 +67,7 @@ export default function Register() {
               </button>
             )}
 
-            <Link
-              to="/"
-              className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
-            >
-              Jyo<span className="text-[#2D6A4F]">.</span>
-            </Link>
+            <Logo />
 
             {!registered && (
               <>
