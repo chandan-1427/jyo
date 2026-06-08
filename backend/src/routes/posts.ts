@@ -30,10 +30,9 @@ postRoutes.post("/", async (c) => {
     return c.json({ error: "Missing required fields" }, 400);
   }
 
-  // Comment this line if you want to allow posts outside Tirupati (for testing or future expansion)
-  if (!isWithinTirupati(pickupLat, pickupLng)) {
+  if (process.env.APP_ENV === "production" && !isWithinTirupati(pickupLat, pickupLng)) {
     return c.json(
-      { error: "Jyo is currently only available in Tirupati. Your location is outside the service area." },
+      { error: "Jyos is currently only available in Tirupati. Your location is outside the service area." },
       400
     );
   }

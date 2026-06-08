@@ -9,8 +9,6 @@ import crypto from "crypto";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
-  notifyPoster,
-  notifyPicker,
 } from "../lib/mailer.js";
 
 export const authRoutes = new Hono();
