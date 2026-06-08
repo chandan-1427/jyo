@@ -30,6 +30,4 @@ export function startExpiryJob() {
       console.error("[EXPIRY JOB] Failed to run expiry job:", err);
     }
   });
-
-  console.log("[EXPIRY JOB] Scheduled — runs every 5 minutes");
 }

@@ -16,7 +16,7 @@ const app = new Hono();
 const allowedOrigins = [
   "https://jyo.co.in",
   "https://www.jyo.co.in",
-  "http://localhost:5173", // keep for local dev
+  "http://localhost:5173",
 ];
 
 app.use(
@@ -32,7 +32,6 @@ app.use(
   })
 );
 
-// --- Routes ---
 app.get("/", (c) => c.json({ status: "ok" }));
 
 app.route("/auth", authRoutes);
@@ -41,17 +40,28 @@ app.route("/posts", postRoutes);
 app.route("/requests", requestRoutes);
 app.route("/notifications", notificationRoutes);
 
-// --- Start ---
 const port = Number(process.env.PORT) || 3000;
 
 startExpiryJob();
 
 serve(
-  {
-    fetch: app.fetch,
-    port,
-  },
+  { fetch: app.fetch, port },
   (info) => {
-    console.log(`Server is running on http://localhost:${info.port}`);
+    const env = process.env.APP_ENV ?? "development";
+    const isProd = env === "production";
+
+    console.log(`
+┌─────────────────────────────────────────────┐
+│           JYO Backend — Running             │
+├─────────────────────────────────────────────┤
+│ Port    : ${String(info.port).padEnd(34)}│
+│ Env     : ${env.padEnd(34)}│
+│ CORS    : ${(isProd ? "jyo.co.in only" : "localhost allowed").padEnd(34)}│
+├─────────────────────────────────────────────┤
+│ Routes  : /auth /users /posts               │
+│           /requests /notifications          │
+│ Jobs    : expiry ✓                          │
+└─────────────────────────────────────────────┘
+    `.trim());
   }
 );
