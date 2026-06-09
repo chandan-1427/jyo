@@ -305,7 +305,7 @@ export default function Home() {
           </div>
 
           {/* Bottom Row */}
-          <div className="mt-10 flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between">
+          <div className="border-t border-neutral-300 mt-10 flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between">
 
             {/* Left */}
             <div className="flex flex-wrap items-center gap-1 text-sm text-neutral-500">
