@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, HandPlatter, ChevronRight, X } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import { formatDate } from "../lib/format";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+import { StatusBadge } from "../components/ui/StatusBadge";
 
 type MyRequest = {
   id: string;
@@ -15,24 +14,6 @@ type MyRequest = {
   status: "pending" | "approved" | "rejected" | "cancelled";
   createdAt: string;
 };
-
-// ── Module level ──────────────────────────────────────────────────────────────
-
-const STATUS_STYLES: Record<MyRequest["status"], string> = {
-  pending:   "bg-amber-50 text-amber-600 border-amber-100",
-  approved:  "bg-emerald-50 text-emerald-600 border-emerald-100",
-  rejected:  "bg-red-50 text-red-400 border-red-100",
-  cancelled: "bg-neutral-100 text-neutral-400 border-neutral-200",
-};
-
-const STATUS_LABELS: Record<MyRequest["status"], string> = {
-  pending:   "Pending",
-  approved:  "Approved",
-  rejected:  "Rejected",
-  cancelled: "Cancelled",
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function MyRequests() {
   const navigate = useNavigate();
@@ -94,16 +75,12 @@ export default function MyRequests() {
   // ── Page ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1  font-medium tracking-wide">
+    <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">
 
       {/* Header */}
       <div className="mb-8">
-        <p className="text-sm text-neutral-400 mb-1">
-          Your activity
-        </p>
-        <h1 className=" font-semibold text-2xl text-neutral-900 tracking-tight">
-          My Requests
-        </h1>
+        <p className="text-sm text-neutral-400 mb-1">Your activity</p>
+        <h1 className="font-semibold text-2xl text-neutral-900 tracking-tight">My Requests</h1>
       </div>
 
       {/* Empty state */}
@@ -136,16 +113,12 @@ export default function MyRequests() {
                 <p className="text-sm font-medium text-neutral-900 truncate group-hover:text-neutral-600 transition-colors">
                   {req.postTitle}
                 </p>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  {formatDate(req.createdAt)}
-                </p>
+                <p className="text-xs text-neutral-400 mt-0.5">{formatDate(req.createdAt)}</p>
               </div>
 
               {/* Status + cancel */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-[11px] px-2.5 py-1 rounded-full font-medium border ${STATUS_STYLES[req.status]}`}>
-                  {STATUS_LABELS[req.status]}
-                </span>
+                <StatusBadge status={req.status} />
 
                 {req.status === "pending" && (
                   <button
@@ -162,8 +135,11 @@ export default function MyRequests() {
                 )}
               </div>
 
-              {/* Chevron — only when clickable */}
-              <ChevronRight className="w-4 h-4 text-neutral-200 group-hover:text-neutral-400 transition-colors shrink-0 cursor-pointer" onClick={() => navigate(`/posts/${req.postId}`)} />
+              {/* Chevron */}
+              <ChevronRight
+                className="w-4 h-4 text-neutral-200 group-hover:text-neutral-400 transition-colors shrink-0 cursor-pointer"
+                onClick={() => navigate(`/posts/${req.postId}`)}
+              />
             </div>
           ))}
         </div>
