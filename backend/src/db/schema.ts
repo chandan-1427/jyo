@@ -1,4 +1,3 @@
-// backend/src/db/schema.ts
 import {
   pgTable,
   pgEnum,
