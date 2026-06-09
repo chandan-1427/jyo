@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
-import { eq, or, and, gte } from "drizzle-orm";
+import { eq, or, and, gte, desc } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
 import { uploadFile } from "../lib/storage.js";
@@ -156,8 +156,13 @@ postRoutes.get("/:id", async (c) => {
     const [req] = await db
       .select()
       .from(pickupRequests)
-      .where(eq(pickupRequests.postId, postId))
-      .orderBy(pickupRequests.createdAt)
+      .where(
+        and(
+          eq(pickupRequests.postId, postId),
+          eq(pickupRequests.status, "pending")
+        )
+      )
+      .orderBy(desc(pickupRequests.createdAt))  // newest first
       .limit(1);
     pendingRequest = req ?? null;
   }
