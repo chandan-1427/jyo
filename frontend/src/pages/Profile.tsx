@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { apiFetch } from "../lib/api";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+import { Input } from "../components/ui/Input";
+import { Textarea } from "../components/ui/Textarea";
+import { LinkButton } from "../components/ui/LinkButton";
 
 type ProfileData = {
   id: string;
@@ -13,17 +14,6 @@ type ProfileData = {
   description: string | null;
   createdAt: string;
 };
-
-// ── Module level ──────────────────────────────────────────────────────────────
-
-const inputClass = [
-  "w-full rounded-lg border border-neutral-200 bg-neutral-50",
-  "px-3.5 py-2.5 text-sm text-neutral-900",
-  "placeholder:text-neutral-400",
-  "outline-none",
-  "transition-[border-color,background-color,box-shadow] duration-200 ease-in-out",
-  "focus:border-neutral-300 focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
-].join(" ");
 
 function Field({
   label,
@@ -49,8 +39,6 @@ function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
   const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
   if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function Profile() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -82,6 +70,18 @@ export default function Profile() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(false), 3000);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(""), 4000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setSuccess(false);
@@ -106,8 +106,6 @@ export default function Profile() {
     }
   };
 
-  // ── Loading ───────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
@@ -117,19 +115,13 @@ export default function Profile() {
     );
   }
 
-  // ── Page ──────────────────────────────────────────────────────────────────
-
   return (
     <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">
 
       {/* Header */}
       <div className="mb-8">
-        <p className="text-sm text-neutral-400 mb-1">
-          Account
-        </p>
-        <h1 className="font-semibold text-2xl text-neutral-900 tracking-tight">
-          My Profile
-        </h1>
+        <p className="text-sm text-neutral-400 mb-1">Account</p>
+        <h1 className="font-semibold text-2xl text-neutral-900 tracking-tight">My Profile</h1>
       </div>
 
       <div className="max-w-lg flex flex-col gap-5">
@@ -140,18 +132,13 @@ export default function Profile() {
             <p className="text-xs text-neutral-400">Email</p>
             <p className="text-sm text-neutral-700">{profile?.email}</p>
           </div>
-
-          {/* Horizontal divider on mobile, vertical on sm+ */}
           <div className="w-full h-px sm:w-px sm:h-8 bg-neutral-200 shrink-0" />
-
           <div className="flex flex-col gap-0.5">
             <p className="text-xs text-neutral-400">Member since</p>
             <p className="text-sm text-neutral-700">
               {profile
                 ? new Date(profile.createdAt).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
+                    day: "numeric", month: "long", year: "numeric",
                   })
                 : "—"}
             </p>
@@ -178,19 +165,18 @@ export default function Profile() {
         <form onSubmit={handleSubmit} className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-5 flex flex-col gap-4">
 
           <Field label="Name">
-            <input
+            <Input
               name="name"
               type="text"
               value={form.name}
               onChange={handleChange}
               autoComplete="name"
               required
-              className={inputClass}
             />
           </Field>
 
           <Field label="Phone">
-            <input
+            <Input
               name="phone"
               type="tel"
               inputMode="numeric"
@@ -200,42 +186,40 @@ export default function Profile() {
               onKeyDown={allowOnlyDigits}
               autoComplete="tel"
               required
-              className={inputClass}
             />
           </Field>
 
           <Field label="Area / Locality" hint="optional">
-            <input
+            <Input
               name="locationText"
               type="text"
               value={form.locationText}
               onChange={handleChange}
               placeholder="e.g. Balaji Nagar, Tirupati"
-              className={inputClass}
             />
           </Field>
 
           <Field label="About you" hint="optional">
-            <textarea
+            <Textarea
               name="description"
               value={form.description}
               onChange={handleChange}
               placeholder="A short note about yourself — students, families, anyone is welcome"
               rows={3}
-              className={`${inputClass} resize-none`}
             />
           </Field>
 
-          <button
+          <LinkButton
+            as="button"
             type="submit"
+            label={saving ? "Saving…" : "Save Changes"}
+            loading={saving}
+            loadingLabel="Saving…"
             disabled={saving}
-            className="mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {saving ? "Saving…" : "Save Changes"}
-          </button>
-        </form>
+            className="mt-1 w-full"
+          />
 
+        </form>
       </div>
     </div>
   );
