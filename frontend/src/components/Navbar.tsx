@@ -115,13 +115,13 @@ export default function Navbar() {
     );
 
   return (
-    <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 font-geist font-medium tracking-wide">
+    <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 font-medium tracking-wide">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
 
 {/* Brand */}
         <Link
           to="/feed"
-          className="font-geist font-semibold text-[1.3rem] sm:text-[1.1rem] text-neutral-900 tracking-tight"
+          className="font-semibold text-[1.3rem] sm:text-[1.1rem] text-neutral-900 tracking-tight"
         >
           Jyo<span className="text-[#2D6A4F]">.</span>
         </Link>

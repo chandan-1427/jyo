@@ -68,7 +68,7 @@ export default function MyRequests() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-geist font-medium tracking-wide">
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3  font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
         <p className="text-sm text-neutral-400">Loading your requests…</p>
       </div>
@@ -79,7 +79,7 @@ export default function MyRequests() {
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-geist font-medium tracking-wide">
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4  font-medium tracking-wide">
         <p className="text-sm text-neutral-500 text-center max-w-xs">{error}</p>
         <button
           onClick={() => window.location.reload()}
@@ -94,14 +94,14 @@ export default function MyRequests() {
   // ── Page ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1 font-geist font-medium tracking-wide">
+    <div className="max-w-5xl mx-auto px-6 py-1  font-medium tracking-wide">
 
       {/* Header */}
       <div className="mb-8">
         <p className="text-sm text-neutral-400 mb-1">
           Your activity
         </p>
-        <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
+        <h1 className=" font-semibold text-2xl text-neutral-900 tracking-tight">
           My Requests
         </h1>
       </div>

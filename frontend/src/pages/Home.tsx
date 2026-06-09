@@ -49,7 +49,7 @@ const NOTES = {
 
 function EyebrowLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-md text-neutral-400 font-geist tracking-wide mb-1">
+    <p className="text-md text-neutral-400  tracking-wide mb-1">
       {children}
     </p>
   );
@@ -86,7 +86,7 @@ export default function Home() {
   if (user) return <Navigate to="/feed" replace />;
 
   return (
-    <div className="min-h-screen bg-white font-geist text-neutral-900 font-medium tracking-wide">
+    <div className="min-h-screen bg-white  text-neutral-900 font-medium tracking-wide">
 
       {/* Navbar */}
       <header className="mt-[-40px] sticky top-0 z-50 bg-white border-b border-neutral-100">
@@ -111,7 +111,7 @@ export default function Home() {
           <div className="flex flex-col">
             <EyebrowLabel>Community food sharing · Tirupati</EyebrowLabel>
 
-            <h1 className="font-geist font-medium text-4xl lg:text-[2.75rem] leading-[1.15] text-neutral-900 mb-6 tracking-tight">
+            <h1 className=" font-medium text-4xl lg:text-[2.75rem] leading-[1.15] text-neutral-900 mb-6 tracking-tight">
               Good food shouldn't be thrown away while someone nearby needs a meal.
             </h1>
 
@@ -161,7 +161,7 @@ export default function Home() {
         <section className="px-6 pb-20">
           <div className="mb-10">
             <EyebrowLabel>How it works</EyebrowLabel>
-            <h2 className="font-geist font-medium text-2xl lg:text-3xl text-neutral-900 tracking-tight">
+            <h2 className=" font-medium text-2xl lg:text-3xl text-neutral-900 tracking-tight">
               Sharing is done in three simple steps
             </h2>
           </div>
@@ -173,7 +173,7 @@ export default function Home() {
                   <p className="text-[12px] font-semibold text-neutral-400 tracking- uppercase">
                     {step}
                   </p>
-                  <h3 className="font-geist font-semibold text-base text-neutral-900">
+                  <h3 className=" font-semibold text-base text-neutral-900">
                     {title}
                   </h3>
                 </div>
@@ -187,7 +187,7 @@ export default function Home() {
         <section className="px-6 grid md:grid-cols-2 gap-4 pb-20">
           {Object.entries(NOTES).map(([heading, items]) => (
             <Card key={heading}>
-              <h3 className="font-geist font-semibold text-base text-neutral-900 mb-5">
+              <h3 className=" font-semibold text-base text-neutral-900 mb-5">
                 {heading}
               </h3>
               <BulletList items={items} />

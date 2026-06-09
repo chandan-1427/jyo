@@ -145,14 +145,14 @@ export default function CreatePost() {
   const minEnd = form.pickupWindowStart || minStart;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1 font-geist font-medium tracking-wide">
+    <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">
 
       {/* Page header */}
       <div className="mb-8">
         <p className="text-sm text-neutral-400 mb-1">
           Share with your community
         </p>
-        <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
+        <h1 className="font-semibold text-2xl text-neutral-900 tracking-tight">
           Post Food
         </h1>
       </div>

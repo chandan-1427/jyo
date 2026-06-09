@@ -42,7 +42,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-geist font-medium flex flex-col">
+    <div className="min-h-screen bg-white  font-medium flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-[360px]">
 
@@ -61,7 +61,7 @@ export default function ForgotPassword() {
 
             {!message && (
               <>
-                <h1 className="mt-5 font-geist text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                <h1 className="mt-5  text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
                   Forgot your password?
                 </h1>
                 <p className="mt-1.5 text-sm text-neutral-500">
@@ -79,7 +79,7 @@ export default function ForgotPassword() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <h2 className="font-geist text-[1.3rem] font-semibold text-neutral-900 tracking-tight">
+                <h2 className=" text-[1.3rem] font-semibold text-neutral-900 tracking-tight">
                   Check your inbox
                 </h2>
                 <p className="text-sm text-neutral-500 leading-relaxed">{message}</p>

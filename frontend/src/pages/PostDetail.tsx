@@ -294,7 +294,7 @@ export default function PostDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-geist font-medium tracking-wide">
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
         <p className="text-sm text-neutral-400">Loading post…</p>
       </div>
@@ -305,7 +305,7 @@ export default function PostDetail() {
 
   if (error || !data) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-geist font-medium tracking-wide">
+      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
         <p className="text-sm text-neutral-500 text-center">{error || "Post not found."}</p>
         <button
           onClick={() => navigate("/feed")}
@@ -320,7 +320,7 @@ export default function PostDetail() {
   const { post, isPoster, isApprovedPicker, pendingRequest } = data;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1 font-geist font-medium tracking-wide">
+    <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">
 
       {/* Back */}
       <button
@@ -349,7 +349,7 @@ export default function PostDetail() {
         {/* Post info */}
         <div className="bg-white border border-neutral-300 rounded-xl px-5 py-5 flex flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
-            <h1 className="font-geist font-semibold text-xl text-neutral-900 tracking-tight leading-tight">
+            <h1 className="font-semibold text-xl text-neutral-900 tracking-tight leading-tight">
               {post.title}
             </h1>
             <StatusBadge status={post.status} />

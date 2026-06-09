@@ -31,7 +31,7 @@ export default function VerifyEmail() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white font-geist font-medium flex flex-col">
+    <div className="min-h-screen bg-white  font-medium flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-[360px]">
 
@@ -47,7 +47,7 @@ export default function VerifyEmail() {
                 <Loader2 className="w-7 h-7 text-neutral-400 animate-spin" />
               </div>
               <div className="flex flex-col gap-1">
-                <h1 className="font-geist text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                <h1 className=" text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
                   Verifying your email
                 </h1>
                 <p className="text-sm text-neutral-500">
@@ -65,7 +65,7 @@ export default function VerifyEmail() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <h1 className="font-geist text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                <h1 className=" text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
                   Email verified!
                 </h1>
                 <p className="text-sm text-neutral-500 leading-relaxed">
@@ -92,7 +92,7 @@ export default function VerifyEmail() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <h1 className="font-geist text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                <h1 className=" text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
                   Verification failed
                 </h1>
                 <p className="text-sm text-neutral-500 leading-relaxed">
