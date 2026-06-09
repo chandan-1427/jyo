@@ -158,7 +158,7 @@ export default function Home() {
           <div className="mb-10">
             <EyebrowLabel>How it works</EyebrowLabel>
             <h2 className=" font-medium text-2xl lg:text-3xl text-neutral-900 tracking-tight">
-              Sharing is done in three simple steps
+              Sharing is done in four simple steps
             </h2>
           </div>
 
