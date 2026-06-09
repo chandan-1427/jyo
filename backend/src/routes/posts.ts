@@ -250,20 +250,6 @@ postRoutes.delete("/:id", async (c) => {
     );
   }
 
-  // If pending — notify picker before deleting
-  if (post.status === "pending_approval") {
-    const [pendingRequest] = await db
-      .select()
-      .from(pickupRequests)
-      .where(
-        and(
-          eq(pickupRequests.postId, postId),
-          eq(pickupRequests.status, "pending")
-        )
-      )
-      .limit(1);
-  }
-
   // Delete all related pickup requests first — required by foreign key constraint
   await db
     .delete(pickupRequests)
