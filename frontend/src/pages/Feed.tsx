@@ -47,8 +47,6 @@ export default function Feed() {
     setRefreshing(false);
   };
 
-  // ── Loading ───────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-3 font-medium tracking-wide">
@@ -57,8 +55,6 @@ export default function Feed() {
       </div>
     );
   }
-
-  // ── Error ─────────────────────────────────────────────────────────────────
 
   if (error) {
     return (
@@ -76,8 +72,6 @@ export default function Feed() {
       </div>
     );
   }
-
-  // ── Feed ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8  font-medium tracking-wide">

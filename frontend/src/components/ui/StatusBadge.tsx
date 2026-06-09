@@ -1,5 +1,3 @@
-// components/ui/StatusBadge.tsx
-
 import { cn } from "../../lib/utils";
 
 const STYLES: Record<string, string> = {

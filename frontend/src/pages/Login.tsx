@@ -17,8 +17,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();

@@ -11,16 +11,12 @@ import { formatPickupWindow } from "../lib/format";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { LinkButton } from "../components/ui/LinkButton";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 type PostDetailData = {
   post: FoodPost & { pickupLat: number | null; pickupLng: number | null };
   isPoster: boolean;
   isApprovedPicker: boolean;
   pendingRequest: PickupRequest | null;
 };
-
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function MapsLink({ lat, lng }: { lat: number; lng: number }) {
   return (
@@ -241,8 +237,6 @@ function VisitorView({ status, onRequest }: { status: FoodPost["status"]; onRequ
   return null;
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -305,8 +299,6 @@ export default function PostDetail() {
     }
   };
 
-  // ── Loading ──────────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
@@ -315,8 +307,6 @@ export default function PostDetail() {
       </div>
     );
   }
-
-  // ── Error ────────────────────────────────────────────────────────────────────
 
   if (error || !data) {
     return (

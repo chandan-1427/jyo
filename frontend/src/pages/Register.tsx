@@ -21,8 +21,6 @@ function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
   if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function Register() {
   const navigate = useNavigate();
 
@@ -41,7 +39,7 @@ export default function Register() {
     setLoading(true);
     try {
       await apiFetch("/auth/register", { method: "POST", body: JSON.stringify(form) });
-      setRegistered(true); // ← show success state instead of navigating immediately
+      setRegistered(true);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
     } finally {
@@ -54,7 +52,6 @@ export default function Register() {
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-[360px]">
 
-          {/* Brand + back button */}
           <div className="relative mb-6">
             {!registered && (
               <button
@@ -81,7 +78,7 @@ export default function Register() {
             )}
           </div>
 
-          {/* ── Success state ── */}
+          {/* Success state */}
           {registered ? (
             <div className="flex flex-col items-center text-center gap-4 py-4">
               <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#2D6A4F]/10">
@@ -132,7 +129,7 @@ export default function Register() {
               </p>
             </div>
           ) : (
-            /* ── Registration form ── */
+            /* Registration form */
             <>
               {/* Error */}
               {error && (

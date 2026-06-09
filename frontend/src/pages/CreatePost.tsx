@@ -9,8 +9,6 @@ import { Textarea } from "../components/ui/Textarea";
 import { LinkButton } from "../components/ui/LinkButton";
 import { LocationStatus } from "../components/ui/LocationStatus";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 // Returns current datetime in "YYYY-MM-DDTHH:MM" format for min attribute
 function nowLocal(): string {
   const now = new Date();
@@ -42,8 +40,6 @@ function Field({
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function CreatePost() {
   const navigate = useNavigate();

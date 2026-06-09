@@ -1,5 +1,3 @@
-// components/ui/Input.tsx
-
 import { cn } from "../../lib/utils";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {

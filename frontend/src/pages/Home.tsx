@@ -45,8 +45,6 @@ const NOTES = {
   ],
 };
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
 function EyebrowLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-md text-neutral-400  tracking-wide mb-1">
@@ -75,8 +73,6 @@ function BulletList({ items }: { items: string[] }) {
     </ul>
   );
 }
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const { user, loading } = useAuth();

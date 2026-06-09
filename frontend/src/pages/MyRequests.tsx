@@ -45,8 +45,6 @@ export default function MyRequests() {
     }
   };
 
-  // ── Loading ───────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3  font-medium tracking-wide">
@@ -55,8 +53,6 @@ export default function MyRequests() {
       </div>
     );
   }
-
-  // ── Error ─────────────────────────────────────────────────────────────────
 
   if (error) {
     return (
@@ -71,8 +67,6 @@ export default function MyRequests() {
       </div>
     );
   }
-
-  // ── Page ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">

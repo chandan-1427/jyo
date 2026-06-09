@@ -1,5 +1,3 @@
-// components/ui/Field.tsx
-
 interface FieldProps {
   label: string;
   hint?: string;
