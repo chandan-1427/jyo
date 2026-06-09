@@ -288,30 +288,69 @@ export default function Home() {
           <LinkButton as="link" to="/register" label="Get Started" />
         </section>
 
-        {/* Footer */}
-        <footer className="px-6 border-t border-neutral-300 py-10 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-sm text-neutral-500">
-            Built to reduce food wastage through local community sharing.
-          </p>
-          <div className="flex items-center gap-4">
-            <a
-              href="https://mail.google.com/mail/?view=cm&to=jyofoodsharing@gmail.com&su=Jyo Support"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-md 
-                border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 
-                transition-colors bg-neutral-100 hover:opacity-80 active:opacity-90"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              Contact Support
-            </a>
-            <p className="text-sm font-medium text-neutral-900">
-              Jyo <span className="text-neutral-500 mx-1">·</span> Tirupati
-            </p>
-          </div>
-        </footer>
 
       </main>
+      
+      {/* Footer */}
+      <footer className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-12">
+        <div className="mx-auto max-w-7xl">
+
+          {/* Center Section */}
+          <div className="flex flex-col items-center text-center">
+            <Logo className="text-8xl" />
+
+            <p className="mt-3 text-md text-neutral-500">
+              Built to reduce food wastage through local community sharing.
+            </p>
+          </div>
+
+          {/* Bottom Row */}
+          <div className="mt-10 flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between">
+
+            {/* Left */}
+            <div className="flex flex-wrap items-center gap-1 text-sm text-neutral-500">
+              <span>&copy; 2026 Jyo by Chandan Dakka •</span>
+              <span>MIT License •</span>
+              <span>Tirupati, Andhra Pradesh</span>
+            </div>
+
+            {/* Right */}
+            <div className="flex flex-wrap items-center gap-1">
+              <a
+                href="https://mail.google.com/mail/?view=cm&to=jyofoodsharing@gmail.com&su=Jyo Support"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-neutral-500 transition-colors hover:text-neutral-800"
+              >
+                Mail
+              </a>
+
+              <span className="text-neutral-400">|</span>
+
+              <a
+                href="https://github.com/chandan-1427/jyo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-neutral-500 transition-colors hover:text-neutral-800"
+              >
+                GitHub
+              </a>
+
+              <span className="text-neutral-400">|</span>
+
+              <a
+                href="https://www.instagram.com/jyo_food_sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-neutral-500 transition-colors hover:text-neutral-800"
+              >
+                Instagram
+              </a>
+
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
