@@ -51,7 +51,7 @@ export default function CreatePost() {
   const [form, setForm] = useState({
     title: "",
     description: "",
-    pickupWindowStart: "",
+    pickupWindowStart: nowLocal(),
     pickupWindowEnd: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);

@@ -51,7 +51,7 @@ export default function Feed() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-3  font-medium tracking-wide">
+      <div className="max-w-4xl mx-auto px-4 py-24 flex flex-col items-center gap-3 font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
         <p className="text-sm text-neutral-400">Detecting your location…</p>
       </div>
