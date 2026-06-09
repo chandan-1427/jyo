@@ -85,7 +85,7 @@ export default function Home() {
     <div className="min-h-screen text-neutral-900 font-medium tracking-wide">
 
       {/* Navbar */}
-      <header className="mt-[-40px] sticky top-0 z-50 border-b border-neutral-100">
+      <header className="mt-[-40px] sticky bg-white top-0 z-50 border-b border-neutral-100">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-6">
