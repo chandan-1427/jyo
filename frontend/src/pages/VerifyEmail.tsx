@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { Link } from "react-router-dom";
 import { CheckCircle2, XCircle, Loader2, Mail } from "lucide-react";
+import { Logo } from "../components/ui/Logo";
+import { LinkButton } from "../components/ui/LinkButton";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
 
@@ -36,12 +37,7 @@ export default function VerifyEmail() {
 
           {/* Brand */}
           <div className="mb-8">
-            <Link
-              to="/"
-              className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
-            >
-              Jyo<span className="text-[#2D6A4F]">.</span>
-            </Link>
+            <Logo />
           </div>
 
           {/* Loading */}
@@ -84,12 +80,7 @@ export default function VerifyEmail() {
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/login")}
-                className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150"
-              >
-                Go to login
-              </button>
+              <LinkButton as="link" to="/login" label="Go to Login"/>
             </div>
           )}
 
@@ -116,12 +107,7 @@ export default function VerifyEmail() {
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/register")}
-                className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150"
-              >
-                Register again
-              </button>
+              <LinkButton as="link" to="/register" label="Register Again" className="w-full"/>
 
               <div className="w-full border-t border-neutral-100" />
 

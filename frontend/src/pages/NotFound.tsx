@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { Logo } from "../components/ui/Logo";
 
 export default function NotFound() {
   const { user, loading } = useAuth();
@@ -12,9 +13,7 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-white font-geist font-medium tracking-wide flex flex-col items-center justify-center gap-1">
       <div className="flex flex-col items-center gap-1">
-        <h1 className="font-geist font-semibold text-2xl text-neutral-900 tracking-tight">
-          Jyo<span className="text-[#2D6A4F]">.</span>
-        </h1>
+        <Logo />
 
         <p className="text-6xl font-geist font-semibold leading-none text-neutral-800 tracking-tight">
           404

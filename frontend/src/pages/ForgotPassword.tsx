@@ -2,15 +2,18 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
+import { Logo } from "../components/ui/Logo";
+import { Input } from "../components/ui/Input";
+import { LinkButton } from "../components/ui/LinkButton";
 
-const inputClass = [
-  "w-full rounded-lg border border-neutral-200 bg-neutral-50",
-  "px-3.5 py-2.5 text-sm text-neutral-900",
-  "placeholder:text-neutral-400",
-  "outline-none",
-  "transition-[border-color,background-color,box-shadow] duration-200 ease-in-out",
-  "focus:border-neutral-300 focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
-].join(" ");
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[13px] font-medium text-neutral-700">{label}</label>
+      {children}
+    </div>
+  );
+}
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -54,12 +57,7 @@ export default function ForgotPassword() {
               Back
             </button>
 
-            <Link
-              to="/"
-              className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
-            >
-              Jyo<span className="text-[#2D6A4F]">.</span>
-            </Link>
+            <Logo />
 
             {!message && (
               <>
@@ -84,9 +82,7 @@ export default function ForgotPassword() {
                 <h2 className="font-geist text-[1.3rem] font-semibold text-neutral-900 tracking-tight">
                   Check your inbox
                 </h2>
-                <p className="text-sm text-neutral-500 leading-relaxed">
-                  {message}
-                </p>
+                <p className="text-sm text-neutral-500 leading-relaxed">{message}</p>
               </div>
 
               <div className="w-full rounded-lg border border-neutral-100 bg-neutral-50 px-4 py-3 flex items-start gap-2.5">
@@ -96,33 +92,24 @@ export default function ForgotPassword() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setMessage("");
-                  setEmail("");
-                }}
-                className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150"
-              >
-                Try again
-              </button>
+              <LinkButton
+                as="button"
+                label="Try again"
+                onClick={() => { setMessage(""); setEmail(""); }}
+                className="mt-1 w-full"
+              />
 
               <div className="w-full border-t border-neutral-100" />
 
               <p className="text-[13px] text-neutral-500">
                 Remember your password?{" "}
-                <Link
-                  to="/login"
-                  className="font-medium text-neutral-900 hover:underline underline-offset-2"
-                >
+                <Link to="/login" className="font-medium text-neutral-900 hover:underline underline-offset-2">
                   Log in
                 </Link>
               </p>
             </div>
           ) : (
-            /* Form state */
             <>
-              {/* Error */}
               {error && (
                 <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
                   <span className="mt-px text-red-500 text-sm shrink-0">!</span>
@@ -131,36 +118,33 @@ export default function ForgotPassword() {
               )}
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-medium text-neutral-700">Email</label>
-                  <input
+                <Field label="Email">
+                  <Input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     autoComplete="email"
                     required
-                    className={inputClass}
                   />
-                </div>
+                </Field>
 
-                <button
+                <LinkButton
+                  as="button"
                   type="submit"
+                  label="Send reset link"
+                  loading={loading}
+                  loadingLabel="Sending…"
                   disabled={loading}
-                  className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {loading ? "Sending…" : "Send reset link"}
-                </button>
+                  className="mt-1 w-full"
+                />
               </form>
 
               <div className="my-3 border-t border-neutral-100" />
 
               <p className="text-[13px] text-neutral-500 text-center">
                 Remember your password?{" "}
-                <Link
-                  to="/login"
-                  className="font-medium text-neutral-900 hover:underline underline-offset-2"
-                >
+                <Link to="/login" className="font-medium text-neutral-900 hover:underline underline-offset-2">
                   Log in
                 </Link>
               </p>

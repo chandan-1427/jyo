@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
+import { Logo } from "../components/ui/Logo";
+import { PasswordInput } from "../components/ui/PasswordInput";
+import { LinkButton } from "../components/ui/LinkButton";
 
-const inputClass = [
-  "w-full rounded-lg border border-neutral-200 bg-neutral-50",
-  "px-3.5 py-2.5 text-sm text-neutral-900",
-  "placeholder:text-neutral-400",
-  "outline-none",
-  "transition-[border-color,background-color,box-shadow] duration-200 ease-in-out",
-  "focus:border-neutral-300 focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
-].join(" ");
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[13px] font-medium text-neutral-700">{label}</label>
+      {children}
+    </div>
+  );
+}
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -19,7 +21,6 @@ export default function ResetPassword() {
   const token = searchParams.get("token") ?? "";
 
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -60,12 +61,7 @@ export default function ResetPassword() {
               </button>
             )}
 
-            <Link
-              to="/"
-              className="font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight"
-            >
-              Jyo<span className="text-[#2D6A4F]">.</span>
-            </Link>
+            <Logo />
 
             {!success && !token && (
               <>
@@ -104,22 +100,18 @@ export default function ResetPassword() {
                 </p>
               </div>
 
-              <button
-                type="button"
+              <LinkButton
+                as="button"
+                label="Request new link"
                 onClick={() => navigate("/forgot-password")}
-                className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150"
-              >
-                Request new link
-              </button>
+                className="mt-1 w-full"
+              />
 
               <div className="w-full border-t border-neutral-100" />
 
               <p className="text-[13px] text-neutral-500">
                 Remember your password?{" "}
-                <Link
-                  to="/login"
-                  className="font-medium text-neutral-900 hover:underline underline-offset-2"
-                >
+                <Link to="/login" className="font-medium text-neutral-900 hover:underline underline-offset-2">
                   Log in
                 </Link>
               </p>
@@ -142,13 +134,12 @@ export default function ResetPassword() {
                 </p>
               </div>
 
-              <button
-                type="button"
+              <LinkButton
+                as="button"
+                label="Go to login"
                 onClick={() => navigate("/login")}
-                className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150"
-              >
-                Go to login
-              </button>
+                className="mt-1 w-full"
+              />
             </div>
           )}
 
@@ -163,45 +154,32 @@ export default function ResetPassword() {
               )}
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-medium text-neutral-700">New password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Create a new password"
-                      autoComplete="new-password"
-                      required
-                      className={`${inputClass} pr-16`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors select-none"
-                    >
-                      {showPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                </div>
+                <Field label="New password">
+                  <PasswordInput
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a new password"
+                    autoComplete="new-password"
+                    required
+                  />
+                </Field>
 
-                <button
+                <LinkButton
+                  as="button"
                   type="submit"
+                  label="Reset password"
+                  loading={loading}
+                  loadingLabel="Resetting…"
                   disabled={loading}
-                  className="cursor-pointer mt-1 w-full rounded-lg bg-neutral-900 hover:bg-neutral-700 text-white py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {loading ? "Resetting…" : "Reset password"}
-                </button>
+                  className="mt-1 w-full"
+                />
               </form>
 
               <div className="my-3 border-t border-neutral-100" />
 
               <p className="text-[13px] text-neutral-500 text-center">
                 Remember your password?{" "}
-                <Link
-                  to="/login"
-                  className="font-medium text-neutral-900 hover:underline underline-offset-2"
-                >
+                <Link to="/login" className="font-medium text-neutral-900 hover:underline underline-offset-2">
                   Log in
                 </Link>
               </p>
