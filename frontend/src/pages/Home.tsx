@@ -205,7 +205,9 @@ export default function Home() {
               href="https://mail.google.com/mail/?view=cm&to=jyofoodsharing@gmail.com&su=Jyo Support"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-150"
+              className="inline-flex items-center gap-2 rounded-md 
+                border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 
+                transition-colors bg-neutral-100 hover:opacity-80 active:opacity-90"
             >
               <Mail className="w-3.5 h-3.5" />
               Contact Support
