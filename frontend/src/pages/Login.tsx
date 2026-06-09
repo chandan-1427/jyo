@@ -77,7 +77,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-white  font-medium flex flex-col">
+    <div className="min-h-screen   font-medium flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-[360px]">
 
@@ -128,7 +128,7 @@ export default function Login() {
                 <button
                   onClick={handleResendVerification}
                   disabled={resendLoading}
-                  className="cursor-pointer ml-6 w-fit flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 hover:text-amber-900 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="cursor-pointer ml-6 w-fit flex items-center gap-1.5 rounded-md border border-amber-300  px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 hover:text-amber-900 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {resendLoading ? (
                     <>

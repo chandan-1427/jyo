@@ -85,7 +85,7 @@ export default function MyRequests() {
 
       {/* Empty state */}
       {requests.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl bg-white">
+        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl ">
           <HandPlatter className="w-7 h-7 text-neutral-200" />
           <div className="text-center">
             <p className="text-sm font-medium text-neutral-600">No requests yet</p>
@@ -103,7 +103,7 @@ export default function MyRequests() {
           {requests.map((req) => (
             <div
               key={req.id}
-              className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 flex items-center gap-4 group"
+              className=" border border-neutral-200 rounded-xl px-4 py-3.5 flex items-center gap-4 group"
             >
               {/* Info */}
               <div

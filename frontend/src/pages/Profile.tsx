@@ -127,7 +127,7 @@ export default function Profile() {
       <div className="max-w-lg flex flex-col gap-5">
 
         {/* Read-only info */}
-        <div className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-around gap-3 sm:gap-0">
+        <div className=" border border-neutral-200 rounded-[0.5rem] px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-around gap-3 sm:gap-0">
           <div className="flex flex-col gap-0.5">
             <p className="text-xs text-neutral-400">Email</p>
             <p className="text-sm text-neutral-700">{profile?.email}</p>
@@ -162,7 +162,7 @@ export default function Profile() {
         )}
 
         {/* Editable form */}
-        <form onSubmit={handleSubmit} className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-5 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className=" border border-neutral-200 rounded-[0.5rem] px-5 py-5 flex flex-col gap-4">
 
           <Field label="Name">
             <Input

@@ -11,7 +11,7 @@ export default function NotFound() {
   const label = user ? "Back to Feed" : "Back to Home";
   
   return (
-    <div className="min-h-screen bg-white  font-medium tracking-wide flex flex-col items-center justify-center gap-1">
+    <div className="min-h-screen   font-medium tracking-wide flex flex-col items-center justify-center gap-1">
       <div className="flex flex-col items-center gap-1">
         <Logo />
 

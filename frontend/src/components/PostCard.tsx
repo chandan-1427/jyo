@@ -12,7 +12,7 @@ export default function PostCard({ post }: Props) {
   return (
     <Link
       to={`/posts/${post.id}`}
-      className="bg-white border border-neutral-200 rounded-xl overflow-hidden hover:border-neutral-300 hover:bg-neutral-50 transition-colors duration-150 block group"
+      className=" border border-neutral-200 rounded-xl overflow-hidden hover:border-neutral-300 hover:bg-neutral-50 transition-colors duration-150 block group"
     >
       {/* Photo */}
       {post.photoUrl ? (

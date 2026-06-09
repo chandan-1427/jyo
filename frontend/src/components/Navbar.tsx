@@ -103,7 +103,7 @@ export default function Navbar() {
           <div
             key={n.id}
             className={`px-4 py-3 text-sm transition-colors ${
-              n.read ? "text-neutral-400 bg-white" : "text-neutral-700 bg-[#2D6A4F]/5"
+              n.read ? "text-neutral-400 " : "text-neutral-700 bg-[#2D6A4F]/5"
             }`}
           >
             <p className="leading-snug">{n.message}</p>
@@ -116,7 +116,7 @@ export default function Navbar() {
     );
 
   return (
-    <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 font-medium tracking-wide">
+    <nav className=" border-b border-neutral-100 sticky top-0 z-50 font-medium tracking-wide">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
 
         <Logo to="/feed"/>
@@ -160,7 +160,7 @@ export default function Navbar() {
             </button>
 
             {showNotifs && (
-              <div className="absolute right-0 top-10 w-80 bg-white rounded-xl border border-neutral-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)] z-50 overflow-hidden">
+              <div className="absolute right-0 top-10 w-80  rounded-xl border border-neutral-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)] z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-neutral-100">
                   <p className="text-[13px] font-semibold text-neutral-700">Notifications</p>
                 </div>
@@ -218,7 +218,7 @@ export default function Navbar() {
 
       {/* Mobile notifications panel */}
       {showMobileNotifs && (
-        <div className="sm:hidden bg-white border-t border-neutral-100">
+        <div className="sm:hidden  border-t border-neutral-100">
           <div className="px-4 py-3 border-b border-neutral-100">
             <p className="text-[13px] font-semibold text-neutral-700">Notifications</p>
           </div>
@@ -230,7 +230,7 @@ export default function Navbar() {
 
       {/* Mobile nav menu */}
       {menuOpen && (
-        <div className="sm:hidden bg-white border-t border-neutral-100 px-4 py-4 flex flex-col gap-4">
+        <div className="sm:hidden  border-t border-neutral-100 px-4 py-4 flex flex-col gap-4">
           {navLinks.map((link) => (
             <Link
               key={link.path}

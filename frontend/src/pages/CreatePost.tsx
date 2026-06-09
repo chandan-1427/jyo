@@ -166,13 +166,13 @@ return (
             <button
               type="button"
               onClick={clearPhoto}
-              className="cursor-pointer absolute top-2.5 right-2.5 bg-white border border-neutral-200 rounded-full p-1 text-neutral-500 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm"
+              className="cursor-pointer absolute top-2.5 right-2.5  border border-neutral-200 rounded-full p-1 text-neutral-500 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         ) : (
-          <label className="flex flex-col items-center justify-center h-52 rounded-xl border border-dashed border-neutral-200 bg-neutral-50 cursor-pointer hover:bg-white hover:border-neutral-300 transition-colors duration-150 group">
+          <label className="flex flex-col items-center justify-center h-52 rounded-xl border border-dashed border-neutral-200 bg-neutral-50 cursor-pointer hover: hover:border-neutral-300 transition-colors duration-150 group">
             <Camera className="w-6 h-6 text-neutral-300 group-hover:text-neutral-400 transition-colors mb-2" />
             <span className="text-sm text-neutral-400 group-hover:text-neutral-500 transition-colors">
               Tap to add a food photo

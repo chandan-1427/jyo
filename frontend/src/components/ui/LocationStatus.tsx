@@ -12,7 +12,7 @@ export function LocationStatus({ loading, coords }: LocationStatusProps) {
       className={cn(
         "flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-sm border",
         loading && "bg-neutral-50 border-neutral-100 text-neutral-400",
-        !loading && coords && "bg-white border-neutral-100 text-neutral-600",
+        !loading && coords && " border-neutral-100 text-neutral-600",
         !loading && !coords && "bg-red-50 border-red-100 text-red-500"
       )}
     >

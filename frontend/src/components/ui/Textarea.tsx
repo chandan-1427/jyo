@@ -13,7 +13,7 @@ export function Textarea({ className, ...props }: TextareaProps) {
         "placeholder:text-neutral-400",
         "outline-none resize-none",
         "transition-[border-color,background-color,box-shadow] duration-200 ease-in-out",
-        "focus:border-neutral-300 focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
+        "focus:border-neutral-300 focus: focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
         className
       )}
       {...props}

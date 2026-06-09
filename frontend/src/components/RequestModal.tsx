@@ -73,7 +73,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   return (
     // Backdrop
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-lg">
+      <div className=" rounded-2xl w-full max-w-sm p-6 shadow-lg">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
@@ -135,7 +135,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
                 <button
                   type="button"
                   onClick={() => { setSelfieFile(null); setSelfiePreview(""); }}
-                  className="cursor-pointer absolute top-2 right-2 bg-white border border-neutral-200 text-neutral-500 rounded-full px-2 py-0.5 text-xs shadow-sm hover:text-red-500 hover:border-red-200 transition-colors"
+                  className="cursor-pointer absolute top-2 right-2  border border-neutral-200 text-neutral-500 rounded-full px-2 py-0.5 text-xs shadow-sm hover:text-red-500 hover:border-red-200 transition-colors"
                 >
                   Remove
                 </button>

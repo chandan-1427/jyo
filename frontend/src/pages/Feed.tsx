@@ -106,7 +106,7 @@ export default function Feed() {
 
       {/* Empty state */}
       {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl bg-white">
+        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl ">
           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-neutral-100">
             <UtensilsCrossed className="w-5 h-5 text-neutral-400" />
           </div>
