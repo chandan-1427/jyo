@@ -8,6 +8,8 @@ import { apiFetch } from "../lib/api";
 import type { FoodPost, PickupRequest } from "../types/api";
 import RequestModal from "../components/RequestModal";
 import { formatPickupWindow } from "../lib/format";
+import { StatusBadge } from "../components/ui/StatusBadge";
+import { LinkButton } from "../components/ui/LinkButton";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,33 +20,7 @@ type PostDetailData = {
   pendingRequest: PickupRequest | null;
 };
 
-// ── Module-level helpers ──────────────────────────────────────────────────────
-
-const STATUS_STYLES: Record<FoodPost["status"], string> = {
-  open:             "bg-emerald-50 text-emerald-600 border-emerald-100",
-  pending_approval: "bg-amber-50 text-amber-600 border-amber-100",
-  closed:           "bg-neutral-100 text-neutral-500 border-neutral-200",
-  expired:          "bg-red-50 text-red-400 border-red-100",
-  completed:        "bg-blue-50 text-blue-600 border-blue-100",
-};
-
-const STATUS_LABELS: Record<FoodPost["status"], string> = {
-  open:             "Open",
-  pending_approval: "Pending",
-  closed:           "Closed",
-  expired:          "Expired",
-  completed:        "Completed",
-};
-
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: FoodPost["status"] }) {
-  return (
-    <span className={`text-[11px] px-2.5 py-1 rounded-full font-medium border shrink-0 ${STATUS_STYLES[status]}`}>
-      {STATUS_LABELS[status]}
-    </span>
-  );
-}
 
 function MapsLink({ lat, lng }: { lat: number; lng: number }) {
   return (
@@ -127,7 +103,7 @@ function PosterView({
             <p className="text-sm font-medium text-neutral-900">{pendingRequest.pickerName}</p>
             <p className="text-sm text-neutral-400 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
-              Estimated Arrival Time for picker: {pendingRequest.etaMinutes} min
+              Estimated arrival: {pendingRequest.etaMinutes} min
             </p>
           </div>
         </div>
@@ -140,18 +116,19 @@ function PosterView({
         )}
 
         <div className="flex gap-3">
-          <button
-            onClick={() => onApprove(pendingRequest.id)}
+          <LinkButton
+            as="button"
+            label="Approve"
+            loading={actionLoading}
+            loadingLabel="Approving…"
             disabled={actionLoading}
-            className="flex-1 bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            Approve
-          </button>
+            onClick={() => onApprove(pendingRequest.id)}
+            className="flex-1"
+          />
           <button
             onClick={() => onReject(pendingRequest.id)}
             disabled={actionLoading}
-            className="flex-1 border border-neutral-200 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 cursor-pointer border border-neutral-200 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             Reject
@@ -164,12 +141,9 @@ function PosterView({
   if (post.status === "closed") {
     return (
       <div className="flex flex-col gap-3">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-2.5">
-          <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-px" />
-          <p className="text-sm text-amber-800 leading-snug">
-            Pickup approved. Waiting for the picker to arrive.
-          </p>
-        </div>
+        <InfoBanner variant="warning" icon={Clock}>
+          Pickup approved. Waiting for the picker to arrive.
+        </InfoBanner>
         <button
           onClick={onComplete}
           className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg border border-[#2D6A4F]/30 bg-[#2D6A4F]/5 px-4 py-2.5 text-sm font-medium text-[#2D6A4F] hover:bg-[#2D6A4F]/10 transition-colors duration-150"
@@ -183,17 +157,18 @@ function PosterView({
 
   if (post.status === "completed") {
     return (
-      <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-4 py-3 flex items-start gap-2.5">
-        <CheckCircle2 className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-px" />
-        <p className="text-sm text-[#2D6A4F] leading-snug">
-          Food successfully shared. Location is no longer visible.
-        </p>
-      </div>
+      <InfoBanner variant="success" icon={CheckCircle2}>
+        Food successfully shared. Location is no longer visible.
+      </InfoBanner>
     );
   }
 
   if (post.status === "expired") {
-    return <InfoBanner variant="danger" icon={TimerOff}>This post has expired. Create a new post if the food is still available.</InfoBanner>;
+    return (
+      <InfoBanner variant="danger" icon={TimerOff}>
+        This post has expired. Create a new post if the food is still available.
+      </InfoBanner>
+    );
   }
 
   return null;
@@ -202,17 +177,21 @@ function PosterView({
 function VisitorView({ status, onRequest }: { status: FoodPost["status"]; onRequest: () => void }) {
   if (status === "open") {
     return (
-      <button
+      <LinkButton
+        as="button"
+        label="I'll pick it up"
         onClick={onRequest}
-        className="w-full bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
-      >
-        I'll pick it up
-      </button>
+        className="w-full"
+      />
     );
   }
 
   if (status === "pending_approval") {
-    return <InfoBanner variant="warning" icon={Clock}>Someone has already requested this food. Check back if it becomes available again.</InfoBanner>;
+    return (
+      <InfoBanner variant="warning" icon={Clock}>
+        Someone has already requested this food. Check back if it becomes available again.
+      </InfoBanner>
+    );
   }
 
   if (status === "closed") {
@@ -281,7 +260,7 @@ export default function PostDetail() {
   const handleComplete = async () => {
     setActionLoading(true);
     try {
-      await apiFetch(`/posts/${post.id}/complete`, { method: "PUT" });
+      await apiFetch(`/posts/${data?.post.id}/complete`, { method: "PUT" });
       await fetchPost();
     } catch (err: unknown) {
       if (err instanceof Error) setActionError(err.message);
@@ -290,7 +269,7 @@ export default function PostDetail() {
     }
   };
 
-  // ── Loading ─────────────────────────────────────────────────────────────────
+  // ── Loading ──────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -301,18 +280,18 @@ export default function PostDetail() {
     );
   }
 
-  // ── Error ───────────────────────────────────────────────────────────────────
+  // ── Error ────────────────────────────────────────────────────────────────────
 
   if (error || !data) {
     return (
       <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
         <p className="text-sm text-neutral-500 text-center">{error || "Post not found."}</p>
-        <button
+        <LinkButton
+          as="button"
+          label="Back to Feed"
           onClick={() => navigate("/feed")}
-          className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
-        >
-          Back to Feed
-        </button>
+          className="text-sm underline underline-offset-2 bg-transparent hover:bg-transparent text-neutral-900 hover:text-neutral-600 px-0 py-0 shadow-none"
+        />
       </div>
     );
   }
@@ -335,11 +314,7 @@ export default function PostDetail() {
 
         {/* Photo */}
         {post.photoUrl ? (
-          <img
-            src={post.photoUrl}
-            alt={post.title}
-            className="w-full h-60 object-cover rounded-xl"
-          />
+          <img src={post.photoUrl} alt={post.title} className="w-full h-60 object-cover rounded-xl" />
         ) : (
           <div className="w-full h-60 bg-neutral-100 rounded-xl flex items-center justify-center">
             <UtensilsCrossed className="w-10 h-10 text-neutral-300" />
@@ -372,7 +347,6 @@ export default function PostDetail() {
             </div>
           </div>
 
-          {/* Maps link — poster and approved picker only */}
           {(isPoster || isApprovedPicker) && post.pickupLat && post.pickupLng && (
             <MapsLink lat={post.pickupLat} lng={post.pickupLng} />
           )}
@@ -380,8 +354,6 @@ export default function PostDetail() {
 
         {/* Action section */}
         <div className="flex flex-col gap-4">
-
-          {/* Approved picker banner */}
           {isApprovedPicker && (
             <InfoBanner variant="success" icon={CheckCircle2}>
               Your request was approved. Head to the location above to collect the food.

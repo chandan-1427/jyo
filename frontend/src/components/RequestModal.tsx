@@ -3,6 +3,10 @@ import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../lib/api";
 import { uploadImage } from "../lib/supabase";
 import { getCurrentLocation } from "../lib/location";
+import { AlertCircle, Camera } from "lucide-react";
+import { Field } from "./ui/Field";
+import { Input } from "./ui/Input";
+import { LinkButton } from "./ui/LinkButton";
 
 type Props = {
   postId: string;
@@ -73,41 +77,38 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-bold text-gray-800 text-lg">Request Pickup</h2>
+          <h2 className="font-semibold text-neutral-900 text-lg tracking-tight">Request Pickup</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition text-xl leading-none"
+            className="cursor-pointer text-neutral-400 hover:text-neutral-700 transition-colors text-xl leading-none"
           >
             ✕
           </button>
         </div>
 
         {error && (
-          <p className="text-sm text-red-500 bg-red-50 px-4 py-2 rounded-lg mb-4">
-            {error}
-          </p>
+          <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
+            <AlertCircle className="w-4 h-4 text-red-500 mt-px shrink-0" />
+            <p className="text-sm text-red-600 leading-snug">{error}</p>
+          </div>
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
           {/* Name */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Your Name</label>
-            <input
+          <Field label="Your Name">
+            <Input
               type="text"
               value={pickerName}
               onChange={(e) => setPickerName(e.target.value)}
+              placeholder="Your full name"
               required
-              className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-orange-400 transition"
             />
-          </div>
+          </Field>
 
           {/* ETA */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">
-              Estimated Time to Arrive (minutes)
-            </label>
-            <input
+          <Field label="Estimated Time to Arrive (minutes)">
+            <Input
               type="number"
               min="1"
               max="60"
@@ -115,16 +116,12 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
               onChange={(e) => setEtaMinutes(e.target.value)}
               placeholder="e.g. 15"
               required
-              className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-orange-400 transition"
             />
-          </div>
+          </Field>
 
           {/* Selfie */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">
-              Selfie Photo
-            </label>
-            <p className="text-xs text-gray-400">
+          <Field label="Selfie Photo">
+            <p className="text-xs text-neutral-400 -mt-1">
               So the poster can identify you at pickup
             </p>
 
@@ -138,15 +135,15 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
                 <button
                   type="button"
                   onClick={() => { setSelfieFile(null); setSelfiePreview(""); }}
-                  className="absolute top-2 right-2 bg-white text-gray-500 rounded-full px-2 py-0.5 text-xs shadow hover:text-red-400 transition"
+                  className="cursor-pointer absolute top-2 right-2 bg-white border border-neutral-200 text-neutral-500 rounded-full px-2 py-0.5 text-xs shadow-sm hover:text-red-500 hover:border-red-200 transition-colors"
                 >
                   Remove
                 </button>
               </div>
             ) : (
-              <label className="mt-1 border-2 border-dashed border-gray-200 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-orange-300 transition">
-                <span className="text-2xl">📷</span>
-                <span className="text-xs text-gray-400 mt-1">
+              <label className="mt-1 border border-dashed border-neutral-200 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-neutral-300 hover:bg-neutral-50 transition-colors group">
+                <Camera className="w-5 h-5 text-neutral-300 group-hover:text-neutral-400 transition-colors mb-1.5" />
+                <span className="text-xs text-neutral-400 group-hover:text-neutral-500 transition-colors">
                   Tap to upload selfie
                 </span>
                 <input
@@ -158,15 +155,18 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
                 />
               </label>
             )}
-          </div>
+          </Field>
 
-          <button
+          <LinkButton
+            as="button"
             type="submit"
+            label="Request Pickup"
+            loading={loading}
+            loadingLabel="Submitting…"
             disabled={loading}
-            className="bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-          >
-            {loading ? "Submitting..." : "Request Pickup"}
-          </button>
+            className="mt-2 w-full"
+          />
+
         </form>
       </div>
     </div>
