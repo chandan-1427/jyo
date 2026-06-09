@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { UtensilsCrossed, Clock } from "lucide-react";
 import type { FoodPost } from "../types/api";
 import { formatPickupWindow } from "../lib/format";
+import { StatusBadge } from "./ui/StatusBadge";
 
 type Props = {
   post: FoodPost;
@@ -10,7 +12,7 @@ export default function PostCard({ post }: Props) {
   return (
     <Link
       to={`/posts/${post.id}`}
-      className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition block"
+      className="bg-white border border-neutral-200 rounded-xl overflow-hidden hover:border-neutral-300 hover:bg-neutral-50 transition-colors duration-150 block group"
     >
       {/* Photo */}
       {post.photoUrl ? (
@@ -20,32 +22,35 @@ export default function PostCard({ post }: Props) {
           className="w-full h-40 object-cover"
         />
       ) : (
-        <div className="w-full h-40 bg-orange-50 flex items-center justify-center text-4xl">
-          🍱
+        <div className="w-full h-40 bg-neutral-50 flex items-center justify-center">
+          <UtensilsCrossed className="w-8 h-8 text-neutral-200" />
         </div>
       )}
 
       {/* Content */}
-      <div className="p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800 text-base">{post.title}</h2>
-          {post.status === "pending_approval" && (
-            <span className="text-xs bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full">
-              Pending
-            </span>
-          )}
+      <div className="p-4 flex flex-col gap-2.5">
+
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="font-semibold text-neutral-900 text-sm leading-snug tracking-tight">
+            {post.title}
+          </h2>
+          <StatusBadge status={post.status} />
         </div>
 
         {post.description && (
-          <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+          <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
             {post.description}
           </p>
         )}
 
-        <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+        <div className="flex items-center justify-between text-xs text-neutral-400 pt-0.5">
           <span>by {post.posterName}</span>
-          <span>🕐 {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3 shrink-0" />
+            {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}
+          </span>
         </div>
+
       </div>
     </Link>
   );
