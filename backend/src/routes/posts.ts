@@ -223,3 +223,56 @@ postRoutes.put("/:id/complete", async (c) => {
 
   return c.json({ message: "Post marked as completed" });
 });
+
+// --- Delete post ---
+postRoutes.delete("/:id", async (c) => {
+  const { userId } = c.get("user");
+  const postId = c.req.param("id");
+
+  const [post] = await db
+    .select()
+    .from(foodPosts)
+    .where(eq(foodPosts.id, postId))
+    .limit(1);
+
+  if (!post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  if (post.posterId !== userId) {
+    return c.json({ error: "Unauthorized" }, 403);
+  }
+
+  if (post.status === "closed" || post.status === "completed") {
+    return c.json(
+      { error: "Cannot delete a post that has already been approved. The picker is on their way." },
+      400
+    );
+  }
+
+  // If pending — notify picker before deleting
+  if (post.status === "pending_approval") {
+    const [pendingRequest] = await db
+      .select()
+      .from(pickupRequests)
+      .where(
+        and(
+          eq(pickupRequests.postId, postId),
+          eq(pickupRequests.status, "pending")
+        )
+      )
+      .limit(1);
+  }
+
+  // Delete all related pickup requests first — required by foreign key constraint
+  await db
+    .delete(pickupRequests)
+    .where(eq(pickupRequests.postId, postId));
+
+  // Now safe to delete the post
+  await db
+    .delete(foodPosts)
+    .where(eq(foodPosts.id, postId));
+
+  return c.json({ message: "Post deleted successfully" });
+});
