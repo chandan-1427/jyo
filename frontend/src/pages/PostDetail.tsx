@@ -28,7 +28,7 @@ function MapsLink({ lat, lng }: { lat: number; lng: number }) {
       href={`https://www.google.com/maps?q=${lat},${lng}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 border border-neutral-200 text-neutral-700 hover:border-neutral-400 hover:text-neutral-900 bg-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
+      className="w-fit inline-flex items-center gap-2 border border-neutral-300 text-neutral-700 hover:border-neutral-400 hover:text-neutral-900 bg-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
     >
       <MapPin className="w-4 h-4" />
       Open in Google Maps
