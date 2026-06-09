@@ -111,7 +111,7 @@ postRoutes.get("/mine", async (c) => {
     .select()
     .from(foodPosts)
     .where(eq(foodPosts.posterId, userId))
-    .orderBy(foodPosts.createdAt);
+    .orderBy(desc(foodPosts.createdAt));
 
   return c.json({ posts });
 });
