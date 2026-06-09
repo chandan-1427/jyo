@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
@@ -280,7 +280,7 @@ requestRoutes.get("/mine", async (c) => {
     .from(pickupRequests)
     .innerJoin(foodPosts, eq(pickupRequests.postId, foodPosts.id))
     .where(eq(pickupRequests.pickerId, userId))
-    .orderBy(pickupRequests.createdAt);
+    .orderBy(desc(pickupRequests.createdAt));
 
   return c.json({ requests });
 });
