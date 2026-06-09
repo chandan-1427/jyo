@@ -36,7 +36,7 @@ export default function Feed() {
 
   useEffect(() => {
     if (!coords) return;
-    const interval = setInterval(() => fetchPosts(coords), 60_000);
+    const interval = setInterval(() => fetchPosts(coords), 15_000);
     return () => clearInterval(interval);
   }, [coords, fetchPosts]);
 

@@ -8,6 +8,15 @@ const DEV_FALLBACK_COORDS: Coords = { lat: 13.6288, lng: 79.4192 };
 
 export function getCurrentLocation(): Promise<Coords> {
   return new Promise((resolve, reject) => {
+
+    // In local env — always use Tirupati fallback, skip GPS entirely
+    if (import.meta.env.VITE_APP_ENV !== "production") {
+      console.warn("[DEV] Using Tirupati fallback coordinates");
+      resolve(DEV_FALLBACK_COORDS);
+      return;
+    }
+
+    // Production — use real GPS
     if (!navigator.geolocation) {
       reject(new Error("Geolocation is not supported by your browser"));
       return;
@@ -16,14 +25,6 @@ export function getCurrentLocation(): Promise<Coords> {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => {
-        // In local — fall back to Tirupati coords silently
-        if (import.meta.env.VITE_APP_ENV !== "production") {
-          console.warn("[DEV] Location failed, using Tirupati fallback:", err.message);
-          resolve(DEV_FALLBACK_COORDS);
-          return;
-        }
-
-        // In production — surface the real error
         switch (err.code) {
           case err.PERMISSION_DENIED:
             reject(new Error("Location permission denied. Please allow location access to see nearby food."));
