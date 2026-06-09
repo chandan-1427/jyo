@@ -110,7 +110,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
           <Field label="Estimated Time to Arrive (minutes)">
             <Input
               type="number"
-              min="1"
+              min="5"
               max="60"
               value={etaMinutes}
               onChange={(e) => setEtaMinutes(e.target.value)}
