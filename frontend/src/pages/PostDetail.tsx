@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, MapPin, Clock, Loader2, AlertCircle,
+  ArrowLeft, MapPin, Clock, Loader2, AlertCircle, X,
   CheckCircle2, UtensilsCrossed, ExternalLink, TimerOff, Ban,
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
@@ -80,6 +80,8 @@ function PosterView({
   }
 
   if (post.status === "pending_approval" && pendingRequest) {
+    const [lightbox, setLightbox] = useState(false);
+
     return (
       <div className="flex flex-col gap-4">
         <p className="text-[13px] font-medium text-neutral-700">
@@ -92,7 +94,9 @@ function PosterView({
             <img
               src={pendingRequest.selfieUrl}
               alt="Picker selfie"
-              className="w-16 h-16 rounded-lg object-cover shrink-0"
+              className="w-16 h-16 rounded-lg object-cover shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setLightbox(true)}
+              title="Click to view"
             />
           ) : (
             <div className="w-16 h-16 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
@@ -105,8 +109,40 @@ function PosterView({
               <Clock className="w-3.5 h-3.5" />
               Estimated arrival: {pendingRequest.etaMinutes} min
             </p>
+            {pendingRequest.selfieUrl && (
+              <button
+                type="button"
+                onClick={() => setLightbox(true)}
+                className="cursor-pointer text-xs text-neutral-400 hover:text-neutral-700 underline underline-offset-2 transition-colors text-left mt-0.5"
+              >
+                View photo
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Lightbox */}
+        {lightbox && (
+          <div
+            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
+            onClick={() => setLightbox(false)}
+          >
+            <div className="relative max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={pendingRequest.selfieUrl!}
+                alt="Picker selfie"
+                className="w-full rounded-xl object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setLightbox(false)}
+                className="cursor-pointer absolute top-2.5 right-2.5 bg-white border border-neutral-200 rounded-full p-1.5 text-neutral-500 hover:text-neutral-900 transition-colors shadow-sm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {actionError && (
           <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
