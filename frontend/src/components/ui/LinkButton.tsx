@@ -12,6 +12,7 @@ interface ButtonProps extends BaseProps {
   disabled?: boolean;
   loading?: boolean;
   loadingLabel?: string;
+  icon?: React.ReactNode;
   onClick?: () => void;
 }
 
@@ -51,10 +52,11 @@ export function LinkButton(props: Props) {
       onClick={props.onClick}
       className={cn(
         baseStyles,
-        "w-full disabled:opacity-40 disabled:cursor-not-allowed",
+        "disabled:opacity-40 disabled:cursor-not-allowed",
         className
       )}
     >
+      {props.icon && props.icon}
       {props.loading ? props.loadingLabel ?? "Loading…" : label}
     </button>
   );
