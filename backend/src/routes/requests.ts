@@ -91,9 +91,8 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   
   createNotification(post.posterId, "Someone wants to pick up your food. Review their request.")
     .catch(console.error);
+    
   notifyPoster(poster.email, "request_received");
-
-  await notifyPoster(poster.email, "request_received");
 
   return c.json({ message: "Request submitted", request }, 201);
 });
