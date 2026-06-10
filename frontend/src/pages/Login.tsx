@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { apiFetch } from "../lib/api";
+import { apiFetch, ApiError } from "../lib/api";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { Input } from "../components/ui/Input";
@@ -44,7 +44,7 @@ export default function Login() {
       login(data.user);
       navigate("/feed");
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      if (err instanceof ApiError) {
         // Check if it's an unverified email error
         if (err.message.includes("verify your email")) {
           setNeedsVerification(true);
@@ -68,7 +68,7 @@ export default function Login() {
       });
       setResendMessage(data.message);
     } catch (err: unknown) {
-      if (err instanceof Error) setResendMessage(err.message);
+      if (err instanceof ApiError) setResendMessage(err.message);
     } finally {
       setResendLoading(false);
     }

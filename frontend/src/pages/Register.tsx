@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiFetch } from "../lib/api";
+import { apiFetch, ApiError } from "../lib/api";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PasswordInput } from "../components/ui/PasswordInput";
@@ -28,7 +28,8 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
-
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -36,12 +37,16 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
     setLoading(true);
     try {
       await apiFetch("/auth/register", { method: "POST", body: JSON.stringify(form) });
       setRegistered(true);
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      if (err instanceof ApiError) {
+        setError(err.message);
+        if (err.details) setFieldErrors(err.details);
+      }
     } finally {
       setLoading(false);
     }
@@ -152,6 +157,9 @@ export default function Register() {
                     autoComplete="name"
                     required
                   />
+                  {fieldErrors.name && (
+                    <p className="text-xs text-red-500">{fieldErrors.name[0]}</p>
+                  )}
                 </Field>
 
                 <Field label="Email">
@@ -164,6 +172,9 @@ export default function Register() {
                     autoComplete="email"
                     required
                   />
+                  {fieldErrors.email && (
+                    <p className="text-xs text-red-500">{fieldErrors.email[0]}</p>
+                  )}              
                 </Field>
 
                 <Field label="Phone number">
@@ -179,6 +190,9 @@ export default function Register() {
                     autoComplete="tel"
                     required
                   />
+                  {fieldErrors.phone && (
+                    <p className="text-xs text-red-500">{fieldErrors.phone[0]}</p>
+                  )}
                 </Field>
 
                 <Field label="Password">
@@ -190,6 +204,9 @@ export default function Register() {
                     autoComplete="new-password"
                     required
                   />
+                  {fieldErrors.password && (
+                    <p className="text-xs text-red-500">{fieldErrors.password[0]}</p>
+                  )}                  
                 </Field>
 
                 <LinkButton
