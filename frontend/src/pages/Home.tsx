@@ -219,7 +219,7 @@ export default function Home() {
         {/* Who is Jyo for */}
         <section className="px-6 pt-1 pb-10">
           <EyebrowLabel>Who it's for</EyebrowLabel>
-          <SectionHeading>Two worlds, one purpose</SectionHeading>
+          <SectionHeading>Two worlds, one purpose - Reduce food waste</SectionHeading>
 
           <div className="grid md:grid-cols-2 gap-6">
 
