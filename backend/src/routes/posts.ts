@@ -6,13 +6,14 @@ import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
 import { uploadFile } from "../lib/storage.js";
 import crypto from "crypto";
+import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 
 export const postRoutes = new Hono();
 
 postRoutes.use("*", authMiddleware);
 
 // --- Create post ---
-postRoutes.post("/", async (c) => {
+postRoutes.post("/", createPostLimiter, async (c) => {
   const { userId } = c.get("user");
   const body = await c.req.json();
 
@@ -176,7 +177,7 @@ postRoutes.get("/:id", async (c) => {
   return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest });
 });
 
-postRoutes.post("/upload", async (c) => {
+postRoutes.post("/upload", uploadLimiter, async (c) => {
   const body = await c.req.parseBody();
   const file = body["file"];
 

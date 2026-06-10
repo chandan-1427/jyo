@@ -6,6 +6,7 @@ import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { forgotPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -26,7 +27,7 @@ const cookieOptions = {
 };
 
 // --- Register ---
-authRoutes.post("/register", async (c) => {
+authRoutes.post("/register", registerLimiter, async (c) => {
   const { name, email, password, phone } = await c.req.json();
 
   if (!name || !email || !password || !phone) {
@@ -62,7 +63,7 @@ authRoutes.post("/register", async (c) => {
 });
 
 // --- Login ---
-authRoutes.post("/login", async (c) => {
+authRoutes.post("/login", loginLimiter, async (c) => {
   const { email, password } = await c.req.json();
 
   if (!email || !password) {
@@ -139,7 +140,7 @@ authRoutes.get("/verify-email", async (c) => {
 });
 
 // --- Forgot password ---
-authRoutes.post("/forgot-password", async (c) => {
+authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
   const { email } = await c.req.json();
 
   if (!email) {
@@ -172,7 +173,7 @@ authRoutes.post("/forgot-password", async (c) => {
 });
 
 // --- Reset password ---
-authRoutes.post("/reset-password", async (c) => {
+authRoutes.post("/reset-password", resendVerificationLimiter, async (c) => {
   const { token, password } = await c.req.json();
 
   if (!token || !password) {

@@ -6,6 +6,7 @@ import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
 import { uploadFile } from "../lib/storage.js";
+import { createRequestLimiter } from "../middleware/limiters.js";
 import { createNotification } from "../lib/notify.js";
 
 import crypto from "crypto";
@@ -15,7 +16,7 @@ export const requestRoutes = new Hono();
 requestRoutes.use("*", authMiddleware);
 
 // --- Submit pickup request ---
-requestRoutes.post("/", async (c) => {
+requestRoutes.post("/",createRequestLimiter, async (c) => {
   const { userId } = c.get("user");
   const body = await c.req.json();
 
