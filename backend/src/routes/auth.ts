@@ -7,6 +7,7 @@ import { users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
 import { forgotPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
+import { z } from "zod";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -26,13 +27,41 @@ const cookieOptions = {
   maxAge: 60 * 60 * 24 * 7,
 };
 
+const registerSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  email: z.email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(100),
+  phone: z.string().min(10, "Phone number too short").max(15),
+});
+
+const loginSchema = z.object({
+  email: z.email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.email("Invalid email address"),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(100),
+});
+
+const resendVerificationSchema = z.object({
+  email: z.email("Invalid email address"),
+});
+
 // --- Register ---
 authRoutes.post("/register", registerLimiter, async (c) => {
-  const { name, email, password, phone } = await c.req.json();
-
-  if (!name || !email || !password || !phone) {
-    return c.json({ error: "All fields are required" }, 400);
+  const body = await c.req.json();
+  const result = registerSchema.safeParse(body);
+  
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
   }
+
+  const { name, email, password, phone } = result.data;
 
   const existing = await db
     .select()
@@ -64,11 +93,14 @@ authRoutes.post("/register", registerLimiter, async (c) => {
 
 // --- Login ---
 authRoutes.post("/login", loginLimiter, async (c) => {
-  const { email, password } = await c.req.json();
+  const body = await c.req.json();
+  const result = loginSchema.safeParse(body);
 
-  if (!email || !password) {
-    return c.json({ error: "Email and password are required" }, 400);
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
   }
+
+  const { email, password } = result.data;
 
   // Find user
   const [user] = await db
@@ -141,11 +173,14 @@ authRoutes.get("/verify-email", async (c) => {
 
 // --- Forgot password ---
 authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
-  const { email } = await c.req.json();
+  const body = await c.req.json();
+  const result = forgotPasswordSchema.safeParse(body);
 
-  if (!email) {
-    return c.json({ error: "Email is required" }, 400);
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
   }
+
+  const { email } = result.data;
 
   const [user] = await db
     .select()
@@ -174,11 +209,14 @@ authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
 
 // --- Reset password ---
 authRoutes.post("/reset-password", resendVerificationLimiter, async (c) => {
-  const { token, password } = await c.req.json();
+  const body = await c.req.json();
+  const result = resetPasswordSchema.safeParse(body);
 
-  if (!token || !password) {
-    return c.json({ error: "Token and new password are required" }, 400);
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
   }
+
+  const { token, password } = result.data;
 
   const [user] = await db
     .select()
@@ -205,13 +243,15 @@ authRoutes.post("/reset-password", resendVerificationLimiter, async (c) => {
   return c.json({ message: "Password reset successfully. You can now log in." });
 });
 
-// Resend verification email
-authRoutes.post("/resend-verification", async (c) => {
-  const { email } = await c.req.json();
+authRoutes.post("/resend-verification", resendVerificationLimiter, async (c) => {
+  const body = await c.req.json();
+  const result = resendVerificationSchema.safeParse(body);
 
-  if (!email) {
-    return c.json({ error: "Email is required" }, 400);
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
   }
+
+  const { email } = result.data;
 
   const [user] = await db
     .select()

@@ -7,6 +7,7 @@ import { haversineDistance } from "../lib/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
 import { uploadFile } from "../lib/storage.js";
 import { createRequestLimiter } from "../middleware/limiters.js";
+import { z } from "zod";
 import { createNotification } from "../lib/notify.js";
 
 import crypto from "crypto";
@@ -15,16 +16,26 @@ export const requestRoutes = new Hono();
 
 requestRoutes.use("*", authMiddleware);
 
+const createRequestSchema = z.object({
+  postId: z.uuid("Invalid post ID"),
+  pickerName: z.string().min(2, "Name must be at least 2 characters").max(100),
+  selfieUrl: z.url("Invalid selfie URL").optional(),
+  etaMinutes: z.number().int().min(1).max(180, "ETA cannot exceed 3 hours"),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
+
 // --- Submit pickup request ---
-requestRoutes.post("/",createRequestLimiter, async (c) => {
+requestRoutes.post("/", createRequestLimiter, async (c) => {
   const { userId } = c.get("user");
   const body = await c.req.json();
+  const result = createRequestSchema.safeParse(body);
 
-  const { postId, pickerName, selfieUrl, etaMinutes, lat, lng } = body;
-
-  if (!postId || !pickerName || !etaMinutes || !lat || !lng) {
-    return c.json({ error: "Missing required fields" }, 400);
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
   }
+
+  const { postId, pickerName, selfieUrl, etaMinutes, lat, lng } = result.data;
 
   // Fetch the post
   const [post] = await db

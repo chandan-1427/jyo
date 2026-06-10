@@ -6,34 +6,38 @@ import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
 import { uploadFile } from "../lib/storage.js";
 import crypto from "crypto";
+import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 
 export const postRoutes = new Hono();
 
 postRoutes.use("*", authMiddleware);
 
+const createPostSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters").max(100),
+  description: z.string().max(500).optional(),
+  photoUrl: z.url("Invalid photo URL").optional(),
+  pickupLat: z.number().min(-90).max(90),
+  pickupLng: z.number().min(-180).max(180),
+  pickupWindowStart: z.iso.datetime("Invalid start time"),
+  pickupWindowEnd: z.iso.datetime("Invalid end time"),
+});
+
 // --- Create post ---
 postRoutes.post("/", createPostLimiter, async (c) => {
   const { userId } = c.get("user");
   const body = await c.req.json();
+  const result = createPostSchema.safeParse(body);
 
-  const {
-    title,
-    description,
-    photoUrl,
-    pickupLat,
-    pickupLng,
-    pickupWindowStart,
-    pickupWindowEnd,
-  } = body;
-
-  if (!title || !pickupLat || !pickupLng || !pickupWindowStart || !pickupWindowEnd) {
-    return c.json({ error: "Missing required fields" }, 400);
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
   }
+
+  const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd } = result.data;
 
   if (process.env.APP_ENV === "production" && !isWithinTirupati(pickupLat, pickupLng)) {
     return c.json(
-      { error: "Jyos is currently only available in Tirupati. Your location is outside the service area." },
+      { error: "Jyo is currently only available in Tirupati. Your location is outside the service area." },
       400
     );
   }
