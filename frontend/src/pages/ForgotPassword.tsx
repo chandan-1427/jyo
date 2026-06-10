@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiFetch } from "../lib/api";
+import { apiFetch, ApiError } from "../lib/api";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { Logo } from "../components/ui/Logo";
 import { Input } from "../components/ui/Input";
@@ -35,7 +35,7 @@ export default function ForgotPassword() {
       });
       setMessage(data.message);
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      if (err instanceof ApiError) setError(err.message);
     } finally {
       setLoading(false);
     }

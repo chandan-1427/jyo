@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { apiFetch } from "../lib/api";
+import { apiFetch, ApiError } from "../lib/api";
 import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
 import { Logo } from "../components/ui/Logo";
 import { PasswordInput } from "../components/ui/PasswordInput";
@@ -37,7 +37,7 @@ export default function ResetPassword() {
       });
       setSuccess(true);
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      if (err instanceof ApiError) setError(err.message);
     } finally {
       setLoading(false);
     }
