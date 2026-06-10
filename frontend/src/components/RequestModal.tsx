@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { apiFetch } from "../lib/api";
+import { apiFetch, ApiError } from "../lib/api";
 import { uploadImage } from "../lib/supabase";
 import { getCurrentLocation } from "../lib/location";
 import { AlertCircle, Camera } from "lucide-react";
@@ -64,7 +64,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
 
       onSuccess();
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      if (err instanceof ApiError) setError(err.message);
     } finally {
       setLoading(false);
     }

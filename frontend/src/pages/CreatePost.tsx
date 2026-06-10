@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, X, Clock, AlertCircle } from "lucide-react";
-import { apiFetch } from "../lib/api";
+import { apiFetch, ApiError } from "../lib/api";
 import { uploadImage } from "../lib/supabase";
 import { getCurrentLocation, type Coords } from "../lib/location";
 import { Input } from "../components/ui/Input";
@@ -126,7 +126,7 @@ export default function CreatePost() {
       });
       navigate("/my-posts");
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      if (err instanceof ApiError) setError(err.message);
     } finally {
       setLoading(false);
     }
