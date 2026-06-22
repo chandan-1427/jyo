@@ -24,7 +24,7 @@ function MapsLink({ lat, lng }: { lat: number; lng: number }) {
       href={`https://www.google.com/maps?q=${lat},${lng}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="w-fit inline-flex items-center gap-2 border border-neutral-300 text-neutral-700 hover:border-neutral-400 hover:text-neutral-900  px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
+      className="w-fit inline-flex items-center gap-2 border border-neutral-300 text-neutral-700 hover:border-neutral-400 hover:text-neutral-900 bg-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
     >
       <MapPin className="w-4 h-4" />
       Open in Google Maps
@@ -85,7 +85,7 @@ function PosterView({
         </p>
 
         {/* Requester card */}
-        <div className=" border border-neutral-100 rounded-xl p-4 flex gap-4 items-start">
+        <div className="bg-white border border-neutral-100 rounded-xl p-4 flex gap-4 items-start">
           {pendingRequest.selfieUrl ? (
             <img
               src={pendingRequest.selfieUrl}
@@ -132,7 +132,7 @@ function PosterView({
               <button
                 type="button"
                 onClick={() => setLightbox(false)}
-                className="cursor-pointer absolute top-2.5 right-2.5  border border-neutral-200 rounded-full p-1.5 text-neutral-500 hover:text-neutral-900 transition-colors shadow-sm"
+                className="cursor-pointer absolute top-2.5 right-2.5 bg-white border border-neutral-200 rounded-full p-1.5 text-neutral-500 hover:text-neutral-900 transition-colors shadow-sm"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -348,7 +348,7 @@ export default function PostDetail() {
         )}
 
         {/* Post info */}
-        <div className=" border border-neutral-300 rounded-xl px-5 py-5 flex flex-col gap-4">
+        <div className="bg-white border border-neutral-300 rounded-xl px-5 py-5 flex flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
             <h1 className="font-semibold text-xl text-neutral-900 tracking-tight leading-tight">
               {post.title}

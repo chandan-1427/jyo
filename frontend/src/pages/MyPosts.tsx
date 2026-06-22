@@ -80,7 +80,7 @@ export default function MyPosts() {
 
       {/* Empty state */}
       {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl ">
+        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl bg-white">
           <UtensilsCrossed className="w-7 h-7 text-neutral-200" />
           <div className="text-center">
             <p className="text-sm font-medium text-neutral-600">No posts yet</p>
@@ -103,7 +103,7 @@ export default function MyPosts() {
             return (
               <div
                 key={post.id}
-                className=" border border-neutral-200 rounded-xl px-4 py-3.5 flex items-center gap-4 transition-colors duration-150 group"
+                className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 flex items-center gap-4 transition-colors duration-150 group"
               >
                 {/* Thumbnail */}
                 <div
