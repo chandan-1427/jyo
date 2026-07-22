@@ -11,11 +11,11 @@ export function Logo({ to = "/", className }: LogoProps) {
     <Link
       to={to}
       className={cn(
-        "font-geist font-semibold text-[1.1rem] text-neutral-900 tracking-tight",
+        "font-geist font-semibold text-[1.1rem] text-foreground tracking-tight",
         className
       )}
     >
-      Jyo<span className="text-[#2D6A4F]">.</span>
+      Jyo<span className="text-accent">.</span>
     </Link>
   );
 }

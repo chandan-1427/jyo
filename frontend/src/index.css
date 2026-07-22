@@ -3,15 +3,35 @@
 @theme {
   --font-geist: "Geist Variable", sans-serif;
   --font-inter: "Inter Variable", sans-serif;
+
+  --color-background: #1B1A19;
+  --color-foreground: #EBEBEB;
+  --color-muted: #A3A3A3;
+  --color-subtle: #6B6B6B;
+  --color-border: #2A2A28;
+  --color-surface: #202020;
+  --color-accent: #FBBF24;
 }
 
 @layer base {
   body {
     font-family: var(--font-inter);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-geist);
+    color: var(--color-foreground);
+  }
+
+  p, li {
+    color: var(--color-muted);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
   }
 
   ::selection {
@@ -21,17 +41,17 @@
 
   html {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.22) #1F1F1E;
+    scrollbar-color: rgba(255, 255, 255, 0.22) var(--color-surface);
     scroll-behavior: smooth;
   }
 
   ::-webkit-scrollbar { width: 10px; }
-  ::-webkit-scrollbar-track { background: #1F1F1E; }
+  ::-webkit-scrollbar-track { background: var(--color-surface); }
   ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.18);
-    border: 2px solid #1F1F1E;
+    border: 2px solid var(--color-surface);
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
-  ::-webkit-scrollbar-corner { background: #1F1F1E; }
+  ::-webkit-scrollbar-corner { background: var(--color-surface); }
 }
