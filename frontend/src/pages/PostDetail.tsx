@@ -182,10 +182,10 @@ function PosterView({
           <button
             onClick={onComplete}
             disabled={actionLoading}
-            className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg border border-emerald-900/40 bg-emerald-950/30 px-4 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-950/50 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
           >
-            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {actionLoading ? "Updating…" : "Food has been collected — Stop sharing location"}
+            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
+            {actionLoading ? "Updating…" : "Food has been collected — Click here to stop sharing location"}
           </button>
         </div>
       )}
