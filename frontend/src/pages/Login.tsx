@@ -11,6 +11,7 @@ import { AuthSidePanel } from "../components/auth/AuthSidePanel";
 import { Field } from "../components/auth/Field";
 import { authInputStyles, AUTH_BENEFITS } from "../components/auth/authStyles";
 import { BackButton } from "../components/auth/BackButton";
+import { validateForm, loginSchema } from "../lib/validation";
 
 export default function Login() {
   const { login } = useAuth();
@@ -23,18 +24,26 @@ export default function Login() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
     setNeedsVerification(false);
     setResendMessage("");
-    setLoading(true);
 
+    const validation = validateForm(loginSchema, { email, password });
+    if (!validation.success) {
+      setFieldErrors(validation.fieldErrors);
+      return;
+    }
+
+    setLoading(true);
     try {
       const data = await apiFetch("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(validation.data),
       });
       login(data.user);
       navigate("/feed");
@@ -149,6 +158,7 @@ export default function Login() {
                 className={authInputStyles}
                 required
               />
+              {fieldErrors.email && <p className="text-xs text-red-400">{fieldErrors.email[0]}</p>}
             </Field>
 
             <Field label="Password">
@@ -161,6 +171,7 @@ export default function Login() {
                 className={authInputStyles}
                 required
               />
+              {fieldErrors.password && <p className="text-xs text-red-400">{fieldErrors.password[0]}</p>}
             </Field>
 
             <LinkButton

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch, ApiError } from "../lib/api";
-import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
+import { Mail, CheckCircle2 } from "lucide-react";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { Input } from "../components/ui/Input";
@@ -10,6 +10,7 @@ import { AuthSidePanel } from "../components/auth/AuthSidePanel";
 import { Field } from "../components/auth/Field";
 import { authInputStyles, AUTH_BENEFITS } from "../components/auth/authStyles";
 import { BackButton } from "../components/auth/BackButton";
+import { validateForm, registerSchema } from "../lib/validation";
 
 function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
   const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
@@ -23,7 +24,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -33,9 +34,16 @@ export default function Register() {
     e.preventDefault();
     setError("");
     setFieldErrors({});
+
+    const validation = validateForm(registerSchema, form);
+    if (!validation.success) {
+      setFieldErrors(validation.fieldErrors);
+      return; // stop here — no network request for input that's already known-invalid
+    }
+
     setLoading(true);
     try {
-      await apiFetch("/auth/register", { method: "POST", body: JSON.stringify(form) });
+      await apiFetch("/auth/register", { method: "POST", body: JSON.stringify(validation.data) });
       setRegistered(true);
     } catch (err: unknown) {
       if (err instanceof ApiError) {

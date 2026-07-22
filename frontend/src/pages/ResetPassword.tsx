@@ -8,6 +8,7 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { Field } from "../components/auth/Field";
 import { authInputStyles } from "../components/auth/authStyles";
 import { BackButton } from "../components/auth/BackButton";
+import { validateForm, resetPasswordSchema } from "../lib/validation";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -18,16 +19,24 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setFieldErrors({});
 
+    const validation = validateForm(resetPasswordSchema, { password });
+    if (!validation.success) {
+      setFieldErrors(validation.fieldErrors);
+      return;
+    }
+
+    setLoading(true);
     try {
       await apiFetch("/auth/reset-password", {
         method: "POST",
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, ...validation.data }),
       });
       setSuccess(true);
     } catch (err: unknown) {
@@ -146,6 +155,7 @@ export default function ResetPassword() {
                     className={authInputStyles}
                     required
                   />
+                  {fieldErrors.password && <p className="text-xs text-red-400">{fieldErrors.password[0]}</p>}
                 </Field>
 
                 <LinkButton

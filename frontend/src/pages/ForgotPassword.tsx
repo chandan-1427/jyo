@@ -1,31 +1,40 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { apiFetch, ApiError } from "../lib/api";
-import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
+import { Mail, CheckCircle2 } from "lucide-react";
 import { Logo } from "../components/ui/Logo";
 import { Input } from "../components/ui/Input";
 import { LinkButton } from "../components/ui/LinkButton";
 import { Field } from "../components/auth/Field";
 import { authInputStyles } from "../components/auth/authStyles";
 import { BackButton } from "../components/auth/BackButton";
+import { validateForm, forgotPasswordSchema } from "../lib/validation";
 
 export default function ForgotPassword() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setMessage("");
+    setFieldErrors({});
+
+    const validation = validateForm(forgotPasswordSchema, { email });
+    if (!validation.success) {
+      setFieldErrors(validation.fieldErrors);
+      setLoading(false); // validation failed before the try/finally below ever runs
+      return;
+    }
 
     try {
       const data = await apiFetch("/auth/forgot-password", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(validation.data),
       });
       setMessage(data.message);
     } catch (err: unknown) {
@@ -113,6 +122,7 @@ export default function ForgotPassword() {
                     className={authInputStyles}
                     required
                   />
+                  {fieldErrors.email && <p className="text-xs text-red-400">{fieldErrors.email[0]}</p>}
                 </Field>
 
                 <LinkButton
