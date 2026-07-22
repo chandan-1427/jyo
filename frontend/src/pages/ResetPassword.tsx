@@ -5,15 +5,8 @@ import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
 import { Logo } from "../components/ui/Logo";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { LinkButton } from "../components/ui/LinkButton";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[13px] font-medium text-neutral-700">{label}</label>
-      {children}
-    </div>
-  );
-}
+import { Field } from "../components/auth/Field";
+import { authInputStyles } from "../components/auth/authStyles";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -44,17 +37,17 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-medium flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-[360px]">
 
-          {/* Brand + back button */}
+          {/* Brand + back button + heading */}
           <div className="relative mb-6">
             {!success && (
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="cursor-pointer absolute top-0 right-0 flex items-center gap-1 text-sm font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
+                className="cursor-pointer absolute top-0 right-0 flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground transition-colors"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Back
@@ -65,10 +58,10 @@ export default function ResetPassword() {
 
             {!success && !token && (
               <>
-                <h1 className="mt-5  text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                <h1 className="mt-5 text-[1.4rem] font-semibold text-foreground tracking-tight">
                   Invalid link
                 </h1>
-                <p className="mt-1.5 text-sm text-neutral-500">
+                <p className="mt-1 text-sm text-muted">
                   This password reset link is invalid or has expired.
                 </p>
               </>
@@ -76,10 +69,10 @@ export default function ResetPassword() {
 
             {!success && token && (
               <>
-                <h1 className="mt-5  text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+                <h1 className="mt-5 text-[1.4rem] font-semibold text-foreground tracking-tight">
                   Reset your password
                 </h1>
-                <p className="mt-1.5 text-sm text-neutral-500">
+                <p className="mt-1 text-sm text-muted">
                   Enter a new password for your account.
                 </p>
               </>
@@ -88,14 +81,14 @@ export default function ResetPassword() {
 
           {/* Invalid token state */}
           {!token && (
-            <div className="flex flex-col items-center text-center gap-4 py-4">
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-50">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-950/30">
                 <XCircle className="w-7 h-7 text-red-400" />
               </div>
 
-              <div className="flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
-                <span className="mt-px text-red-500 text-sm shrink-0">!</span>
-                <p className="text-sm text-red-600 leading-snug text-left">
+              <div className="flex items-start gap-2.5 w-full rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
+                <span className="mt-px text-red-400 text-sm shrink-0">!</span>
+                <p className="text-sm text-red-400 leading-snug text-left">
                   This reset link is invalid or has expired. Please request a new one.
                 </p>
               </div>
@@ -104,14 +97,12 @@ export default function ResetPassword() {
                 as="button"
                 label="Request new link"
                 onClick={() => navigate("/forgot-password")}
-                className="mt-1 w-full"
+                className="w-full"
               />
 
-              <div className="w-full border-t border-neutral-100" />
-
-              <p className="text-[13px] text-neutral-500">
+              <p className="text-[13px] text-subtle">
                 Remember your password?{" "}
-                <Link to="/login" className="font-medium text-neutral-900 hover:underline underline-offset-2">
+                <Link to="/login" className="font-medium text-foreground hover:underline underline-offset-2">
                   Log in
                 </Link>
               </p>
@@ -120,16 +111,16 @@ export default function ResetPassword() {
 
           {/* Success state */}
           {success && (
-            <div className="flex flex-col items-center text-center gap-4 py-4">
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#2D6A4F]/10">
-                <CheckCircle2 className="w-7 h-7 text-[#2D6A4F]" />
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-accent/10">
+                <CheckCircle2 className="w-7 h-7 text-accent" />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <h2 className=" text-[1.3rem] font-semibold text-neutral-900 tracking-tight">
+                <h2 className="text-[1.3rem] font-semibold text-foreground tracking-tight">
                   Password updated!
                 </h2>
-                <p className="text-sm text-neutral-500 leading-relaxed">
+                <p className="text-sm text-muted leading-relaxed">
                   Your password has been reset successfully. You can now log in with your new password.
                 </p>
               </div>
@@ -138,7 +129,7 @@ export default function ResetPassword() {
                 as="button"
                 label="Go to login"
                 onClick={() => navigate("/login")}
-                className="mt-1 w-full"
+                className="w-full"
               />
             </div>
           )}
@@ -147,19 +138,20 @@ export default function ResetPassword() {
           {token && !success && (
             <>
               {error && (
-                <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
-                  <span className="mt-px text-red-500 text-sm shrink-0">!</span>
-                  <p className="text-sm text-red-600 leading-snug">{error}</p>
+                <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-2.5">
+                  <span className="mt-px text-red-400 text-sm shrink-0">!</span>
+                  <p className="text-sm text-red-400 leading-snug">{error}</p>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                 <Field label="New password">
                   <PasswordInput
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create a new password"
                     autoComplete="new-password"
+                    className={authInputStyles}
                     required
                   />
                 </Field>
@@ -171,15 +163,13 @@ export default function ResetPassword() {
                   loading={loading}
                   loadingLabel="Resetting…"
                   disabled={loading}
-                  className="mt-1 w-full"
+                  className="w-full mt-1"
                 />
               </form>
 
-              <div className="my-3 border-t border-neutral-100" />
-
-              <p className="text-[13px] text-neutral-500 text-center">
+              <p className="mt-5 text-[13px] text-subtle text-center">
                 Remember your password?{" "}
-                <Link to="/login" className="font-medium text-neutral-900 hover:underline underline-offset-2">
+                <Link to="/login" className="font-medium text-foreground hover:underline underline-offset-2">
                   Log in
                 </Link>
               </p>
