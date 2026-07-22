@@ -7,15 +7,9 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { Input } from "../components/ui/Input";
 import { Logo } from "../components/ui/Logo";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[13px] font-medium text-neutral-700">{label}</label>
-      {children}
-    </div>
-  );
-}
+import { AuthSidePanel } from "../components/auth/AuthSidePanel";
+import { Field } from "../components/auth/Field";
+import { authInputStyles, AUTH_BENEFITS } from "../components/auth/authStyles";
 
 export default function Login() {
   const { login } = useAuth();
@@ -45,7 +39,6 @@ export default function Login() {
       navigate("/feed");
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        // Check if it's an unverified email error
         if (err.message.includes("verify your email")) {
           setNeedsVerification(true);
         } else {
@@ -75,58 +68,64 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-medium flex flex-col">
-      <div className="flex-1 flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-[360px]">
+    <div className="h-screen grid lg:grid-cols-2">
 
-          {/* Brand + back button */}
-          <div className="relative mb-8">
+      <AuthSidePanel
+        headline="Good food shouldn't go to waste while someone nearby needs it."
+        subtext="Log back in to keep sharing with your community in Tirupati."
+        benefits={AUTH_BENEFITS}
+      />
+
+      {/* Right — form */}
+      <div className="flex flex-col justify-center px-6 py-8 sm:px-12">
+        <div className="w-full max-w-[360px] mx-auto">
+
+          <div className="relative mb-6">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="cursor-pointer absolute top-0 right-0 flex items-center gap-1 text-sm font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
+              className="cursor-pointer absolute top-0 right-0 flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
             </button>
 
-            <Logo />
-            <h1 className="mt-5  text-[1.45rem] font-semibold text-neutral-900 tracking-tight">
+            <div className="lg:hidden mb-5">
+              <Logo />
+            </div>
+
+            <h1 className="text-[1.4rem] font-semibold text-foreground tracking-tight">
               Welcome back
             </h1>
-            <p className="mt-1.5 text-sm text-neutral-500">
-              Log in to your Jyo account to continue.
-            </p>
+            <p className="mt-1 text-sm text-muted">Log in to your Jyo account to continue.</p>
           </div>
 
-          {/* Error */}
           {error && (
-            <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
-              <span className="mt-px text-red-500 text-sm shrink-0">!</span>
-              <p className="text-sm text-red-600 leading-snug">{error}</p>
+            <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
+              <span className="mt-px text-red-400 text-sm shrink-0">!</span>
+              <p className="text-sm text-red-400 leading-snug">{error}</p>
             </div>
           )}
 
-          {/* Unverified email state */}
           {needsVerification && (
-            <div className="mt-[-15px] mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-3">
+            <div className="mb-4 rounded-lg border border-amber-800/40 bg-amber-950/30 px-4 py-3 flex flex-col gap-3">
               <div className="flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-px" />
-                <p className="text-sm text-amber-800 leading-snug">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-px" />
+                <p className="text-sm text-amber-300 leading-snug">
                   Your email is not verified. Please check your inbox for the verification link.
                 </p>
               </div>
 
               {resendMessage ? (
                 <div className="flex items-center gap-1.5 pl-6">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0" />
-                  <p className="text-sm text-[#2D6A4F] font-medium">{resendMessage}</p>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-accent shrink-0" />
+                  <p className="text-sm text-accent font-medium">{resendMessage}</p>
                 </div>
               ) : (
                 <button
                   onClick={handleResendVerification}
                   disabled={resendLoading}
-                  className="cursor-pointer ml-6 w-fit flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 hover:text-amber-900 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="cursor-pointer ml-6 w-fit flex items-center gap-1.5 rounded-md border border-amber-800/50 bg-transparent px-3 py-1.5 text-sm font-medium text-amber-300 hover:bg-amber-900/30 hover:text-amber-200 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {resendLoading ? (
                     <>
@@ -144,8 +143,7 @@ export default function Login() {
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
 
             <Field label="Email">
               <Input
@@ -154,6 +152,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 autoComplete="email"
+                className={authInputStyles}
                 required
               />
             </Field>
@@ -165,6 +164,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
                 autoComplete="current-password"
+                className={authInputStyles}
                 required
               />
             </Field>
@@ -176,26 +176,20 @@ export default function Login() {
               loading={loading}
               loadingLabel="Logging in…"
               disabled={loading}
+              className="w-full mt-1"
             />
 
           </form>
 
-          {/* Divider */}
-          <div className="my-3 border-t border-neutral-100" />
-
-          {/* Footer */}
-          <p className="text-[13px] text-neutral-500 text-center">
+          <p className="mt-5 text-[13px] text-subtle text-center">
             Don't have an account?{" "}
-            <Link
-              to="/register"
-              className="font-medium text-neutral-900 tracking-wide hover:underline underline-offset-2"
-            >
+            <Link to="/register" className="font-medium text-foreground tracking-wide hover:underline underline-offset-2">
               Register
             </Link>
           </p>
 
-          <p className="text-[13px] text-neutral-500 text-center mt-3">
-            <Link to="/forgot-password" className="font-medium text-neutral-900 hover:underline underline-offset-2 tracking-wide">
+          <p className="text-[13px] text-subtle text-center mt-3">
+            <Link to="/forgot-password" className="font-medium text-foreground hover:underline underline-offset-2 tracking-wide">
               Forgot password?
             </Link>
           </p>
