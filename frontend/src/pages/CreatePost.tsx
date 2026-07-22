@@ -8,37 +8,17 @@ import { Input } from "../components/ui/Input";
 import { Textarea } from "../components/ui/Textarea";
 import { LinkButton } from "../components/ui/LinkButton";
 import { LocationStatus } from "../components/ui/LocationStatus";
+import { Field } from "../components/ui/Field";
+import { DateTimePicker } from "../components/ui/DateTimePicker";
 
-// Returns current datetime in "YYYY-MM-DDTHH:MM" format for min attribute
 function nowLocal(): string {
   const now = new Date();
-  // Get local time components
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline gap-2">
-        <label className="text-[13px] font-medium text-neutral-700">{label}</label>
-        {hint && <span className="text-[12px] text-neutral-400">{hint}</span>}
-      </div>
-      {children}
-    </div>
-  );
 }
 
 export default function CreatePost() {
@@ -68,7 +48,6 @@ export default function CreatePost() {
     const { name, value } = e.target;
     setForm((prev) => {
       const next = { ...prev, [name]: value };
-      // If start changes, clear end if it's now invalid
       if (name === "pickupWindowStart" && next.pickupWindowEnd && next.pickupWindowEnd <= value) {
         next.pickupWindowEnd = "";
       }
@@ -120,8 +99,8 @@ export default function CreatePost() {
           photoUrl,
           pickupLat: coords.lat,
           pickupLng: coords.lng,
-          pickupWindowStart: start,   // ← IST converted
-          pickupWindowEnd: end,       // ← IST converted
+          pickupWindowStart: start,
+          pickupWindowEnd: end,
         }),
       });
       navigate("/my-posts");
@@ -135,119 +114,118 @@ export default function CreatePost() {
   const minStart = nowLocal();
   const minEnd = form.pickupWindowStart || minStart;
 
-return (
-  <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">
+  return (
+    <div className="px-6 py-8 font-medium tracking-wide">
 
-    {/* Page header */}
-    <div className="mb-8">
-      <p className="text-sm text-neutral-400 mb-1">Share with your community</p>
-      <h1 className="font-semibold text-2xl text-neutral-900 tracking-tight">Post Food</h1>
-    </div>
-
-    {/* Error */}
-    {error && (
-      <div className="mb-6 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
-        <AlertCircle className="w-4 h-4 text-red-500 mt-px shrink-0" />
-        <p className="text-sm text-red-600 leading-snug">{error}</p>
+      {/* Page header */}
+      <div className="mb-8">
+        <p className="text-sm text-subtle mb-1">Share with your community</p>
+        <h1 className="font-semibold text-2xl text-foreground tracking-tight">Post Food</h1>
       </div>
-    )}
 
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5 max-w-lg">
-
-      {/* Photo upload */}
-      <Field label="Food Photo">
-        {photoPreview ? (
-          <div className="relative rounded-xl overflow-hidden border border-neutral-100">
-            <img src={photoPreview} alt="Food preview" className="w-full h-52 object-cover" />
-            <button
-              type="button"
-              onClick={clearPhoto}
-              className="cursor-pointer absolute top-2.5 right-2.5 bg-white border border-neutral-200 rounded-full p-1 text-neutral-500 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
-          <label className="flex flex-col items-center justify-center h-52 rounded-xl border border-dashed border-neutral-200 bg-neutral-50 cursor-pointer hover:bg-white hover:border-neutral-300 transition-colors duration-150 group">
-            <Camera className="w-6 h-6 text-neutral-300 group-hover:text-neutral-400 transition-colors mb-2" />
-            <span className="text-sm text-neutral-400 group-hover:text-neutral-500 transition-colors">
-              Tap to add a food photo
-            </span>
-            <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
-          </label>
-        )}
-      </Field>
-
-      {/* Title */}
-      <Field label="Food Title">
-        <Input
-          name="title"
-          type="text"
-          value={form.title}
-          onChange={handleChange}
-          placeholder="e.g. Rice and dal for 2"
-          required
-        />
-      </Field>
-
-      {/* Description */}
-      <Field label="Description" hint="optional">
-        <Textarea
-          name="description"
-          value={form.description}
-          onChange={handleChange}
-          placeholder="Details about the food, quantity, allergens..."
-          rows={3}
-        />
-      </Field>
-
-      {/* Pickup window */}
-      <Field label="Pickup Window">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[12px] text-neutral-400 flex items-center gap-1">
-              <Clock className="w-3 h-3" /> From
-            </span>
-            <Input
-              name="pickupWindowStart"
-              type="datetime-local"
-              value={form.pickupWindowStart}
-              onChange={handleChange}
-              min={minStart}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[12px] text-neutral-400 flex items-center gap-1">
-              <Clock className="w-3 h-3" /> To
-            </span>
-            <Input
-              name="pickupWindowEnd"
-              type="datetime-local"
-              value={form.pickupWindowEnd}
-              onChange={handleChange}
-              min={minEnd}
-              required
-            />
-          </div>
+      {/* Error */}
+      {error && (
+        <div className="mb-6 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
+          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
+          <p className="text-sm text-red-400 leading-snug">{error}</p>
         </div>
-      </Field>
+      )}
 
-      {/* Location status */}
-      <LocationStatus loading={locLoading} coords={coords} />
+      <form onSubmit={handleSubmit} className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
 
-      {/* Submit */}
-      <LinkButton
-        as="button"
-        type="submit"
-        label={loading ? "Posting…" : "Post Food"}
-        disabled={loading || !coords}
-        loading={loading}
-        loadingLabel="Posting…"
-        className="mt-1 w-full"
+        {/* Left — photo */}
+        <div className="lg:sticky lg:top-20">
+          <Field label="Food Photo">
+            {photoPreview ? (
+              <div className="relative rounded-xl overflow-hidden border border-border">
+                <img src={photoPreview} alt="Food preview" className="w-full h-80 lg:h-96 object-cover" />
+                <button
+                  type="button"
+                  onClick={clearPhoto}
+                  className="cursor-pointer absolute top-2.5 right-2.5 bg-surface border border-border rounded-full p-1 text-muted hover:text-red-400 hover:border-red-900/40 transition-colors shadow-sm"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center h-80 lg:h-96 rounded-xl border border-dashed border-border bg-surface cursor-pointer hover:bg-surface/60 hover:border-neutral-600 transition-colors duration-150 group">
+                <Camera className="w-6 h-6 text-subtle group-hover:text-muted transition-colors mb-2" />
+                <span className="text-sm text-subtle group-hover:text-muted transition-colors">
+                  Tap to add a food photo
+                </span>
+                <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+              </label>
+            )}
+          </Field>
+        </div>
+
+        {/* Right — form fields */}
+        <div className="flex flex-col gap-5">
+
+          <Field label="Food Title">
+            <Input
+              name="title"
+              type="text"
+              value={form.title}
+              onChange={handleChange}
+              placeholder="e.g. Rice and dal for 2"
+              required
+            />
+          </Field>
+
+          <Field label="Description" hint="optional">
+            <Textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              placeholder="Details about the food, quantity, allergens..."
+              rows={4}
+            />
+          </Field>
+
+<Field label="Pickup Window">
+  <div className="grid grid-cols-2 gap-3">
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[12px] text-subtle flex items-center gap-1">
+        <Clock className="w-3 h-3" /> From
+      </span>
+      <DateTimePicker
+        value={form.pickupWindowStart}
+        onChange={(val) =>
+          handleChange({ target: { name: "pickupWindowStart", value: val } } as any)
+        }
+        min={minStart}
       />
-
-    </form>
+    </div>
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[12px] text-subtle flex items-center gap-1">
+        <Clock className="w-3 h-3" /> To
+      </span>
+      <DateTimePicker
+        value={form.pickupWindowEnd}
+        onChange={(val) =>
+          handleChange({ target: { name: "pickupWindowEnd", value: val } } as any)
+        }
+        min={minEnd}
+      />
+    </div>
   </div>
-);
+</Field>
+
+          <LocationStatus loading={locLoading} coords={coords} />
+
+          <LinkButton
+            as="button"
+            type="submit"
+            label={loading ? "Posting…" : "Post Food"}
+            disabled={loading || !coords}
+            loading={loading}
+            loadingLabel="Posting…"
+            className="mt-1 w-full"
+          />
+
+        </div>
+      </form>
+    </div>
+  );
 }
