@@ -1,5 +1,3 @@
-// components/ui/PasswordInput.tsx
-
 import { useState } from "react";
 import { cn } from "../../lib/utils";
 import { Input } from "./Input";
@@ -21,7 +19,7 @@ export function PasswordInput({ className, ...props }: PasswordInputProps) {
       <button
         type="button"
         onClick={() => setShow(prev => !prev)}
-        className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors select-none"
+        className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-subtle hover:text-foreground transition-colors select-none"
       >
         {show ? "Hide" : "Show"}
       </button>

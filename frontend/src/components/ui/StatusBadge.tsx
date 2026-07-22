@@ -2,16 +2,16 @@ import { cn } from "../../lib/utils";
 
 const STYLES: Record<string, string> = {
   // post statuses
-  open:             "bg-emerald-50 text-emerald-600 border-emerald-100",
-  pending_approval: "bg-amber-50 text-amber-600 border-amber-100",
-  closed:           "bg-neutral-100 text-neutral-500 border-neutral-200",
-  expired:          "bg-red-50 text-red-400 border-red-100",
-  completed:        "bg-blue-50 text-blue-600 border-blue-100",
+  open:             "bg-emerald-950/30 text-emerald-400 border-emerald-900/40",
+  pending_approval: "bg-amber-950/30 text-amber-400 border-amber-900/40",
+  closed:           "bg-surface text-subtle border-border",
+  expired:          "bg-red-950/30 text-red-400 border-red-900/40",
+  completed:        "bg-blue-950/30 text-blue-400 border-blue-900/40",
   // request statuses
-  pending:          "bg-amber-50 text-amber-600 border-amber-100",
-  approved:         "bg-emerald-50 text-emerald-600 border-emerald-100",
-  rejected:         "bg-red-50 text-red-400 border-red-100",
-  cancelled:        "bg-neutral-100 text-neutral-500 border-neutral-200",
+  pending:          "bg-amber-950/30 text-amber-400 border-amber-900/40",
+  approved:         "bg-emerald-950/30 text-emerald-400 border-emerald-900/40",
+  rejected:         "bg-red-950/30 text-red-400 border-red-900/40",
+  cancelled:        "bg-surface text-subtle border-border",
 };
 
 const LABELS: Record<string, string> = {
@@ -34,7 +34,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   return (
     <span className={cn(
       "text-[11px] px-2.5 py-1 rounded-full font-medium border shrink-0",
-      STYLES[status] ?? "bg-neutral-100 text-neutral-500 border-neutral-200"
+      STYLES[status] ?? "bg-surface text-subtle border-border"
     )}>
       {LABELS[status] ?? status}
     </span>
