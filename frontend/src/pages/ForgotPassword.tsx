@@ -7,6 +7,7 @@ import { Input } from "../components/ui/Input";
 import { LinkButton } from "../components/ui/LinkButton";
 import { Field } from "../components/auth/Field";
 import { authInputStyles } from "../components/auth/authStyles";
+import { BackButton } from "../components/auth/BackButton";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -41,14 +42,7 @@ export default function ForgotPassword() {
 
           {/* Brand + back button + heading */}
           <div className="relative mb-6">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="cursor-pointer absolute top-0 right-0 flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Back
-            </button>
+            <BackButton />
 
             <Logo />
 

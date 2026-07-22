@@ -10,6 +10,7 @@ import { Logo } from "../components/ui/Logo";
 import { AuthSidePanel } from "../components/auth/AuthSidePanel";
 import { Field } from "../components/auth/Field";
 import { authInputStyles, AUTH_BENEFITS } from "../components/auth/authStyles";
+import { BackButton } from "../components/auth/BackButton";
 
 export default function Login() {
   const { login } = useAuth();
@@ -81,14 +82,7 @@ export default function Login() {
         <div className="w-full max-w-[360px] mx-auto">
 
           <div className="relative mb-6">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="cursor-pointer absolute top-0 right-0 flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Back
-            </button>
+            <BackButton />
 
             <div className="lg:hidden mb-5">
               <Logo />
