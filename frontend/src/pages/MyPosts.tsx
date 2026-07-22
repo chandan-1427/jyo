@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, UtensilsCrossed, ChevronRight, Trash2 } from "lucide-react";
+import { Plus, Loader2, UtensilsCrossed, ChevronRight, Trash2, AlertCircle } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import type { FoodPost } from "../types/api";
 import { formatDate } from "../lib/format";
@@ -39,35 +39,38 @@ export default function MyPosts() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
-        <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
-        <p className="text-sm text-neutral-400">Loading your posts…</p>
+      <div className="px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
+        <Loader2 className="w-5 h-5 text-subtle animate-spin" />
+        <p className="text-sm text-subtle">Loading your posts…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
-        <p className="text-sm text-neutral-500 text-center max-w-xs">{error}</p>
-        <LinkButton
-          as="button"
-          label="Try again"
+      <div className="px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
+        <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3 max-w-sm w-full">
+          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
+          <p className="text-sm text-red-400 leading-snug">{error}</p>
+        </div>
+        <button
           onClick={() => window.location.reload()}
-          className="text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 bg-transparent hover:bg-transparent shadow-none px-0 py-0"
-        />
+          className="cursor-pointer text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted transition-colors"
+        >
+          Try again
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">
+    <div className="px-6 py-8 font-medium tracking-wide">
 
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <p className="text-sm text-neutral-400 mb-1">Your activity</p>
-          <h1 className="font-semibold text-2xl text-neutral-900 tracking-tight">My Posts</h1>
+          <p className="text-sm text-subtle mb-1">Your activity</p>
+          <h1 className="font-semibold text-2xl text-foreground tracking-tight">My Posts</h1>
         </div>
         <LinkButton
           as="button"
@@ -80,15 +83,15 @@ export default function MyPosts() {
 
       {/* Empty state */}
       {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-neutral-100 rounded-xl bg-white">
-          <UtensilsCrossed className="w-7 h-7 text-neutral-200" />
+        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-border rounded-xl bg-surface">
+          <UtensilsCrossed className="w-7 h-7 text-subtle" />
           <div className="text-center">
-            <p className="text-sm font-medium text-neutral-600">No posts yet</p>
-            <p className="text-sm text-neutral-400 mt-0.5">Share food with your community.</p>
+            <p className="text-sm font-medium text-muted">No posts yet</p>
+            <p className="text-sm text-subtle mt-0.5">Share food with your community.</p>
           </div>
           <button
             onClick={() => navigate("/create")}
-            className="cursor-pointer text-sm font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors mt-1"
+            className="cursor-pointer text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted transition-colors mt-1"
           >
             Post your first one
           </button>
@@ -103,7 +106,7 @@ export default function MyPosts() {
             return (
               <div
                 key={post.id}
-                className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 flex items-center gap-4 transition-colors duration-150 group"
+                className="bg-surface border border-border rounded-xl px-4 py-3.5 flex items-center gap-4 transition-colors duration-150 group"
               >
                 {/* Thumbnail */}
                 <div
@@ -117,15 +120,15 @@ export default function MyPosts() {
                       className="w-14 h-14 rounded-lg object-cover shrink-0"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
-                      <UtensilsCrossed className="w-5 h-5 text-neutral-300" />
+                    <div className="w-14 h-14 rounded-lg bg-background flex items-center justify-center shrink-0">
+                      <UtensilsCrossed className="w-5 h-5 text-subtle" />
                     </div>
                   )}
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-neutral-900 truncate">{post.title}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">{formatDate(post.createdAt)}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{post.title}</p>
+                    <p className="text-xs text-subtle mt-0.5">{formatDate(post.createdAt)}</p>
                   </div>
                 </div>
 
@@ -139,14 +142,14 @@ export default function MyPosts() {
                       <button
                         onClick={() => handleDelete(post.id)}
                         disabled={isDeleting}
-                        className="cursor-pointer text-xs font-medium text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
+                        className="cursor-pointer text-xs font-medium text-red-400 hover:text-red-300 transition-colors disabled:opacity-40"
                       >
                         {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Delete"}
                       </button>
-                      <span className="text-neutral-200">|</span>
+                      <span className="text-border">|</span>
                       <button
                         onClick={() => setConfirmId(null)}
-                        className="cursor-pointer text-xs font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
+                        className="cursor-pointer text-xs font-medium text-subtle hover:text-foreground transition-colors"
                       >
                         Cancel
                       </button>
@@ -154,7 +157,7 @@ export default function MyPosts() {
                   ) : (
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmId(post.id); }}
-                      className="cursor-pointer p-1 rounded-md text-neutral-500 hover:text-red-400 hover:bg-red-50 shrink-0"
+                      className="cursor-pointer p-1 rounded-md text-muted hover:text-red-400 hover:bg-red-950/30 shrink-0"
                       title="Delete post"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -164,7 +167,7 @@ export default function MyPosts() {
 
                 {/* Chevron */}
                 <ChevronRight
-                  className="w-4 h-4 text-neutral-300 group-hover:text-neutral-400 transition-colors shrink-0 cursor-pointer"
+                  className="w-4 h-4 text-subtle group-hover:text-muted transition-colors shrink-0 cursor-pointer"
                   onClick={() => !isConfirming && navigate(`/posts/${post.id}`)}
                 />
               </div>
