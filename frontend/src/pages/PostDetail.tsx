@@ -24,11 +24,11 @@ function MapsLink({ lat, lng }: { lat: number; lng: number }) {
       href={`https://www.google.com/maps?q=${lat},${lng}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="w-fit inline-flex items-center gap-2 border border-neutral-300 text-neutral-700 hover:border-neutral-400 hover:text-neutral-900 bg-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
+      className="w-fit inline-flex items-center gap-2 border border-border text-muted hover:border-neutral-600 hover:text-foreground bg-surface px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
     >
       <MapPin className="w-4 h-4" />
       Open in Google Maps
-      <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
+      <ExternalLink className="w-3.5 h-3.5 text-subtle" />
     </a>
   );
 }
@@ -43,10 +43,10 @@ function InfoBanner({
   children: React.ReactNode;
 }) {
   const styles = {
-    success: "bg-emerald-50 border-emerald-100 text-emerald-700",
-    warning: "bg-amber-50 border-amber-100 text-amber-700",
-    muted:   "bg-neutral-50 border-neutral-100 text-neutral-500",
-    danger:  "bg-red-50 border-red-100 text-red-500",
+    success: "bg-emerald-950/30 border-emerald-900/40 text-emerald-400",
+    warning: "bg-amber-950/30 border-amber-900/40 text-amber-400",
+    muted:   "bg-surface border-border text-subtle",
+    danger:  "bg-red-950/30 border-red-900/40 text-red-400",
   };
   return (
     <div className={`flex items-start gap-2.5 border rounded-lg px-4 py-3 text-sm ${styles[variant]}`}>
@@ -67,154 +67,164 @@ function PosterView({
   onReject: (id: string) => void;
   onComplete: () => void;
 }) {
-  if (post.status === "open") {
-    return (
-      <p className="text-sm text-neutral-400 text-center py-4">
-        No one has requested this food yet.
-      </p>
-    );
-  }
+  // Hook lifted to the top level, unconditional — fixes a Rules-of-Hooks
+  // violation that previously called useState() inside an `if` block.
+  const [lightbox, setLightbox] = useState(false);
 
-  if (post.status === "pending_approval" && pendingRequest) {
-    const [lightbox, setLightbox] = useState(false);
+  return (
+    <div className="flex flex-col gap-4">
+      {/* actionError now renders regardless of which status branch is
+          active below — previously only visible during pending_approval,
+          silently swallowing errors from the "complete" action. */}
+      {actionError && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
+          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
+          <p className="text-sm text-red-400 leading-snug">{actionError}</p>
+        </div>
+      )}
 
-    return (
-      <div className="flex flex-col gap-4">
-        <p className="text-[13px] font-medium text-neutral-700">
-          Someone wants to pick this up
-        </p>
+      {post.status === "open" && (
+        <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-2">
+          <Clock className="w-5 h-5 text-subtle" />
+          <p className="text-sm text-subtle">No one has requested this food yet.</p>
+        </div>
+      )}
 
-        {/* Requester card */}
-        <div className="bg-white border border-neutral-100 rounded-xl p-4 flex gap-4 items-start">
-          {pendingRequest.selfieUrl ? (
-            <img
-              src={pendingRequest.selfieUrl}
-              alt="Picker selfie"
-              className="w-16 h-16 rounded-lg object-cover shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setLightbox(true)}
-              title="Click to view"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
-              <UtensilsCrossed className="w-5 h-5 text-neutral-300" />
+      {post.status === "pending_approval" && pendingRequest && (
+        <div className="flex flex-col gap-4">
+          <p className="text-[13px] font-medium text-muted">
+            Someone wants to pick this up
+          </p>
+
+          {/* Requester card */}
+          <div className="bg-surface border border-border rounded-xl p-4 flex gap-4 items-start">
+            {pendingRequest.selfieUrl ? (
+              <img
+                src={pendingRequest.selfieUrl}
+                alt="Picker selfie"
+                className="w-16 h-16 rounded-lg object-cover shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setLightbox(true)}
+                title="Click to view"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-lg bg-background flex items-center justify-center shrink-0">
+                <UtensilsCrossed className="w-5 h-5 text-subtle" />
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-foreground">{pendingRequest.pickerName}</p>
+              <p className="text-sm text-subtle flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" />
+                Estimated arrival: {pendingRequest.etaMinutes} min
+              </p>
+              {pendingRequest.selfieUrl && (
+                <button
+                  type="button"
+                  onClick={() => setLightbox(true)}
+                  className="cursor-pointer text-xs text-subtle hover:text-foreground underline underline-offset-2 transition-colors text-left mt-0.5"
+                >
+                  View photo
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Lightbox */}
+          {lightbox && (
+            <div
+              className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
+              onClick={() => setLightbox(false)}
+            >
+              <div className="relative max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+                <img
+                  src={pendingRequest.selfieUrl!}
+                  alt="Picker selfie"
+                  className="w-full rounded-xl object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLightbox(false)}
+                  className="cursor-pointer absolute top-2.5 right-2.5 bg-surface border border-border rounded-full p-1.5 text-muted hover:text-foreground transition-colors shadow-sm"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium text-neutral-900">{pendingRequest.pickerName}</p>
-            <p className="text-sm text-neutral-400 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              Estimated arrival: {pendingRequest.etaMinutes} min
-            </p>
-            {pendingRequest.selfieUrl && (
-              <button
-                type="button"
-                onClick={() => setLightbox(true)}
-                className="cursor-pointer text-xs text-neutral-400 hover:text-neutral-700 underline underline-offset-2 transition-colors text-left mt-0.5"
-              >
-                View photo
-              </button>
-            )}
+
+          <div className="flex gap-3">
+            <LinkButton
+              as="button"
+              label="Approve"
+              loading={actionLoading}
+              loadingLabel="Approving…"
+              disabled={actionLoading}
+              onClick={() => onApprove(pendingRequest.id)}
+              className="flex-1"
+            />
+            <button
+              onClick={() => onReject(pendingRequest.id)}
+              disabled={actionLoading}
+              className="flex-1 cursor-pointer border border-border text-muted hover:border-neutral-600 hover:bg-surface rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {actionLoading ? "Rejecting…" : "Reject"}
+            </button>
           </div>
         </div>
+      )}
 
-        {/* Lightbox */}
-        {lightbox && (
-          <div
-            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
-            onClick={() => setLightbox(false)}
-          >
-            <div className="relative max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-              <img
-                src={pendingRequest.selfieUrl!}
-                alt="Picker selfie"
-                className="w-full rounded-xl object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => setLightbox(false)}
-                className="cursor-pointer absolute top-2.5 right-2.5 bg-white border border-neutral-200 rounded-full p-1.5 text-neutral-500 hover:text-neutral-900 transition-colors shadow-sm"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {actionError && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
-            <AlertCircle className="w-4 h-4 text-red-500 mt-px shrink-0" />
-            <p className="text-sm text-red-600 leading-snug">{actionError}</p>
-          </div>
-        )}
-
-        <div className="flex gap-3">
-          <LinkButton
-            as="button"
-            label="Approve"
-            loading={actionLoading}
-            loadingLabel="Approving…"
-            disabled={actionLoading}
-            onClick={() => onApprove(pendingRequest.id)}
-            className="flex-1"
-          />
+      {post.status === "closed" && (
+        <div className="flex flex-col gap-3">
+          <InfoBanner variant="warning" icon={Clock}>
+            Pickup approved. Waiting for the picker to arrive.
+          </InfoBanner>
           <button
-            onClick={() => onReject(pendingRequest.id)}
+            onClick={onComplete}
             disabled={actionLoading}
-            className="flex-1 cursor-pointer border border-neutral-200 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg border border-emerald-900/40 bg-emerald-950/30 px-4 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-950/50 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            Reject
+            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {actionLoading ? "Updating…" : "Food has been collected — Stop sharing location"}
           </button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  if (post.status === "closed") {
-    return (
-      <div className="flex flex-col gap-3">
-        <InfoBanner variant="warning" icon={Clock}>
-          Pickup approved. Waiting for the picker to arrive.
+      {post.status === "completed" && (
+        <InfoBanner variant="success" icon={CheckCircle2}>
+          Food successfully shared. Location is no longer visible.
         </InfoBanner>
-        <button
-          onClick={onComplete}
-          className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg border border-[#2D6A4F]/30 bg-[#2D6A4F]/5 px-4 py-2.5 text-sm font-medium text-[#2D6A4F] hover:bg-[#2D6A4F]/10 transition-colors duration-150"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          Food has been collected — Stop sharing location
-        </button>
-      </div>
-    );
-  }
+      )}
 
-  if (post.status === "completed") {
-    return (
-      <InfoBanner variant="success" icon={CheckCircle2}>
-        Food successfully shared. Location is no longer visible.
-      </InfoBanner>
-    );
-  }
-
-  if (post.status === "expired") {
-    return (
-      <InfoBanner variant="danger" icon={TimerOff}>
-        This post has expired. Create a new post if the food is still available.
-      </InfoBanner>
-    );
-  }
-
-  return null;
+      {post.status === "expired" && (
+        <InfoBanner variant="danger" icon={TimerOff}>
+          This post has expired. Create a new post if the food is still available.
+        </InfoBanner>
+      )}
+    </div>
+  );
 }
 
 function VisitorView({ status, onRequest }: { status: FoodPost["status"]; onRequest: () => void }) {
   if (status === "open") {
     return (
-      <LinkButton
-        as="button"
-        label="I'll pick it up"
-        onClick={onRequest}
-        className="w-full"
-      />
+      <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-3">
+        <div className="w-11 h-11 rounded-full bg-accent/10 flex items-center justify-center">
+          <UtensilsCrossed className="w-5 h-5 text-accent" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Interested in this food?</p>
+          <p className="text-sm text-subtle mt-0.5">
+            Send a request and the poster will review it before you head over.
+          </p>
+        </div>
+        <LinkButton
+          as="button"
+          label="I'll pick it up"
+          onClick={onRequest}
+          className="w-full mt-1"
+        />
+      </div>
     );
   }
 
@@ -288,6 +298,7 @@ export default function PostDetail() {
   };
 
   const handleComplete = async () => {
+    setActionError(""); // was missing — stale errors could otherwise linger
     setActionLoading(true);
     try {
       await apiFetch(`/posts/${data?.post.id}/complete`, { method: "PUT" });
@@ -301,23 +312,26 @@ export default function PostDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
-        <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
-        <p className="text-sm text-neutral-400">Loading post…</p>
+      <div className="px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
+        <Loader2 className="w-5 h-5 text-subtle animate-spin" />
+        <p className="text-sm text-subtle">Loading post…</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
-        <p className="text-sm text-neutral-500 text-center">{error || "Post not found."}</p>
-        <LinkButton
-          as="button"
-          label="Back to Feed"
+      <div className="px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
+        <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3 max-w-sm w-full">
+          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
+          <p className="text-sm text-red-400 leading-snug">{error || "Post not found."}</p>
+        </div>
+        <button
           onClick={() => navigate("/feed")}
-          className="text-sm underline underline-offset-2 bg-transparent hover:bg-transparent text-neutral-900 hover:text-neutral-600 px-0 py-0 shadow-none"
-        />
+          className="cursor-pointer text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted transition-colors"
+        >
+          Back to Feed
+        </button>
       </div>
     );
   }
@@ -325,60 +339,62 @@ export default function PostDetail() {
   const { post, isPoster, isApprovedPicker, pendingRequest } = data;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">
+    <div className="px-6 py-8 font-medium tracking-wide">
 
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
-        className="cursor-pointer flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-700 transition-colors mb-6"
+        className="cursor-pointer flex items-center gap-1.5 text-sm text-subtle hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Back
       </button>
 
-      <div className="max-w-lg flex flex-col gap-6">
+      <div className="grid lg:grid-cols-[1fr_1fr] gap-8 items-start">
 
-        {/* Photo */}
-        {post.photoUrl ? (
-          <img src={post.photoUrl} alt={post.title} className="w-full h-60 object-cover rounded-xl" />
-        ) : (
-          <div className="w-full h-60 bg-neutral-100 rounded-xl flex items-center justify-center">
-            <UtensilsCrossed className="w-10 h-10 text-neutral-300" />
-          </div>
-        )}
+        {/* Left — photo + post info, stays in view while acting on the right */}
+        <div className="flex flex-col gap-6 lg:sticky lg:top-20">
 
-        {/* Post info */}
-        <div className="bg-white border border-neutral-300 rounded-xl px-5 py-5 flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="font-semibold text-xl text-neutral-900 tracking-tight leading-tight">
-              {post.title}
-            </h1>
-            <StatusBadge status={post.status} />
-          </div>
-
-          {post.description && (
-            <p className="text-sm leading-relaxed text-neutral-500">{post.description}</p>
+          {post.photoUrl ? (
+            <img src={post.photoUrl} alt={post.title} className="w-full h-72 object-cover rounded-xl" />
+          ) : (
+            <div className="w-full h-72 bg-surface rounded-xl flex items-center justify-center">
+              <UtensilsCrossed className="w-10 h-10 text-subtle" />
+            </div>
           )}
 
-          <div className="border-t border-neutral-300" />
+          <div className="bg-surface border border-border rounded-xl px-5 py-5 flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="font-semibold text-xl text-foreground tracking-tight leading-tight">
+                {post.title}
+              </h1>
+              <StatusBadge status={post.status} />
+            </div>
 
-          <div className="flex flex-col gap-2.5 text-sm text-neutral-500">
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-400">Posted by</span>
-              <span className="font-medium text-neutral-700">{post.posterName}</span>
+            {post.description && (
+              <p className="text-sm leading-relaxed text-muted">{post.description}</p>
+            )}
+
+            <div className="border-t border-border" />
+
+            <div className="flex flex-col gap-2.5 text-sm text-muted">
+              <div className="flex items-center gap-2">
+                <span className="text-subtle">Posted by</span>
+                <span className="font-medium text-foreground">{post.posterName}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-subtle shrink-0" />
+                <span>Pickup window: {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-              <span>Pickup window: {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
-            </div>
+
+            {(isPoster || isApprovedPicker) && post.pickupLat && post.pickupLng && (
+              <MapsLink lat={post.pickupLat} lng={post.pickupLng} />
+            )}
           </div>
-
-          {(isPoster || isApprovedPicker) && post.pickupLat && post.pickupLng && (
-            <MapsLink lat={post.pickupLat} lng={post.pickupLng} />
-          )}
         </div>
 
-        {/* Action section */}
+        {/* Right — actions */}
         <div className="flex flex-col gap-4">
           {isApprovedPicker && (
             <InfoBanner variant="success" icon={CheckCircle2}>

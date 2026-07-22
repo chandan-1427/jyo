@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { apiFetch, ApiError } from "../lib/api";
 import { uploadImage } from "../lib/supabase";
 import { getCurrentLocation } from "../lib/location";
-import { AlertCircle, Camera } from "lucide-react";
+import { AlertCircle, Camera, X } from "lucide-react";
 import { Field } from "./ui/Field";
 import { Input } from "./ui/Input";
 import { LinkButton } from "./ui/LinkButton";
@@ -43,13 +43,9 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
     setLoading(true);
 
     try {
-      // Get current location
       const coords = await getCurrentLocation();
-
-      // Upload selfie to Supabase
       const selfieUrl = await uploadImage(selfieFile, "selfies");
 
-      // Submit request
       await apiFetch("/requests", {
         method: "POST",
         body: JSON.stringify({
@@ -71,25 +67,24 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   };
 
   return (
-    // Backdrop
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-lg">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-sm p-6 shadow-lg">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-semibold text-neutral-900 text-lg tracking-tight">Request Pickup</h2>
+          <h2 className="font-semibold text-foreground text-lg tracking-tight">Request Pickup</h2>
           <button
             onClick={onClose}
-            className="cursor-pointer text-neutral-400 hover:text-neutral-700 transition-colors text-xl leading-none"
+            className="cursor-pointer text-subtle hover:text-foreground transition-colors"
           >
-            ✕
+            <X className="w-4.5 h-4.5" />
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
-            <AlertCircle className="w-4 h-4 text-red-500 mt-px shrink-0" />
-            <p className="text-sm text-red-600 leading-snug">{error}</p>
+          <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
+            <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
+            <p className="text-sm text-red-400 leading-snug">{error}</p>
           </div>
         )}
 
@@ -121,7 +116,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
 
           {/* Selfie */}
           <Field label="Selfie Photo">
-            <p className="text-xs text-neutral-400 -mt-1">
+            <p className="text-xs text-subtle -mt-1">
               So the poster can identify you at pickup
             </p>
 
@@ -135,15 +130,15 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
                 <button
                   type="button"
                   onClick={() => { setSelfieFile(null); setSelfiePreview(""); }}
-                  className="cursor-pointer absolute top-2 right-2 bg-white border border-neutral-200 text-neutral-500 rounded-full px-2 py-0.5 text-xs shadow-sm hover:text-red-500 hover:border-red-200 transition-colors"
+                  className="cursor-pointer absolute top-2 right-2 bg-surface border border-border text-muted rounded-full px-2 py-0.5 text-xs shadow-sm hover:text-red-400 hover:border-red-900/40 transition-colors"
                 >
                   Remove
                 </button>
               </div>
             ) : (
-              <label className="mt-1 border border-dashed border-neutral-200 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-neutral-300 hover:bg-neutral-50 transition-colors group">
-                <Camera className="w-5 h-5 text-neutral-300 group-hover:text-neutral-400 transition-colors mb-1.5" />
-                <span className="text-xs text-neutral-400 group-hover:text-neutral-500 transition-colors">
+              <label className="mt-1 border border-dashed border-border rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-neutral-600 hover:bg-background transition-colors group">
+                <Camera className="w-5 h-5 text-subtle group-hover:text-muted transition-colors mb-1.5" />
+                <span className="text-xs text-subtle group-hover:text-muted transition-colors">
                   Tap to upload selfie
                 </span>
                 <input
