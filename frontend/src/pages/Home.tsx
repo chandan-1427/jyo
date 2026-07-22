@@ -87,7 +87,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 function EyebrowLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-sm text-subtle tracking-wide mb-1">
+    <p className="text-md text-subtle tracking-wide mb-1">
       {children}
     </p>
   );
@@ -125,9 +125,9 @@ export default function Home() {
   <div className="min-h-screen font-medium">
 
     {/* Navbar */}
-    <header className="mt-[-40px] sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <header className="mt-[-40px] sticky top-0 z-50 bg-background py-2">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Logo />
+        <Logo className="text-2xl" />
         <div className="flex items-center gap-3">
           <Link
             to="/login"
@@ -291,7 +291,7 @@ export default function Home() {
     </main>
 
     {/* Footer */}
-    <footer className="relative border-t border-border px-6 py-20 md:py-24">
+    <footer className="relative border-t border-border rounded-2xl px-6 py-20 md:py-24">
       <div className="mx-auto max-w-6xl">
 
         {/* Top Section */}
@@ -305,7 +305,7 @@ export default function Home() {
               Built to reduce food wastage through local community sharing.
             </p>
 
-            <div className="mt-6 flex items-center gap-2 text-xs text-subtle">
+            <div className="mt-6 flex items-center gap-2 text-[13px] text-subtle">
               <span className="h-1.5 w-1.5 rounded-full bg-accent" />
               <span>Tirupati, Andhra Pradesh</span>
             </div>
@@ -366,9 +366,9 @@ export default function Home() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-16 flex flex-col gap-4 border-t border-border pt-6 text-xs text-subtle md:flex-row md:items-center md:justify-between">
+        <div className="mt-16 flex flex-col gap-4 border-t border-border pt-6 text-[13px] text-subtle md:flex-row md:items-center md:justify-between">
           <span>&copy; 2026 Jyo — built by Chandan Dakka</span>
-          <span>Made for people, not landfills.</span>
+          <span>Made for people, not for profit.</span>
         </div>
       </div>
     </footer>
