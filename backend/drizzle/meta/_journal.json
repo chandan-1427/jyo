@@ -29,6 +29,13 @@
       "when": 1778936945107,
       "tag": "0003_sloppy_gamora",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784751019869,
+      "tag": "0004_nappy_zarda",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,13 @@
 import { db } from "../db/index.js";
-import { notifications } from "../db/schema.js";
+import { notifications, notificationTypeEnum } from "../db/schema.js";
 
-export async function createNotification(userId: string, message: string) {
-  await db.insert(notifications).values({ userId, message });
+type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
+
+export async function createNotification(
+  userId: string,
+  message: string,
+  postId?: string,
+  type?: NotificationType
+) {
+  await db.insert(notifications).values({ userId, message, postId, type });
 }

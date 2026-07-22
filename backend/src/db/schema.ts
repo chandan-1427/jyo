@@ -25,6 +25,13 @@ export const requestStatusEnum = pgEnum("request_status", [
   "cancelled",
 ]);
 
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "request_received",
+  "request_cancelled",
+  "request_approved",
+  "request_rejected",
+]);
+
 // --- Users ---
 export const users = pgTable("users", {
   id:           uuid("id").primaryKey().defaultRandom(),
@@ -73,6 +80,8 @@ export const pickupRequests = pgTable("pickup_requests", {
 export const notifications = pgTable("notifications", {
   id:        uuid("id").primaryKey().defaultRandom(),
   userId:    uuid("user_id").notNull().references(() => users.id),
+  postId:    uuid("post_id").references(() => foodPosts.id, { onDelete: "set null" }),
+  type:      notificationTypeEnum("type"),
   message:   text("message").notNull(),
   read:      boolean("read").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),

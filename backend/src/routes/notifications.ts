@@ -13,7 +13,13 @@ notificationRoutes.get("/", async (c) => {
   const { userId } = c.get("user");
 
   const items = await db
-    .select()
+    .select({
+      id: notifications.id,
+      message: notifications.message,
+      read: notifications.read,
+      createdAt: notifications.createdAt,
+      postId: notifications.postId,
+    })
     .from(notifications)
     .where(eq(notifications.userId, userId))
     .orderBy(desc(notifications.createdAt))

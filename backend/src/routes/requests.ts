@@ -37,7 +37,6 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
 
   const { postId, pickerName, selfieUrl, etaMinutes, lat, lng } = result.data;
 
-  // Fetch the post
   const [post] = await db
     .select()
     .from(foodPosts)
@@ -48,23 +47,19 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     return c.json({ error: "Post not found" }, 404);
   }
 
-  // Can't request your own post
   if (post.posterId === userId) {
     return c.json({ error: "You cannot request your own food post" }, 400);
   }
 
-  // Post must be open
   if (post.status !== "open") {
     return c.json({ error: "This post is no longer available for requests" }, 400);
   }
 
-  // Picker must be within 10 km
   const distance = haversineDistance(lat, lng, post.pickupLat, post.pickupLng);
   if (process.env.APP_ENV === "production" && distance > 20) {
     return c.json({ error: "You are too far from this post to request it" }, 400);
   }
 
-  // Insert request
   const [request] = await db
     .insert(pickupRequests)
     .values({
@@ -76,22 +71,24 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     })
     .returning();
 
-  // Move post to pending_approval
   await db
     .update(foodPosts)
     .set({ status: "pending_approval" })
     .where(eq(foodPosts.id, postId));
 
-  // Notify poster
   const [poster] = await db
     .select({ email: users.email })
     .from(users)
     .where(eq(users.id, post.posterId))
     .limit(1);
-  
-  createNotification(post.posterId, "Someone wants to pick up your food. Review their request.")
-    .catch(console.error);
-    
+
+  createNotification(
+    post.posterId,
+    "Someone wants to pick up your food. Review their request.",
+    postId,
+    "request_received"
+  ).catch(console.error);
+
   notifyPoster(poster.email, "request_received");
 
   return c.json({ message: "Request submitted", request }, 201);
@@ -102,7 +99,6 @@ requestRoutes.put("/:id/approve", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
-  // Fetch request
   const [request] = await db
     .select()
     .from(pickupRequests)
@@ -113,47 +109,46 @@ requestRoutes.put("/:id/approve", async (c) => {
     return c.json({ error: "Request not found" }, 404);
   }
 
-  // Fetch the post
   const [post] = await db
     .select()
     .from(foodPosts)
     .where(eq(foodPosts.id, request.postId))
     .limit(1);
 
-  // Only the poster can approve
   if (post.posterId !== userId) {
     return c.json({ error: "Unauthorized" }, 403);
   }
 
-  // Post must be in pending_approval
   if (post.status !== "pending_approval") {
     return c.json({ error: "This post is not awaiting approval" }, 400);
   }
 
-  // Approve the request
   await db
     .update(pickupRequests)
     .set({ status: "approved" })
     .where(eq(pickupRequests.id, requestId));
 
-  // Close the post and set approvedRequestId
   await db
     .update(foodPosts)
     .set({ status: "closed", approvedRequestId: requestId })
     .where(eq(foodPosts.id, request.postId));
 
-  // Notify picker
   const [picker] = await db
     .select({ email: users.email })
     .from(users)
     .where(eq(users.id, request.pickerId))
     .limit(1);
 
-  createNotification(request.pickerId, "Your pickup request was approved. Check the post for the location.")
-    .catch(console.error);
-  notifyPicker(picker.email, "request_approved");
+  createNotification(
+    request.pickerId,
+    "Your pickup request was approved. Check the post for the location.",
+    request.postId,
+    "request_approved"
+  ).catch(console.error);
 
-  await notifyPicker(picker.email, "request_approved");
+  notifyPicker(picker.email, "request_approved");
+  // duplicate `await notifyPicker(...)` call removed — was sending this
+  // email twice on every approval
 
   return c.json({ message: "Request approved" });
 });
@@ -179,7 +174,6 @@ requestRoutes.put("/:id/reject", async (c) => {
     .where(eq(foodPosts.id, request.postId))
     .limit(1);
 
-  // Only the poster can reject
   if (post.posterId !== userId) {
     return c.json({ error: "Unauthorized" }, 403);
   }
@@ -188,30 +182,31 @@ requestRoutes.put("/:id/reject", async (c) => {
     return c.json({ error: "This post is not awaiting approval" }, 400);
   }
 
-  // Reject the request
   await db
     .update(pickupRequests)
     .set({ status: "rejected" })
     .where(eq(pickupRequests.id, requestId));
 
-  // Move post back to open
   await db
     .update(foodPosts)
     .set({ status: "open" })
     .where(eq(foodPosts.id, request.postId));
 
-  // Notify picker
   const [picker] = await db
     .select({ email: users.email })
     .from(users)
     .where(eq(users.id, request.pickerId))
     .limit(1);
 
-  createNotification(request.pickerId, "Your pickup request was rejected.")
-    .catch(console.error);
-  notifyPicker(picker.email, "request_rejected");
+  createNotification(
+    request.pickerId,
+    "Your pickup request was rejected.",
+    request.postId,
+    "request_rejected"
+  ).catch(console.error);
 
-  await notifyPicker(picker.email, "request_rejected");
+  notifyPicker(picker.email, "request_rejected");
+  // duplicate call removed here too
 
   return c.json({ message: "Request rejected" });
 });
@@ -231,46 +226,45 @@ requestRoutes.put("/:id/cancel", async (c) => {
     return c.json({ error: "Request not found" }, 404);
   }
 
-  // Only the picker can cancel
   if (request.pickerId !== userId) {
     return c.json({ error: "Unauthorized" }, 403);
   }
 
-  // Can only cancel before approval
   if (request.status !== "pending") {
     return c.json({ error: "Cannot cancel a request that has already been approved" }, 400);
   }
 
-  // Cancel the request
   await db
     .update(pickupRequests)
     .set({ status: "cancelled" })
     .where(eq(pickupRequests.id, requestId));
 
-  // Move post back to open
   await db
     .update(foodPosts)
     .set({ status: "open" })
     .where(eq(foodPosts.id, request.postId));
 
-  // Notify poster
   const [post] = await db
-  .select({ posterId: foodPosts.posterId })
-  .from(foodPosts)
-  .where(eq(foodPosts.id, request.postId))
-  .limit(1);
-  
+    .select({ posterId: foodPosts.posterId })
+    .from(foodPosts)
+    .where(eq(foodPosts.id, request.postId))
+    .limit(1);
+
   const [poster] = await db
     .select({ email: users.email })
     .from(users)
     .where(eq(users.id, post.posterId))
     .limit(1);
 
-  createNotification(post.posterId, "A picker cancelled their request. Your post is open again.")
-    .catch(console.error);
-  notifyPoster(poster.email, "request_cancelled");
+  createNotification(
+    post.posterId,
+    "A picker cancelled their request. Your post is open again.",
+    request.postId,
+    "request_cancelled"
+  ).catch(console.error);
 
-  await notifyPoster(poster.email, "request_cancelled");
+  notifyPoster(poster.email, "request_cancelled");
+  // duplicate call removed here too
 
   return c.json({ message: "Request cancelled" });
 });

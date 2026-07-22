@@ -12,6 +12,7 @@ type Notification = {
   message: string;
   read: boolean;
   createdAt: string;
+  postId: string | null;
 };
 
 const navLinks = [
@@ -75,7 +76,14 @@ export default function Navbar() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          const newNotif = payload.new as Notification;
+          const row = payload.new as Record<string, any>;
+          const newNotif: Notification = {
+            id: row.id,
+            message: row.message,
+            read: row.read,
+            createdAt: row.created_at,
+            postId: row.post_id,
+          };
           setNotifications((prev) => [newNotif, ...prev]);
         }
       )
@@ -104,19 +112,29 @@ export default function Navbar() {
       <p className="text-sm text-subtle text-center py-6">No notifications yet</p>
     ) : (
       <div className="divide-y divide-border">
-        {notifications.map((n) => (
-          <div
-            key={n.id}
-            className={`px-4 py-3 text-sm transition-colors ${
-              n.read ? "text-subtle bg-surface" : "text-foreground bg-accent/5"
-            }`}
-          >
-            <p className="leading-snug">{n.message}</p>
-            <p className="text-xs text-subtle mt-0.5">
-              {formatDateTime(n.createdAt)}
-            </p>
-          </div>
-        ))}
+        {notifications.map((n) => {
+          const clickable = Boolean(n.postId);
+          return (
+            <div
+              key={n.id}
+              onClick={() => {
+                if (clickable) {
+                  setShowNotifs(false);
+                  setShowMobileNotifs(false);
+                  navigate(`/posts/${n.postId}`);
+                }
+              }}
+              className={`px-4 py-3 text-sm transition-colors ${
+                clickable ? "cursor-pointer hover:bg-background" : ""
+              } ${n.read ? "text-subtle bg-surface" : "text-foreground bg-accent/5"}`}
+            >
+              <p className="leading-snug">{n.message}</p>
+              <p className="text-xs text-subtle mt-0.5">
+                {formatDateTime(n.createdAt)}
+              </p>
+            </div>
+          );
+        })}
       </div>
     );
 
