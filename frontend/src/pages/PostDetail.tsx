@@ -398,7 +398,7 @@ export default function PostDetail() {
         <div className="flex flex-col gap-4">
           {isApprovedPicker && (
             <InfoBanner variant="success" icon={CheckCircle2}>
-              Your request was approved. Head to the location above to collect the food.
+              Your request was approved. Head to the location to collect the food.
             </InfoBanner>
           )}
 
