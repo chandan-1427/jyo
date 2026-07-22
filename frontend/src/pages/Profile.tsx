@@ -27,8 +27,8 @@ function Field({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline gap-2">
-        <label className="text-[13px] font-medium text-neutral-700">{label}</label>
-        {hint && <span className="text-[12px] text-neutral-400">{hint}</span>}
+        <label className="text-[13px] font-medium text-muted">{label}</label>
+        {hint && <span className="text-[12px] text-subtle">{hint}</span>}
       </div>
       {children}
     </div>
@@ -109,33 +109,39 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
-        <Loader2 className="w-5 h-5 text-neutral-300 animate-spin" />
-        <p className="text-sm text-neutral-400">Loading your profile…</p>
+        <Loader2 className="w-5 h-5 text-subtle animate-spin" />
+        <p className="text-sm text-subtle">Loading your profile…</p>
       </div>
     );
   }
 
+  const initial = profile?.name?.trim().charAt(0).toUpperCase() || "?";
+
   return (
-    <div className="max-w-5xl mx-auto px-6 py-1 font-medium tracking-wide">
+    <div className="px-6 py-8 font-medium tracking-wide">
 
       {/* Header */}
       <div className="mb-8">
-        <p className="text-sm text-neutral-400 mb-1">Account</p>
-        <h1 className="font-semibold text-2xl text-neutral-900 tracking-tight">My Profile</h1>
+        <p className="text-sm text-subtle mb-1">Account</p>
+        <h1 className="font-semibold text-2xl text-foreground tracking-tight">My Profile</h1>
       </div>
 
-      <div className="max-w-lg flex flex-col gap-5">
+      <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
 
-        {/* Read-only info */}
-        <div className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-around gap-3 sm:gap-0">
-          <div className="flex flex-col gap-0.5">
-            <p className="text-xs text-neutral-400">Email</p>
-            <p className="text-sm text-neutral-700">{profile?.email}</p>
+        {/* Left — identity summary */}
+        <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-4 lg:sticky lg:top-20">
+          <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
+            <span className="text-xl font-semibold text-accent">{initial}</span>
           </div>
-          <div className="w-full h-px sm:w-px sm:h-8 bg-neutral-200 shrink-0" />
-          <div className="flex flex-col gap-0.5">
-            <p className="text-xs text-neutral-400">Member since</p>
-            <p className="text-sm text-neutral-700">
+
+          <div>
+            <p className="text-base font-semibold text-foreground">{profile?.name}</p>
+            <p className="text-sm text-subtle mt-0.5">{profile?.email}</p>
+          </div>
+
+          <div className="w-full border-t border-border pt-4">
+            <p className="text-xs text-subtle">Member since</p>
+            <p className="text-sm text-muted mt-0.5">
               {profile
                 ? new Date(profile.createdAt).toLocaleDateString("en-IN", {
                     day: "numeric", month: "long", year: "numeric",
@@ -145,81 +151,84 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
-            <AlertCircle className="w-4 h-4 text-red-500 mt-px shrink-0" />
-            <p className="text-sm text-red-600 leading-snug">{error}</p>
-          </div>
-        )}
+        {/* Right — editable form */}
+        <div className="flex flex-col gap-4 max-w-xl">
 
-        {/* Success */}
-        {success && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-3">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-px shrink-0" />
-            <p className="text-sm text-emerald-600 leading-snug">Profile updated successfully.</p>
-          </div>
-        )}
+          {error && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
+              <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
+              <p className="text-sm text-red-400 leading-snug">{error}</p>
+            </div>
+          )}
 
-        {/* Editable form */}
-        <form onSubmit={handleSubmit} className="bg-white border border-neutral-200 rounded-[0.5rem] px-5 py-5 flex flex-col gap-4">
+          {success && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-emerald-900/40 bg-emerald-950/30 px-3.5 py-3">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-px shrink-0" />
+              <p className="text-sm text-emerald-400 leading-snug">Profile updated successfully.</p>
+            </div>
+          )}
 
-          <Field label="Name">
-            <Input
-              name="name"
-              type="text"
-              value={form.name}
-              onChange={handleChange}
-              autoComplete="name"
-              required
+          <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-xl px-5 py-5 flex flex-col gap-4">
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="Name">
+                <Input
+                  name="name"
+                  type="text"
+                  value={form.name}
+                  onChange={handleChange}
+                  autoComplete="name"
+                  required
+                />
+              </Field>
+
+              <Field label="Phone">
+                <Input
+                  name="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={form.phone}
+                  onChange={handleChange}
+                  onKeyDown={allowOnlyDigits}
+                  autoComplete="tel"
+                  required
+                />
+              </Field>
+            </div>
+
+            <Field label="Area / Locality" hint="optional">
+              <Input
+                name="locationText"
+                type="text"
+                value={form.locationText}
+                onChange={handleChange}
+                placeholder="e.g. Balaji Nagar, Tirupati"
+              />
+            </Field>
+
+            <Field label="About you" hint="optional">
+              <Textarea
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                placeholder="A short note about yourself — students, families, anyone is welcome"
+                rows={4}
+              />
+            </Field>
+
+            <LinkButton
+              as="button"
+              type="submit"
+              label={saving ? "Saving…" : "Save Changes"}
+              loading={saving}
+              loadingLabel="Saving…"
+              disabled={saving}
+              className="mt-1 w-full sm:w-fit sm:self-end"
             />
-          </Field>
 
-          <Field label="Phone">
-            <Input
-              name="phone"
-              type="tel"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={form.phone}
-              onChange={handleChange}
-              onKeyDown={allowOnlyDigits}
-              autoComplete="tel"
-              required
-            />
-          </Field>
-
-          <Field label="Area / Locality" hint="optional">
-            <Input
-              name="locationText"
-              type="text"
-              value={form.locationText}
-              onChange={handleChange}
-              placeholder="e.g. Balaji Nagar, Tirupati"
-            />
-          </Field>
-
-          <Field label="About you" hint="optional">
-            <Textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              placeholder="A short note about yourself — students, families, anyone is welcome"
-              rows={3}
-            />
-          </Field>
-
-          <LinkButton
-            as="button"
-            type="submit"
-            label={saving ? "Saving…" : "Save Changes"}
-            loading={saving}
-            loadingLabel="Saving…"
-            disabled={saving}
-            className="mt-1 w-full"
-          />
-
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );
