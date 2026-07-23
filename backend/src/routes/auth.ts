@@ -6,7 +6,7 @@ import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
-import { forgotPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
+import { forgotPasswordLimiter, resetPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
 import {
   sendVerificationEmail,
@@ -208,7 +208,7 @@ authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
 });
 
 // --- Reset password ---
-authRoutes.post("/reset-password", resendVerificationLimiter, async (c) => {
+authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
   const body = await c.req.json();
   const result = resetPasswordSchema.safeParse(body);
 

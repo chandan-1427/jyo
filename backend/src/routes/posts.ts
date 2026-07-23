@@ -99,7 +99,7 @@ postRoutes.get("/", async (c) => {
       )
     );
 
-  // Filter by 10 km radius and strip exact location from response
+  // Filter by 20 km radius and strip exact location from response
   const nearbyPosts = posts
     .filter((post) =>
       haversineDistance(userLat, userLng, post.pickupLat, post.pickupLng) <= 20

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
@@ -60,6 +60,19 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     return c.json({ error: "You are too far from this post to request it" }, 400);
   }
 
+  // Atomically claim the post — the status condition in the WHERE clause
+  // prevents two concurrent requests from both passing the check above and
+  // creating duplicate pending requests for the same post.
+  const [claimedPost] = await db
+    .update(foodPosts)
+    .set({ status: "pending_approval" })
+    .where(and(eq(foodPosts.id, postId), eq(foodPosts.status, "open")))
+    .returning({ id: foodPosts.id });
+
+  if (!claimedPost) {
+    return c.json({ error: "This post is no longer available for requests" }, 400);
+  }
+
   const [request] = await db
     .insert(pickupRequests)
     .values({
@@ -70,11 +83,6 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
       etaMinutes,
     })
     .returning();
-
-  await db
-    .update(foodPosts)
-    .set({ status: "pending_approval" })
-    .where(eq(foodPosts.id, postId));
 
   const [poster] = await db
     .select({ email: users.email })

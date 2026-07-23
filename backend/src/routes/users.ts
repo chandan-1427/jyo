@@ -3,8 +3,16 @@ import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
+import { z } from "zod";
 
 export const userRoutes = new Hono();
+
+const updateProfileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100).optional(),
+  phone: z.string().min(10, "Phone number too short").max(15).optional(),
+  locationText: z.string().max(200).optional(),
+  description: z.string().max(500).optional(),
+});
 
 // Apply auth middleware to all user routes
 userRoutes.use("*", authMiddleware);
@@ -39,15 +47,20 @@ userRoutes.put("/me", async (c) => {
   const { userId } = c.get("user");
   const body = await c.req.json();
 
-  // Only pick allowed fields — ignore anything else sent in body
-  const { name, phone, locationText, description } = body;
+  const result = updateProfileSchema.safeParse(body);
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
+  }
 
-  // Build update object with only provided fields
+  const { name, phone, locationText, description } = result.data;
+
+  // Build update object with only explicitly provided fields — an empty
+  // string for a nullable field (locationText/description) clears it.
   const updates: Record<string, string> = {};
-  if (name)         updates.name = name;
-  if (phone)        updates.phone = phone;
-  if (locationText) updates.locationText = locationText;
-  if (description)  updates.description = description;
+  if (name !== undefined)         updates.name = name;
+  if (phone !== undefined)        updates.phone = phone;
+  if (locationText !== undefined) updates.locationText = locationText;
+  if (description !== undefined)  updates.description = description;
 
   if (Object.keys(updates).length === 0) {
     return c.json({ error: "No valid fields provided to update" }, 400);
