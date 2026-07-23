@@ -12,10 +12,17 @@ import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "../lib/mailer.js";
+import { env } from "../env.js";
 
 export const authRoutes = new Hono();
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+const secret = new TextEncoder().encode(env.JWT_SECRET);
+
+// Precomputed bcrypt hash of a random value that will never match any real
+// password — compared against on a login attempt for an unknown email so
+// the response takes the same time as a real "wrong password" attempt,
+// instead of returning early and leaking account existence via timing.
+const DUMMY_PASSWORD_HASH = "$2a$10$CwTycUXWue0Thq9StjUM0uJ8O9YtbnHUb.z35p1SICtjy0G1kGGxq";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -76,10 +83,20 @@ authRoutes.post("/register", registerLimiter, async (c) => {
   const passwordHash = await bcrypt.hash(password, 10);
   const verificationToken = crypto.randomBytes(32).toString("hex");
 
-  const [newUser] = await db
-    .insert(users)
-    .values({ name, email, passwordHash, phone, verificationToken })
-    .returning({ id: users.id, name: users.name, email: users.email });
+  let newUser;
+  try {
+    [newUser] = await db
+      .insert(users)
+      .values({ name, email, passwordHash, phone, verificationToken })
+      .returning({ id: users.id, name: users.name, email: users.email });
+  } catch (err: any) {
+    // Unique-violation: two concurrent registrations raced past the
+    // "existing" check above for the same email.
+    if (err?.code === "23505") {
+      return c.json({ error: "Email already registered" }, 400);
+    }
+    throw err;
+  }
 
   // Send verification email — fire and forget
   sendVerificationEmail(email, verificationToken)
@@ -110,6 +127,10 @@ authRoutes.post("/login", loginLimiter, async (c) => {
     .limit(1);
 
   if (!user) {
+    // Still run a bcrypt comparison so the response takes roughly the same
+    // time as a real login attempt — otherwise an attacker could tell
+    // "no such account" apart from "wrong password" just by timing.
+    await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
     return c.json({ error: "Invalid email or password" }, 401);
   }
 

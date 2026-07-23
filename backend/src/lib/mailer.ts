@@ -1,6 +1,7 @@
 import { Resend } from "resend";
+import { env } from "../env.js";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(env.RESEND_API_KEY);
 
 async function sendMail(to: string, subject: string, html: string) {
   const { error } = await resend.emails.send({
@@ -187,7 +188,7 @@ export function notifyPicker(
 // --- Transactional emails (awaited) ---
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const link = `${process.env.APP_URL}/verify-email?token=${token}`;
+  const link = `${env.APP_URL}/verify-email?token=${token}`;
   await sendMail(
     email,
     "Verify your Jyo account",
@@ -203,7 +204,7 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const link = `${process.env.APP_URL}/reset-password?token=${token}`;
+  const link = `${env.APP_URL}/reset-password?token=${token}`;
   await sendMail(
     email,
     "Reset your Jyo password",

@@ -6,11 +6,9 @@ import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
 import { uploadFile } from "../lib/storage.js";
-import { createRequestLimiter } from "../middleware/limiters.js";
+import { createRequestLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
 import { createNotification } from "../lib/notify.js";
-
-import crypto from "crypto";
 
 export const requestRoutes = new Hono();
 
@@ -298,7 +296,7 @@ requestRoutes.get("/mine", async (c) => {
   return c.json({ requests });
 });
 
-requestRoutes.post("/upload-selfie", async (c) => {
+requestRoutes.post("/upload-selfie", uploadLimiter, async (c) => {
   const body = await c.req.parseBody();
   const file = body["file"];
 
@@ -307,10 +305,11 @@ requestRoutes.post("/upload-selfie", async (c) => {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const ext = file.name.split(".").pop();
-  const filename = `${crypto.randomUUID()}.${ext}`;
 
-  const url = await uploadFile(buffer, filename, file.type, "selfies");
-
-  return c.json({ url });
+  try {
+    const url = await uploadFile(buffer, file.type, "selfies");
+    return c.json({ url });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
+  }
 });

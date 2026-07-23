@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { env } from "./env.js";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -40,22 +41,19 @@ app.route("/posts", postRoutes);
 app.route("/requests", requestRoutes);
 app.route("/notifications", notificationRoutes);
 
-const port = Number(process.env.PORT) || 3000;
-
 startExpiryJob();
 
 serve(
-  { fetch: app.fetch, port },
+  { fetch: app.fetch, port: env.PORT },
   (info) => {
-    const env = process.env.APP_ENV ?? "development";
-    const isProd = env === "production";
+    const isProd = env.APP_ENV === "production";
 
     console.log(`
 ┌─────────────────────────────────────────────┐
 │           JYO Backend — Running             │
 ├─────────────────────────────────────────────┤
 │ Port    : ${String(info.port).padEnd(34)}│
-│ Env     : ${env.padEnd(34)}│
+│ Env     : ${env.APP_ENV.padEnd(34)}│
 │ CORS    : ${(isProd ? "jyo.co.in only" : "localhost allowed").padEnd(34)}│
 ├─────────────────────────────────────────────┤
 │ Routes  : /auth /users /posts               │

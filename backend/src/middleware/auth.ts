@@ -1,6 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import { getCookie } from "hono/cookie";
 import { jwtVerify } from "jose";
+import { env } from "../env.js";
 
 type AuthUser = {
   userId: string;
@@ -13,7 +14,7 @@ declare module "hono" {
   }
 }
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+const secret = new TextEncoder().encode(env.JWT_SECRET);
 
 export const authMiddleware = createMiddleware(async (c, next) => {
   const token = getCookie(c, "token");

@@ -5,7 +5,6 @@ import { eq, or, and, gte, desc } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
 import { uploadFile } from "../lib/storage.js";
-import crypto from "crypto";
 import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 
@@ -190,12 +189,13 @@ postRoutes.post("/upload", uploadLimiter, async (c) => {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const ext = file.name.split(".").pop();
-  const filename = `${crypto.randomUUID()}.${ext}`;
 
-  const url = await uploadFile(buffer, filename, file.type, "food-photos");
-
-  return c.json({ url });
+  try {
+    const url = await uploadFile(buffer, file.type, "food-photos");
+    return c.json({ url });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
+  }
 });
 
 // Poster marks food as received/completed
@@ -251,6 +251,13 @@ postRoutes.delete("/:id", async (c) => {
   if (post.status === "closed" || post.status === "completed") {
     return c.json(
       { error: "Cannot delete a post that has already been approved. The picker is on their way." },
+      400
+    );
+  }
+
+  if (post.status === "pending_approval") {
+    return c.json(
+      { error: "Cannot delete a post with a pending pickup request. Approve or reject it first." },
       400
     );
   }
