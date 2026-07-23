@@ -10,6 +10,7 @@ import { createRequestLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
 import { createNotification } from "../lib/notify.js";
 import { env } from "../env.js";
+import { logger } from "../lib/logger.js";
 
 export const requestRoutes = new Hono();
 
@@ -94,7 +95,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     "Someone wants to pick up your food. Review their request.",
     postId,
     "request_received"
-  ).catch(console.error);
+  ).catch((err) => logger.error({ err, postId, pickupRequestId: request.id }, "Failed to create request_received notification"));
 
   notifyPoster(poster.email, "request_received");
 
@@ -151,7 +152,7 @@ requestRoutes.put("/:id/approve", async (c) => {
     "Your pickup request was approved. Check the post for the location.",
     request.postId,
     "request_approved"
-  ).catch(console.error);
+  ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_approved notification"));
 
   notifyPicker(picker.email, "request_approved");
   // duplicate `await notifyPicker(...)` call removed — was sending this
@@ -210,7 +211,7 @@ requestRoutes.put("/:id/reject", async (c) => {
     "Your pickup request was rejected.",
     request.postId,
     "request_rejected"
-  ).catch(console.error);
+  ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_rejected notification"));
 
   notifyPicker(picker.email, "request_rejected");
   // duplicate call removed here too
@@ -268,7 +269,7 @@ requestRoutes.put("/:id/cancel", async (c) => {
     "A picker cancelled their request. Your post is open again.",
     request.postId,
     "request_cancelled"
-  ).catch(console.error);
+  ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_cancelled notification"));
 
   notifyPoster(poster.email, "request_cancelled");
   // duplicate call removed here too

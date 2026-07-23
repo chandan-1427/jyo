@@ -26,4 +26,7 @@ export const env = {
   APP_URL: process.env.APP_URL ?? "http://localhost:5173",
   PORT: Number(process.env.PORT) || 3000,
   APP_ENV: process.env.APP_ENV ?? "development",
+  LOG_LEVEL:
+    process.env.LOG_LEVEL ??
+    (process.env.APP_ENV === "production" ? "info" : "debug"),
 };

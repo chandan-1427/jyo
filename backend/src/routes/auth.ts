@@ -13,6 +13,7 @@ import {
   sendPasswordResetEmail,
 } from "../lib/mailer.js";
 import { env } from "../env.js";
+import { logger } from "../lib/logger.js";
 
 export const authRoutes = new Hono();
 
@@ -100,7 +101,7 @@ authRoutes.post("/register", registerLimiter, async (c) => {
 
   // Send verification email — fire and forget
   sendVerificationEmail(email, verificationToken)
-    .catch((err) => console.error("[MAILER] Verification email failed:", err));
+    .catch((err) => logger.error({ err, userId: newUser.id }, "Verification email failed"));
 
   return c.json({
     message: "Account created. Please check your email to verify your account.",
@@ -223,7 +224,7 @@ authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
     .where(eq(users.id, user.id));
 
   sendPasswordResetEmail(email, resetToken)
-    .catch((err) => console.error("[MAILER] Reset email failed:", err));
+    .catch((err) => logger.error({ err, userId: user.id }, "Reset email failed"));
 
   return c.json({ message: "If that email is registered you will receive a reset link." });
 });
@@ -298,7 +299,7 @@ authRoutes.post("/resend-verification", resendVerificationLimiter, async (c) => 
     .where(eq(users.id, user.id));
 
   sendVerificationEmail(email, verificationToken)
-    .catch((err) => console.error("[MAILER] Resend verification failed:", err));
+    .catch((err) => logger.error({ err, userId: user.id }, "Resend verification failed"));
 
   return c.json({ message: "Verification email sent. Please check your inbox." });
 });

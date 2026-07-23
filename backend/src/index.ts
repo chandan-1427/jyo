@@ -1,8 +1,11 @@
 import "dotenv/config";
 import { env } from "./env.js";
+import { logger } from "./lib/logger.js";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+
+import { requestLogger } from "./middleware/requestLogger.js";
 
 import { authRoutes } from "./routes/auth.js";
 import { userRoutes } from "./routes/users.js";
@@ -12,6 +15,15 @@ import { notificationRoutes } from "./routes/notifications.js";
 
 import { startExpiryJob } from "./jobs/expiry.js";
 
+process.on("unhandledRejection", (reason) => {
+  logger.fatal({ err: reason }, "Unhandled promise rejection");
+});
+
+process.on("uncaughtException", (err) => {
+  logger.fatal({ err }, "Uncaught exception");
+  process.exit(1);
+});
+
 const app = new Hono();
 
 const allowedOrigins = [
@@ -19,6 +31,8 @@ const allowedOrigins = [
   "https://www.jyo.co.in",
   "http://localhost:5173",
 ];
+
+app.use("*", requestLogger);
 
 app.use(
   "*",
@@ -33,6 +47,19 @@ app.use(
   })
 );
 
+app.onError((err, c) => {
+  logger.error(
+    {
+      err,
+      requestId: c.get("requestId"),
+      method: c.req.method,
+      path: c.req.path,
+    },
+    "Unhandled error"
+  );
+  return c.json({ error: "Internal server error" }, 500);
+});
+
 app.get("/", (c) => c.json({ status: "ok" }));
 
 app.route("/auth", authRoutes);
@@ -43,23 +70,15 @@ app.route("/notifications", notificationRoutes);
 
 startExpiryJob();
 
-serve(
-  { fetch: app.fetch, port: env.PORT },
-  (info) => {
-    const isProd = env.APP_ENV === "production";
-
-    console.log(`
-┌─────────────────────────────────────────────┐
-│           JYO Backend — Running             │
-├─────────────────────────────────────────────┤
-│ Port    : ${String(info.port).padEnd(34)}│
-│ Env     : ${env.APP_ENV.padEnd(34)}│
-│ CORS    : ${(isProd ? "jyo.co.in only" : "localhost allowed").padEnd(34)}│
-├─────────────────────────────────────────────┤
-│ Routes  : /auth /users /posts               │
-│           /requests /notifications          │
-│ Jobs    : expiry ✓                          │
-└─────────────────────────────────────────────┘
-    `.trim());
-  }
-);
+serve({ fetch: app.fetch, port: env.PORT }, (info) => {
+  logger.info(
+    {
+      port: info.port,
+      env: env.APP_ENV,
+      cors: env.APP_ENV === "production" ? "jyo.co.in only" : "localhost allowed",
+      routes: ["/auth", "/users", "/posts", "/requests", "/notifications"],
+      jobs: ["expiry"],
+    },
+    "JYO backend started"
+  );
+});

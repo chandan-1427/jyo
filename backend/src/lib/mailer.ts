@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { env } from "../env.js";
+import { logger } from "./logger.js";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -164,7 +165,7 @@ export function notifyPoster(
       "A picker has cancelled their request on your food post. It is now open for others.",
   };
   sendMail(email, subjects[event], `<p>${messages[event]}</p>`)
-    .catch((err) => console.error("[MAILER] notifyPoster failed:", err));
+    .catch((err) => logger.error({ err, event }, "notifyPoster failed"));
 }
 
 export function notifyPicker(
@@ -182,7 +183,7 @@ export function notifyPicker(
       "Your request was rejected by the poster. Check the feed for other food posts nearby.",
   };
   sendMail(email, subjects[event], `<p>${messages[event]}</p>`)
-    .catch((err) => console.error("[MAILER] notifyPicker failed:", err));
+    .catch((err) => logger.error({ err, event }, "notifyPicker failed"));
 }
 
 // --- Transactional emails (awaited) ---

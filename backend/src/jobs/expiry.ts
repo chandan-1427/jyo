@@ -4,6 +4,7 @@ import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, lt, and, inArray } from "drizzle-orm";
 import { notifyPicker } from "../lib/mailer.js";
 import { createNotification } from "../lib/notify.js";
+import { logger } from "../lib/logger.js";
 
 export function startExpiryJob() {
   // Runs every 5 minutes
@@ -26,7 +27,7 @@ export function startExpiryJob() {
         .returning({ id: foodPosts.id });
 
       if (expired.length > 0) {
-        console.log(`[EXPIRY JOB] Marked ${expired.length} post(s) as expired`);
+        logger.info({ count: expired.length, postIds: expired.map((p) => p.id) }, "Marked posts as expired");
 
         // A post that expired while in pending_approval leaves its pending
         // pickup request stuck forever — reject it and tell the picker.
@@ -49,7 +50,7 @@ export function startExpiryJob() {
             "The food post you requested expired before the poster responded.",
             req.postId,
             "request_rejected"
-          ).catch(console.error);
+          ).catch((err) => logger.error({ err, pickupRequestId: req.id }, "Failed to create expiry notification"));
 
           const [picker] = await db
             .select({ email: users.email })
@@ -63,7 +64,7 @@ export function startExpiryJob() {
         }
       }
     } catch (err) {
-      console.error("[EXPIRY JOB] Failed to run expiry job:", err);
+      logger.error({ err }, "Expiry job failed");
     }
   });
 }
