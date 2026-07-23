@@ -24,7 +24,7 @@ const secret = new TextEncoder().encode(env.JWT_SECRET);
 // instead of returning early and leaking account existence via timing.
 const DUMMY_PASSWORD_HASH = "$2a$10$CwTycUXWue0Thq9StjUM0uJ8O9YtbnHUb.z35p1SICtjy0G1kGGxq";
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = env.APP_ENV === "production";
 
 const cookieOptions = {
   httpOnly: true,

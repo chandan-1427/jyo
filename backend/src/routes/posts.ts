@@ -7,6 +7,7 @@ import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
 import { uploadFile } from "../lib/storage.js";
 import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
+import { env } from "../env.js";
 
 export const postRoutes = new Hono();
 
@@ -34,7 +35,7 @@ postRoutes.post("/", createPostLimiter, async (c) => {
 
   const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd } = result.data;
 
-  if (process.env.APP_ENV === "production" && !isWithinTirupati(pickupLat, pickupLng)) {
+  if (env.APP_ENV === "production" && !isWithinTirupati(pickupLat, pickupLng)) {
     return c.json(
       { error: "Jyo is currently only available in Tirupati. Your location is outside the service area." },
       400

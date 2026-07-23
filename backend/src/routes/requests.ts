@@ -9,6 +9,7 @@ import { uploadFile } from "../lib/storage.js";
 import { createRequestLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
 import { createNotification } from "../lib/notify.js";
+import { env } from "../env.js";
 
 export const requestRoutes = new Hono();
 
@@ -54,7 +55,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   }
 
   const distance = haversineDistance(lat, lng, post.pickupLat, post.pickupLng);
-  if (process.env.APP_ENV === "production" && distance > 20) {
+  if (env.APP_ENV === "production" && distance > 20) {
     return c.json({ error: "You are too far from this post to request it" }, 400);
   }
 
