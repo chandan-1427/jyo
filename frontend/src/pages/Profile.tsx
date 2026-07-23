@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-import { apiFetch } from "../lib/api";
-import { Input } from "../components/ui/Input";
-import { Textarea } from "../components/ui/Textarea";
-import { LinkButton } from "../components/ui/LinkButton";
+import { apiFetch } from "@/lib/api";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { LinkButton } from "@/components/ui/LinkButton";
 
 type ProfileData = {
   id: string;

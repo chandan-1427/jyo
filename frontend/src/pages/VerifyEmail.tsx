@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { apiFetch } from "../lib/api";
+import { apiFetch } from "@/lib/api";
 import { Link } from "react-router-dom";
 import { CheckCircle2, XCircle, Loader2, Mail } from "lucide-react";
-import { Logo } from "../components/ui/Logo";
-import { LinkButton } from "../components/ui/LinkButton";
+import { Logo } from "@/components/ui/Logo";
+import { LinkButton } from "@/components/ui/LinkButton";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();

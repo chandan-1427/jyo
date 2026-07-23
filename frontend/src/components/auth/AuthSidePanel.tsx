@@ -1,5 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
-import { Logo } from "../ui/Logo";
+import { Logo } from "@/components/ui/Logo";
 
 interface AuthSidePanelProps {
   headline: string;

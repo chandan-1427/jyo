@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { UtensilsCrossed, Clock } from "lucide-react";
-import type { FoodPost } from "../types/api";
-import { formatPickupWindow } from "../lib/format";
+import type { FoodPost } from "@/types/api";
+import { formatPickupWindow } from "@/lib/format";
 import { StatusBadge } from "./ui/StatusBadge";
 
 type Props = {

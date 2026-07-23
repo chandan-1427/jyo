@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, X, Clock, AlertCircle } from "lucide-react";
-import { apiFetch, ApiError } from "../lib/api";
-import { uploadImage } from "../lib/supabase";
-import { getCurrentLocation, type Coords } from "../lib/location";
-import { Input } from "../components/ui/Input";
-import { Textarea } from "../components/ui/Textarea";
-import { LinkButton } from "../components/ui/LinkButton";
-import { LocationStatus } from "../components/ui/LocationStatus";
-import { Field } from "../components/ui/Field";
-import { DateTimePicker } from "../components/ui/DateTimePicker";
+import { apiFetch, ApiError } from "@/lib/api";
+import { uploadImage } from "@/lib/supabase";
+import { getCurrentLocation, type Coords } from "@/lib/location";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { LinkButton } from "@/components/ui/LinkButton";
+import { LocationStatus } from "@/components/ui/LocationStatus";
+import { Field } from "@/components/ui/Field";
+import { DateTimePicker } from "@/components/ui/DateTimePicker";
 
 function nowLocal(): string {
   const now = new Date();

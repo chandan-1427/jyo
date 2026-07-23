@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { apiFetch, ApiError } from "../lib/api";
-import { uploadImage } from "../lib/supabase";
-import { getCurrentLocation } from "../lib/location";
+import { useAuth } from "@/context/AuthContext";
+import { apiFetch, ApiError } from "@/lib/api";
+import { uploadImage } from "@/lib/supabase";
+import { getCurrentLocation } from "@/lib/location";
 import { AlertCircle, Camera, X } from "lucide-react";
 import { Field } from "./ui/Field";
 import { Input } from "./ui/Input";

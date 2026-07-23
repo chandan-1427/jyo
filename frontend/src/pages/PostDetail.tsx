@@ -4,12 +4,12 @@ import {
   ArrowLeft, MapPin, Clock, Loader2, AlertCircle, X,
   CheckCircle2, UtensilsCrossed, ExternalLink, TimerOff, Ban,
 } from "lucide-react";
-import { apiFetch } from "../lib/api";
-import type { FoodPost, PickupRequest } from "../types/api";
-import RequestModal from "../components/RequestModal";
-import { formatPickupWindow } from "../lib/format";
-import { StatusBadge } from "../components/ui/StatusBadge";
-import { LinkButton } from "../components/ui/LinkButton";
+import { apiFetch } from "@/lib/api";
+import type { FoodPost, PickupRequest } from "@/types/api";
+import RequestModal from "@/components/RequestModal";
+import { formatPickupWindow } from "@/lib/format";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { LinkButton } from "@/components/ui/LinkButton";
 
 type PostDetailData = {
   post: FoodPost & { pickupLat: number | null; pickupLng: number | null };

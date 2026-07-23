@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { apiFetch } from "../lib/api";
+import { apiFetch } from "@/lib/api";
 
 type AuthUser = {
   id: string;

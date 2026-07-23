@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { apiFetch } from "../lib/api";
-import { supabase } from "../lib/supabase";
+import { useAuth } from "@/context/AuthContext";
+import { apiFetch } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { Bell, Menu, X, LogOut, Loader2 } from "lucide-react";
-import { formatDateTime } from "../lib/format";
+import { formatDateTime } from "@/lib/format";
 import { Logo } from "./ui/Logo";
 
 type Notification = {

@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiFetch, ApiError } from "../lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { Mail, CheckCircle2 } from "lucide-react";
-import { LinkButton } from "../components/ui/LinkButton";
-import { PasswordInput } from "../components/ui/PasswordInput";
-import { Input } from "../components/ui/Input";
-import { Logo } from "../components/ui/Logo";
-import { AuthSidePanel } from "../components/auth/AuthSidePanel";
-import { Field } from "../components/auth/Field";
-import { authInputStyles, AUTH_BENEFITS } from "../components/auth/authStyles";
-import { BackButton } from "../components/auth/BackButton";
-import { validateForm, registerSchema } from "../lib/validation";
+import { LinkButton } from "@/components/ui/LinkButton";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { Input } from "@/components/ui/Input";
+import { Logo } from "@/components/ui/Logo";
+import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
+import { Field } from "@/components/auth/Field";
+import { authInputStyles, AUTH_BENEFITS } from "@/components/auth/authStyles";
+import { BackButton } from "@/components/auth/BackButton";
+import { validateForm, registerSchema } from "@/lib/validation";
 
 function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
   const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];

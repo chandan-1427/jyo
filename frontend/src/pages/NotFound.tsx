@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { Logo } from "../components/ui/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { Logo } from "@/components/ui/Logo";
 
 export default function NotFound() {
   const { user, loading } = useAuth();

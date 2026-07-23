@@ -1,5 +1,5 @@
 import { Loader2, CheckCircle2, MapPin } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn } from "@/lib/utils";
 
 interface LocationStatusProps {
   loading: boolean;

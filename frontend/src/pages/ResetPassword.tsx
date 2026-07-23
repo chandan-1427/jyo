@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { apiFetch, ApiError } from "../lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { Logo } from "../components/ui/Logo";
-import { PasswordInput } from "../components/ui/PasswordInput";
-import { LinkButton } from "../components/ui/LinkButton";
-import { Field } from "../components/auth/Field";
-import { authInputStyles } from "../components/auth/authStyles";
-import { BackButton } from "../components/auth/BackButton";
-import { validateForm, resetPasswordSchema } from "../lib/validation";
+import { Logo } from "@/components/ui/Logo";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { LinkButton } from "@/components/ui/LinkButton";
+import { Field } from "@/components/auth/Field";
+import { authInputStyles } from "@/components/auth/authStyles";
+import { BackButton } from "@/components/auth/BackButton";
+import { validateForm, resetPasswordSchema } from "@/lib/validation";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();

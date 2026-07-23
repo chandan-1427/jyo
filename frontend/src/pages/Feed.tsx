@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { apiFetch } from "../lib/api";
-import { getCurrentLocation, type Coords } from "../lib/location";
-import type { FoodPost } from "../types/api";
-import PostCard from "../components/PostCard";
+import { apiFetch } from "@/lib/api";
+import { getCurrentLocation, type Coords } from "@/lib/location";
+import type { FoodPost } from "@/types/api";
+import PostCard from "@/components/PostCard";
 import { MapPin, RefreshCw, Loader2, UtensilsCrossed, AlertCircle } from "lucide-react";
 
 export default function Feed() {

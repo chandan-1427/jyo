@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Loader2, UtensilsCrossed, ChevronRight, Trash2, AlertCircle } from "lucide-react";
-import { apiFetch } from "../lib/api";
-import type { FoodPost } from "../types/api";
-import { formatDate } from "../lib/format";
-import { LinkButton } from "../components/ui/LinkButton";
-import { StatusBadge } from "../components/ui/StatusBadge";
+import { apiFetch } from "@/lib/api";
+import type { FoodPost } from "@/types/api";
+import { formatDate } from "@/lib/format";
+import { LinkButton } from "@/components/ui/LinkButton";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export default function MyPosts() {
   const navigate = useNavigate();

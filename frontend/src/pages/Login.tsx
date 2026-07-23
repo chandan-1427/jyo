@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, CheckCircle2, Loader2, Mail } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import { apiFetch, ApiError } from "../lib/api";
-import { LinkButton } from "../components/ui/LinkButton";
-import { PasswordInput } from "../components/ui/PasswordInput";
-import { Input } from "../components/ui/Input";
-import { Logo } from "../components/ui/Logo";
-import { AuthSidePanel } from "../components/auth/AuthSidePanel";
-import { Field } from "../components/auth/Field";
-import { authInputStyles, AUTH_BENEFITS } from "../components/auth/authStyles";
-import { BackButton } from "../components/auth/BackButton";
-import { validateForm, loginSchema } from "../lib/validation";
+import { useAuth } from "@/context/AuthContext";
+import { apiFetch, ApiError } from "@/lib/api";
+import { LinkButton } from "@/components/ui/LinkButton";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { Input } from "@/components/ui/Input";
+import { Logo } from "@/components/ui/Logo";
+import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
+import { Field } from "@/components/auth/Field";
+import { authInputStyles, AUTH_BENEFITS } from "@/components/auth/authStyles";
+import { BackButton } from "@/components/auth/BackButton";
+import { validateForm, loginSchema } from "@/lib/validation";
 
 export default function Login() {
   const { login } = useAuth();

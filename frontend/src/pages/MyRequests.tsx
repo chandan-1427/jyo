@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, HandPlatter, ChevronRight, X, AlertCircle } from "lucide-react";
-import { apiFetch } from "../lib/api";
-import { formatDate } from "../lib/format";
-import { StatusBadge } from "../components/ui/StatusBadge";
+import { apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type MyRequest = {
   id: string;
