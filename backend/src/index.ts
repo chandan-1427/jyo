@@ -14,6 +14,7 @@ import { requestRoutes } from "./routes/requests.js";
 import { notificationRoutes } from "./routes/notifications.js";
 
 import { startExpiryJob } from "./jobs/expiry.js";
+import { startNotificationCleanupJob } from "./jobs/notificationCleanup.js";
 
 process.on("unhandledRejection", (reason) => {
   logger.fatal({ err: reason }, "Unhandled promise rejection");
@@ -69,6 +70,7 @@ app.route("/requests", requestRoutes);
 app.route("/notifications", notificationRoutes);
 
 startExpiryJob();
+startNotificationCleanupJob();
 
 serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   logger.info(
@@ -77,7 +79,7 @@ serve({ fetch: app.fetch, port: env.PORT }, (info) => {
       env: env.APP_ENV,
       cors: env.APP_ENV === "production" ? "jyo.co.in only" : "localhost allowed",
       routes: ["/auth", "/users", "/posts", "/requests", "/notifications"],
-      jobs: ["expiry"],
+      jobs: ["expiry", "notificationCleanup"],
     },
     "JYO backend started"
   );
