@@ -16,7 +16,7 @@
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
     "file-type": "^22.0.1",
-    "hono": "^4.12.18",
+    "hono": "^4.12.32",
     "hono-rate-limiter": "^0.5.3",
     "jose": "^6.2.3",
     "node-cron": "^4.2.1",

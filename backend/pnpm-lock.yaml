@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@hono/node-server':
         specifier: ^1.19.14
-        version: 1.19.14(hono@4.12.18)
+        version: 1.19.14(hono@4.12.32)
       '@supabase/supabase-js':
         specifier: ^2.105.4
         version: 2.105.4
@@ -24,11 +24,11 @@ importers:
         specifier: ^22.0.1
         version: 22.0.1
       hono:
-        specifier: ^4.12.18
-        version: 4.12.18
+        specifier: ^4.12.32
+        version: 4.12.32
       hono-rate-limiter:
         specifier: ^0.5.3
-        version: 0.5.3(hono@4.12.18)
+        version: 0.5.3(hono@4.12.32)
       jose:
         specifier: ^6.2.3
         version: 6.2.3
@@ -766,8 +766,8 @@ packages:
       unstorage:
         optional: true
 
-  hono@4.12.18:
-    resolution: {integrity: sha512-RWzP96k/yv0PQfyXnWjs6zot20TqfpfsNXhOnev8d1InAxubW93L11/oNUc3tQqn2G0bSdAOBpX+2uDFHV7kdQ==}
+  hono@4.12.32:
+    resolution: {integrity: sha512-XcuyW9qE2kJn07PkecMOBd5Vq/hMy7mmGw+idz1yblbg9N17ijJODrvPkn7/dwL3Kulj8LcRJ69DLOWf91dRUg==}
     engines: {node: '>=16.9.0'}
 
   iceberg-js@0.8.1:
@@ -1157,9 +1157,9 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@hono/node-server@1.19.14(hono@4.12.18)':
+  '@hono/node-server@1.19.14(hono@4.12.32)':
     dependencies:
-      hono: 4.12.18
+      hono: 4.12.32
 
   '@pinojs/redact@0.4.0': {}
 
@@ -1354,11 +1354,11 @@ snapshots:
 
   help-me@5.0.0: {}
 
-  hono-rate-limiter@0.5.3(hono@4.12.18):
+  hono-rate-limiter@0.5.3(hono@4.12.32):
     dependencies:
-      hono: 4.12.18
+      hono: 4.12.32
 
-  hono@4.12.18: {}
+  hono@4.12.32: {}
 
   iceberg-js@0.8.1: {}
 
