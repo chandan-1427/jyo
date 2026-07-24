@@ -162,9 +162,12 @@ frontend/src/
 
 ## Deployment
 
-- Frontend: deployed on Vercel. Connect your GitHub repo and Vercel handles the rest. Set `VITE_*` environment variables in the Vercel project settings.
-- Backend: deployed on Render as a web service. Set the backend environment variables in the Render dashboard. The start command is `node dist/index.js` after running `tsc` to build.
-- Database and Storage: both on Supabase. Create a project, run migrations with `pnpm db:migrate`, and create two storage buckets named `food-photos` and `selfies` with public access.
+Deploys are driven entirely by CI, not by Render/Vercel's own git integrations — a broken build or failing test blocks the deploy instead of shipping anyway.
+
+- **CI/CD**: `.github/workflows/ci.yml` runs on every push/PR to `main`. The `backend` job spins up a disposable Postgres container, builds, migrates, and runs the full test suite; the `frontend` job lints and builds. Only on an actual push to `main`, and only if its corresponding job passed, `deploy-backend` and `deploy-frontend` jobs run.
+- **Backend**: hosted on Render as a web service (start command `node dist/index.js`, built with `tsc`). `deploy-backend` triggers Render's deploy hook (`RENDER_DEPLOY_HOOK_URL` secret) — Render then pulls the latest commit and builds/deploys on its own infrastructure. Auto-deploy-on-push is disabled in the Render dashboard so this hook is the only trigger.
+- **Frontend**: hosted on Vercel, but built *inside* CI rather than by Vercel itself — `deploy-frontend` runs `vercel pull` / `vercel build --prod` / `vercel deploy --prebuilt --prod` using `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` secrets, then ships that finished build straight to production. The GitHub integration in Vercel is disconnected so it can't double-deploy independently of CI.
+- **Database and Storage**: both on Supabase. Create a project, run migrations with `pnpm db:migrate`, and create two storage buckets named `food-photos` and `selfies` with public access.
 
 ## Adapting for Your City
 
@@ -172,7 +175,7 @@ If you want to run this for your own city, fork the repo and make these changes:
 
 1. In `backend/src/lib/haversine.ts`, update `TIRUPATI_CENTER` to the coordinates of your city and adjust `TIRUPATI_RADIUS_KM` to cover the area you want to serve.
 2. Update the `APP_URL` and `CLIENT_URL` environment variables to your deployment URLs.
-3. Update the allowed CORS origins in `backend/src/index.ts` to match your domain.
+3. Update the allowed CORS origins in `backend/src/app.ts` to match your domain.
 4. Replace the branding (app name, email sender, etc.) as needed.
 
 That is essentially it. The rest of the app is city-agnostic.
