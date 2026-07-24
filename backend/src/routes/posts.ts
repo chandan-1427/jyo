@@ -1,13 +1,15 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, gte, desc } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
-import { uploadFile } from "../lib/storage.js";
+import { uploadFile, deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
+import { logger } from "../lib/logger.js";
 
 export const postRoutes = new Hono();
 
@@ -61,7 +63,6 @@ postRoutes.post("/", createPostLimiter, async (c) => {
 
 // --- Get feed ---
 postRoutes.get("/", async (c) => {
-  const { userId } = c.get("user");
   const userLat = parseFloat(c.req.query("lat") ?? "");
   const userLng = parseFloat(c.req.query("lng") ?? "");
 
@@ -126,6 +127,10 @@ postRoutes.get("/:id", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
 
+  if (!z.uuid().safeParse(postId).success) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
   // Fetch post with poster name
   const [result] = await db
     .select({
@@ -181,28 +186,40 @@ postRoutes.get("/:id", async (c) => {
   return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest });
 });
 
-postRoutes.post("/upload", uploadLimiter, async (c) => {
-  const body = await c.req.parseBody();
-  const file = body["file"];
+postRoutes.post(
+  "/upload",
+  uploadLimiter,
+  bodyLimit({
+    maxSize: MAX_UPLOAD_REQUEST_BYTES,
+    onError: (c) => c.json({ error: "File is too large. Maximum size is 5MB." }, 413),
+  }),
+  async (c) => {
+    const body = await c.req.parseBody();
+    const file = body["file"];
 
-  if (!file || typeof file === "string") {
-    return c.json({ error: "No file provided" }, 400);
+    if (!file || typeof file === "string") {
+      return c.json({ error: "No file provided" }, 400);
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    try {
+      const url = await uploadFile(buffer, "food-photos");
+      return c.json({ url });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
+    }
   }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  try {
-    const url = await uploadFile(buffer, file.type, "food-photos");
-    return c.json({ url });
-  } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
-  }
-});
+);
 
 // Poster marks food as received/completed
 postRoutes.put("/:id/complete", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
+
+  if (!z.uuid().safeParse(postId).success) {
+    return c.json({ error: "Post not found" }, 404);
+  }
 
   const [post] = await db
     .select()
@@ -222,10 +239,18 @@ postRoutes.put("/:id/complete", async (c) => {
     return c.json({ error: "Post must be closed before completing" }, 400);
   }
 
-  await db
+  // Same double-click/concurrent-request guard as approve/reject/cancel —
+  // the conditional WHERE makes this a no-op if the post already moved out
+  // of "closed" between the check above and this write.
+  const [completed] = await db
     .update(foodPosts)
     .set({ status: "completed" })
-    .where(eq(foodPosts.id, postId));
+    .where(and(eq(foodPosts.id, postId), eq(foodPosts.status, "closed")))
+    .returning({ id: foodPosts.id });
+
+  if (!completed) {
+    return c.json({ error: "This post has already been processed" }, 400);
+  }
 
   return c.json({ message: "Post marked as completed" });
 });
@@ -234,6 +259,10 @@ postRoutes.put("/:id/complete", async (c) => {
 postRoutes.delete("/:id", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
+
+  if (!z.uuid().safeParse(postId).success) {
+    return c.json({ error: "Post not found" }, 404);
+  }
 
   const [post] = await db
     .select()
@@ -263,6 +292,14 @@ postRoutes.delete("/:id", async (c) => {
     );
   }
 
+  // Only rejected/cancelled requests can exist on a post that's still
+  // "open" — their selfies, along with this post's photo, are about to
+  // become unreachable once these rows are gone, so clean up storage too.
+  const relatedRequests = await db
+    .select({ selfieUrl: pickupRequests.selfieUrl })
+    .from(pickupRequests)
+    .where(eq(pickupRequests.postId, postId));
+
   // Delete all related pickup requests first — required by foreign key constraint
   await db
     .delete(pickupRequests)
@@ -272,6 +309,17 @@ postRoutes.delete("/:id", async (c) => {
   await db
     .delete(foodPosts)
     .where(eq(foodPosts.id, postId));
+
+  if (post.photoUrl) {
+    deleteFile(post.photoUrl, "food-photos")
+      .catch((err) => logger.error({ err, postId }, "Failed to delete post photo"));
+  }
+  for (const req of relatedRequests) {
+    if (req.selfieUrl) {
+      deleteFile(req.selfieUrl, "selfies")
+        .catch((err) => logger.error({ err, postId }, "Failed to delete request selfie"));
+    }
+  }
 
   return c.json({ message: "Post deleted successfully" });
 });

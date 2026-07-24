@@ -24,7 +24,7 @@ export const env = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY!,
   RESEND_API_KEY: process.env.RESEND_API_KEY!,
   APP_URL: process.env.APP_URL ?? "http://localhost:5173",
-  PORT: Number(process.env.PORT) || 3000,
+  PORT: process.env.PORT && !Number.isNaN(Number(process.env.PORT)) ? Number(process.env.PORT) : 3000,
   APP_ENV: process.env.APP_ENV ?? "development",
   LOG_LEVEL:
     process.env.LOG_LEVEL ??

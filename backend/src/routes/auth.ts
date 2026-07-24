@@ -27,6 +27,11 @@ const DUMMY_PASSWORD_HASH = "$2a$10$CwTycUXWue0Thq9StjUM0uJ8O9YtbnHUb.z35p1SICtj
 
 const isProd = env.APP_ENV === "production";
 
+// Matches the 24-hour expiry the frontend already tells users about on the
+// verification-failed screen — previously there was no actual expiry check,
+// so an old or leaked verification link worked forever.
+const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
 const cookieOptions = {
   httpOnly: true,
   secure: isProd,
@@ -83,12 +88,13 @@ authRoutes.post("/register", registerLimiter, async (c) => {
 
   const passwordHash = await bcrypt.hash(password, 10);
   const verificationToken = crypto.randomBytes(32).toString("hex");
+  const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
 
   let newUser;
   try {
     [newUser] = await db
       .insert(users)
-      .values({ name, email, passwordHash, phone, verificationToken })
+      .values({ name, email, passwordHash, phone, verificationToken, verificationTokenExpiry })
       .returning({ id: users.id, name: users.name, email: users.email });
   } catch (err: any) {
     // Unique-violation: two concurrent registrations raced past the
@@ -185,9 +191,13 @@ authRoutes.get("/verify-email", async (c) => {
     return c.json({ error: "Invalid or expired verification link" }, 400);
   }
 
+  if (!user.verificationTokenExpiry || user.verificationTokenExpiry < new Date()) {
+    return c.json({ error: "Verification link has expired. Please request a new one." }, 400);
+  }
+
   await db
     .update(users)
-    .set({ emailVerified: true, verificationToken: null })
+    .set({ emailVerified: true, verificationToken: null, verificationTokenExpiry: null })
     .where(eq(users.id, user.id));
 
   return c.json({ message: "Email verified successfully. You can now log in." });
@@ -292,10 +302,11 @@ authRoutes.post("/resend-verification", resendVerificationLimiter, async (c) => 
 
   // Generate new token
   const verificationToken = crypto.randomBytes(32).toString("hex");
+  const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
 
   await db
     .update(users)
-    .set({ verificationToken })
+    .set({ verificationToken, verificationTokenExpiry })
     .where(eq(users.id, user.id));
 
   sendVerificationEmail(email, verificationToken)

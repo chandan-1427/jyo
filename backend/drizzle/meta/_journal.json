@@ -36,6 +36,13 @@
       "when": 1784751019869,
       "tag": "0004_nappy_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784921730504,
+      "tag": "0005_silent_dark_beast",
+      "breakpoints": true
     }
   ]
 }

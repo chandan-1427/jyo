@@ -1,16 +1,18 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
-import { uploadFile } from "../lib/storage.js";
+import { uploadFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { createRequestLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
 import { createNotification } from "../lib/notify.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
+import { ConflictError } from "../lib/errors.js";
 
 export const requestRoutes = new Hono();
 
@@ -107,6 +109,10 @@ requestRoutes.put("/:id/approve", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
+  if (!z.uuid().safeParse(requestId).success) {
+    return c.json({ error: "Invalid request ID" }, 400);
+  }
+
   const [request] = await db
     .select()
     .from(pickupRequests)
@@ -123,6 +129,10 @@ requestRoutes.put("/:id/approve", async (c) => {
     .where(eq(foodPosts.id, request.postId))
     .limit(1);
 
+  if (!post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
   if (post.posterId !== userId) {
     return c.json({ error: "Unauthorized" }, 403);
   }
@@ -131,15 +141,38 @@ requestRoutes.put("/:id/approve", async (c) => {
     return c.json({ error: "This post is not awaiting approval" }, 400);
   }
 
-  await db
-    .update(pickupRequests)
-    .set({ status: "approved" })
-    .where(eq(pickupRequests.id, requestId));
+  // Two concurrent approve calls (e.g. a double-click) could both pass the
+  // status check above before either write commits. The conditional WHERE
+  // clauses here make each UPDATE a no-op if the row's status already moved
+  // out from under it, and the transaction ensures the request and post
+  // flip together — never one without the other.
+  const approved = await db
+    .transaction(async (tx) => {
+      const [claimedRequest] = await tx
+        .update(pickupRequests)
+        .set({ status: "approved" })
+        .where(and(eq(pickupRequests.id, requestId), eq(pickupRequests.status, "pending")))
+        .returning({ id: pickupRequests.id });
 
-  await db
-    .update(foodPosts)
-    .set({ status: "closed", approvedRequestId: requestId })
-    .where(eq(foodPosts.id, request.postId));
+      if (!claimedRequest) throw new ConflictError();
+
+      const [claimedPost] = await tx
+        .update(foodPosts)
+        .set({ status: "closed", approvedRequestId: requestId })
+        .where(and(eq(foodPosts.id, request.postId), eq(foodPosts.status, "pending_approval")))
+        .returning({ id: foodPosts.id });
+
+      if (!claimedPost) throw new ConflictError();
+    })
+    .then(() => true)
+    .catch((err) => {
+      if (err instanceof ConflictError) return false;
+      throw err;
+    });
+
+  if (!approved) {
+    return c.json({ error: "This request has already been processed" }, 400);
+  }
 
   const [picker] = await db
     .select({ email: users.email })
@@ -166,6 +199,10 @@ requestRoutes.put("/:id/reject", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
+  if (!z.uuid().safeParse(requestId).success) {
+    return c.json({ error: "Invalid request ID" }, 400);
+  }
+
   const [request] = await db
     .select()
     .from(pickupRequests)
@@ -182,6 +219,10 @@ requestRoutes.put("/:id/reject", async (c) => {
     .where(eq(foodPosts.id, request.postId))
     .limit(1);
 
+  if (!post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
   if (post.posterId !== userId) {
     return c.json({ error: "Unauthorized" }, 403);
   }
@@ -190,15 +231,33 @@ requestRoutes.put("/:id/reject", async (c) => {
     return c.json({ error: "This post is not awaiting approval" }, 400);
   }
 
-  await db
-    .update(pickupRequests)
-    .set({ status: "rejected" })
-    .where(eq(pickupRequests.id, requestId));
+  const rejected = await db
+    .transaction(async (tx) => {
+      const [claimedRequest] = await tx
+        .update(pickupRequests)
+        .set({ status: "rejected" })
+        .where(and(eq(pickupRequests.id, requestId), eq(pickupRequests.status, "pending")))
+        .returning({ id: pickupRequests.id });
 
-  await db
-    .update(foodPosts)
-    .set({ status: "open" })
-    .where(eq(foodPosts.id, request.postId));
+      if (!claimedRequest) throw new ConflictError();
+
+      const [claimedPost] = await tx
+        .update(foodPosts)
+        .set({ status: "open" })
+        .where(and(eq(foodPosts.id, request.postId), eq(foodPosts.status, "pending_approval")))
+        .returning({ id: foodPosts.id });
+
+      if (!claimedPost) throw new ConflictError();
+    })
+    .then(() => true)
+    .catch((err) => {
+      if (err instanceof ConflictError) return false;
+      throw err;
+    });
+
+  if (!rejected) {
+    return c.json({ error: "This request has already been processed" }, 400);
+  }
 
   const [picker] = await db
     .select({ email: users.email })
@@ -224,6 +283,10 @@ requestRoutes.put("/:id/cancel", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
+  if (!z.uuid().safeParse(requestId).success) {
+    return c.json({ error: "Invalid request ID" }, 400);
+  }
+
   const [request] = await db
     .select()
     .from(pickupRequests)
@@ -242,21 +305,43 @@ requestRoutes.put("/:id/cancel", async (c) => {
     return c.json({ error: "Cannot cancel a request that has already been approved" }, 400);
   }
 
-  await db
-    .update(pickupRequests)
-    .set({ status: "cancelled" })
-    .where(eq(pickupRequests.id, requestId));
+  const cancelled = await db
+    .transaction(async (tx) => {
+      const [claimedRequest] = await tx
+        .update(pickupRequests)
+        .set({ status: "cancelled" })
+        .where(and(eq(pickupRequests.id, requestId), eq(pickupRequests.status, "pending")))
+        .returning({ id: pickupRequests.id });
 
-  await db
-    .update(foodPosts)
-    .set({ status: "open" })
-    .where(eq(foodPosts.id, request.postId));
+      if (!claimedRequest) throw new ConflictError();
+
+      const [claimedPost] = await tx
+        .update(foodPosts)
+        .set({ status: "open" })
+        .where(and(eq(foodPosts.id, request.postId), eq(foodPosts.status, "pending_approval")))
+        .returning({ id: foodPosts.id });
+
+      if (!claimedPost) throw new ConflictError();
+    })
+    .then(() => true)
+    .catch((err) => {
+      if (err instanceof ConflictError) return false;
+      throw err;
+    });
+
+  if (!cancelled) {
+    return c.json({ error: "This request has already been processed" }, 400);
+  }
 
   const [post] = await db
     .select({ posterId: foodPosts.posterId })
     .from(foodPosts)
     .where(eq(foodPosts.id, request.postId))
     .limit(1);
+
+  if (!post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
 
   const [poster] = await db
     .select({ email: users.email })
@@ -298,20 +383,28 @@ requestRoutes.get("/mine", async (c) => {
   return c.json({ requests });
 });
 
-requestRoutes.post("/upload-selfie", uploadLimiter, async (c) => {
-  const body = await c.req.parseBody();
-  const file = body["file"];
+requestRoutes.post(
+  "/upload-selfie",
+  uploadLimiter,
+  bodyLimit({
+    maxSize: MAX_UPLOAD_REQUEST_BYTES,
+    onError: (c) => c.json({ error: "File is too large. Maximum size is 5MB." }, 413),
+  }),
+  async (c) => {
+    const body = await c.req.parseBody();
+    const file = body["file"];
 
-  if (!file || typeof file === "string") {
-    return c.json({ error: "No file provided" }, 400);
+    if (!file || typeof file === "string") {
+      return c.json({ error: "No file provided" }, 400);
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    try {
+      const url = await uploadFile(buffer, "selfies");
+      return c.json({ url });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
+    }
   }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  try {
-    const url = await uploadFile(buffer, file.type, "selfies");
-    return c.json({ url });
-  } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
-  }
-});
+);
