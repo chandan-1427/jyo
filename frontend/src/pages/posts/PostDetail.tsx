@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Clock, Loader2, AlertCircle, X,
   CheckCircle2, UtensilsCrossed, ExternalLink, TimerOff, Ban,
@@ -52,6 +52,20 @@ function InfoBanner({
     <div className={`flex items-start gap-2.5 border rounded-lg px-4 py-3 text-sm ${styles[variant]}`}>
       <Icon className="w-4 h-4 mt-px shrink-0" />
       <p className="leading-snug">{children}</p>
+    </div>
+  );
+}
+
+function NextSteps() {
+  return (
+    <div className="flex gap-3">
+      <Link
+        to="/feed"
+        className="flex-1 text-center cursor-pointer border border-border text-muted hover:border-neutral-600 hover:bg-surface rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+      >
+        Browse Feed
+      </Link>
+      <LinkButton as="link" to="/create" label="Post Food" className="flex-1" />
     </div>
   );
 }
@@ -191,15 +205,21 @@ function PosterView({
       )}
 
       {post.status === "completed" && (
-        <InfoBanner variant="success" icon={CheckCircle2}>
-          Food successfully shared. Location is no longer visible.
-        </InfoBanner>
+        <>
+          <InfoBanner variant="success" icon={CheckCircle2}>
+            Food successfully shared. Location is no longer visible.
+          </InfoBanner>
+          <NextSteps />
+        </>
       )}
 
       {post.status === "expired" && (
-        <InfoBanner variant="danger" icon={TimerOff}>
-          This post has expired. Create a new post if the food is still available.
-        </InfoBanner>
+        <>
+          <InfoBanner variant="danger" icon={TimerOff}>
+            This post has expired. Create a new post if the food is still available.
+          </InfoBanner>
+          <NextSteps />
+        </>
       )}
     </div>
   );
@@ -230,18 +250,31 @@ function VisitorView({ status, onRequest }: { status: FoodPost["status"]; onRequ
 
   if (status === "pending_approval") {
     return (
-      <InfoBanner variant="warning" icon={Clock}>
-        Someone has already requested this food. Check back if it becomes available again.
-      </InfoBanner>
+      <div className="flex flex-col gap-4">
+        <InfoBanner variant="warning" icon={Clock}>
+          Someone has already requested this food. Check back if it becomes available again.
+        </InfoBanner>
+        <NextSteps />
+      </div>
     );
   }
 
   if (status === "closed") {
-    return <InfoBanner variant="muted" icon={Ban}>This food has already been claimed.</InfoBanner>;
+    return (
+      <div className="flex flex-col gap-4">
+        <InfoBanner variant="muted" icon={Ban}>This food has already been claimed.</InfoBanner>
+        <NextSteps />
+      </div>
+    );
   }
 
   if (status === "expired") {
-    return <InfoBanner variant="danger" icon={TimerOff}>This post has expired.</InfoBanner>;
+    return (
+      <div className="flex flex-col gap-4">
+        <InfoBanner variant="danger" icon={TimerOff}>This post has expired.</InfoBanner>
+        <NextSteps />
+      </div>
+    );
   }
 
   return null;
@@ -350,10 +383,10 @@ export default function PostDetail() {
         Back
       </button>
 
-      <div className="grid lg:grid-cols-[1fr_1fr] gap-8 items-start">
+      <div className="grid md:grid-cols-[3fr_2fr] gap-6 lg:gap-8 items-start">
 
         {/* Left — photo + post info, stays in view while acting on the right */}
-        <div className="flex flex-col gap-6 lg:sticky lg:top-20">
+        <div className="flex flex-col gap-6 md:sticky md:top-20">
 
           {post.photoUrl ? (
             <img src={post.photoUrl} alt={post.title} className="w-full h-72 object-cover rounded-xl" />
