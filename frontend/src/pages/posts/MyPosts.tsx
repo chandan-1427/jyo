@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, UtensilsCrossed, ChevronRight, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Loader2, UtensilsCrossed, Trash2, AlertCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import type { FoodPost } from "@/types/api";
 import { formatDate } from "@/lib/format";
@@ -97,7 +97,7 @@ export default function MyPosts() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {posts.map((post) => {
             const isDeletable = post.status !== "closed" && post.status !== "completed";
             const isConfirming = confirmId === post.id;
@@ -106,70 +106,72 @@ export default function MyPosts() {
             return (
               <div
                 key={post.id}
-                className="bg-surface border border-border rounded-xl px-4 py-3.5 flex items-center gap-4 transition-colors duration-150 group"
+                className="bg-surface border border-border rounded-xl overflow-hidden hover:border-neutral-600 transition-colors duration-150 flex flex-col group"
               >
                 {/* Thumbnail */}
                 <div
-                  className="cursor-pointer flex items-center gap-4 flex-1 min-w-0"
+                  className="cursor-pointer"
                   onClick={() => !isConfirming && navigate(`/posts/${post.id}`)}
                 >
                   {post.photoUrl ? (
                     <img
                       src={post.photoUrl}
                       alt={post.title}
-                      className="w-14 h-14 rounded-lg object-cover shrink-0"
+                      className="w-full h-36 object-cover"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-lg bg-background flex items-center justify-center shrink-0">
-                      <UtensilsCrossed className="w-5 h-5 text-subtle" />
+                    <div className="w-full h-36 bg-background flex items-center justify-center">
+                      <UtensilsCrossed className="w-7 h-7 text-subtle" />
                     </div>
                   )}
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{post.title}</p>
-                    <p className="text-xs text-subtle mt-0.5">{formatDate(post.createdAt)}</p>
-                  </div>
                 </div>
 
-                {/* Status badge */}
-                <StatusBadge status={post.status} />
+                {/* Content */}
+                <div className="p-4 flex flex-col gap-2.5 flex-1">
+                  <div
+                    className="cursor-pointer flex items-start justify-between gap-2"
+                    onClick={() => !isConfirming && navigate(`/posts/${post.id}`)}
+                  >
+                    <h2 className="font-semibold text-foreground text-sm leading-snug tracking-tight truncate">
+                      {post.title}
+                    </h2>
+                    <StatusBadge status={post.status} />
+                  </div>
 
-                {/* Delete / Confirm */}
-                {isDeletable && (
-                  isConfirming ? (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => handleDelete(post.id)}
-                        disabled={isDeleting}
-                        className="cursor-pointer text-xs font-medium text-red-400 hover:text-red-300 transition-colors disabled:opacity-40"
-                      >
-                        {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Delete"}
-                      </button>
-                      <span className="text-border">|</span>
-                      <button
-                        onClick={() => setConfirmId(null)}
-                        className="cursor-pointer text-xs font-medium text-subtle hover:text-foreground transition-colors"
-                      >
-                        Cancel
-                      </button>
+                  <p className="text-xs text-subtle">{formatDate(post.createdAt)}</p>
+
+                  {/* Delete / Confirm */}
+                  {isDeletable && (
+                    <div className="mt-auto pt-2.5 border-t border-border flex items-center justify-end">
+                      {isConfirming ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDelete(post.id)}
+                            disabled={isDeleting}
+                            className="cursor-pointer text-xs font-medium text-red-400 hover:text-red-300 transition-colors disabled:opacity-40"
+                          >
+                            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Delete"}
+                          </button>
+                          <span className="text-border">|</span>
+                          <button
+                            onClick={() => setConfirmId(null)}
+                            className="cursor-pointer text-xs font-medium text-subtle hover:text-foreground transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmId(post.id)}
+                          className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-subtle hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setConfirmId(post.id); }}
-                      className="cursor-pointer p-1 rounded-md text-muted hover:text-red-400 hover:bg-red-950/30 shrink-0"
-                      title="Delete post"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )
-                )}
-
-                {/* Chevron */}
-                <ChevronRight
-                  className="w-4 h-4 text-subtle group-hover:text-muted transition-colors shrink-0 cursor-pointer"
-                  onClick={() => !isConfirming && navigate(`/posts/${post.id}`)}
-                />
+                  )}
+                </div>
               </div>
             );
           })}

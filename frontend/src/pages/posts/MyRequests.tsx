@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, HandPlatter, ChevronRight, X, AlertCircle } from "lucide-react";
+import { Loader2, HandPlatter, X, AlertCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -106,47 +106,41 @@ export default function MyRequests() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {requests.map((req) => (
             <div
               key={req.id}
-              className="bg-surface border border-border rounded-xl px-4 py-3.5 flex items-center gap-4 group"
+              className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5 hover:border-neutral-600 transition-colors duration-150 group"
             >
               {/* Info */}
               <div
-                className="flex-1 min-w-0 cursor-pointer"
+                className="cursor-pointer flex items-start justify-between gap-2"
                 onClick={() => navigate(`/posts/${req.postId}`)}
               >
-                <p className="text-sm font-medium text-foreground truncate group-hover:text-muted transition-colors">
+                <h2 className="font-semibold text-foreground text-sm leading-snug tracking-tight truncate group-hover:text-muted transition-colors">
                   {req.postTitle}
-                </p>
-                <p className="text-xs text-subtle mt-0.5">{formatDate(req.createdAt)}</p>
+                </h2>
+                <StatusBadge status={req.status} />
               </div>
 
-              {/* Status + cancel */}
-              <div className="flex items-center gap-2 shrink-0">
-                <StatusBadge status={req.status} />
+              <p className="text-xs text-subtle">{formatDate(req.createdAt)}</p>
 
-                {req.status === "pending" && (
+              {/* Cancel */}
+              {req.status === "pending" && (
+                <div className="mt-auto pt-2.5 border-t border-border flex items-center justify-end">
                   <button
                     onClick={() => handleCancel(req.id)}
                     disabled={cancellingId === req.id}
-                    title="Cancel request"
-                    className="cursor-pointer w-6 h-6 flex items-center justify-center rounded-full text-subtle hover:text-red-400 hover:bg-red-950/30 transition-colors disabled:opacity-40"
+                    className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-subtle hover:text-red-400 transition-colors disabled:opacity-40"
                   >
                     {cancellingId === req.id
                       ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       : <X className="w-3.5 h-3.5" />
                     }
+                    Cancel
                   </button>
-                )}
-              </div>
-
-              {/* Chevron */}
-              <ChevronRight
-                className="w-4 h-4 text-subtle group-hover:text-muted transition-colors shrink-0 cursor-pointer"
-                onClick={() => navigate(`/posts/${req.postId}`)}
-              />
+                </div>
+              )}
             </div>
           ))}
         </div>
