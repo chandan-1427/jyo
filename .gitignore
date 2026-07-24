@@ -1,0 +1,34 @@
+# deps
+node_modules/
+
+# env
+.env
+.env.*
+!.env.example
+
+# build output
+dist/
+dist-ssr/
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/*.code-snippets
+.idea/
+.DS_Store
+*.local
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
