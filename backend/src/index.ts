@@ -3,6 +3,7 @@ import { env } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
+import { closeDb } from "./db/index.js";
 
 import { startExpiryJob } from "./jobs/expiry.js";
 import { startNotificationCleanupJob } from "./jobs/notificationCleanup.js";
@@ -18,10 +19,10 @@ process.on("uncaughtException", (err) => {
 
 const app = createApp();
 
-startExpiryJob();
-startNotificationCleanupJob();
+const expiryJob = startExpiryJob();
+const notificationCleanupJob = startNotificationCleanupJob();
 
-serve({ fetch: app.fetch, port: env.PORT }, (info) => {
+const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   logger.info(
     {
       port: info.port,
@@ -33,3 +34,44 @@ serve({ fetch: app.fetch, port: env.PORT }, (info) => {
     "JYO backend started"
   );
 });
+
+// On deploy/restart, Render sends SIGTERM — without this, in-flight
+// requests get cut off mid-response and the DB connection is torn down
+// out from under any query still running. Stop taking new work first,
+// let what's already in flight finish, then tear down cron jobs and the
+// DB connection. A force-exit timeout guards against a hung connection
+// blocking shutdown indefinitely.
+let shuttingDown = false;
+
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  logger.info({ signal }, "Shutting down gracefully");
+
+  const forceExit = setTimeout(() => {
+    logger.error("Graceful shutdown timed out, forcing exit");
+    process.exit(1);
+  }, 10_000);
+  forceExit.unref();
+
+  try {
+    await Promise.all([expiryJob.stop(), notificationCleanupJob.stop()]);
+
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+
+    await closeDb();
+
+    logger.info("Shutdown complete");
+    clearTimeout(forceExit);
+    process.exit(0);
+  } catch (err) {
+    logger.error({ err }, "Error during graceful shutdown");
+    process.exit(1);
+  }
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));

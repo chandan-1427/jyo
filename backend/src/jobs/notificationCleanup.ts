@@ -7,8 +7,9 @@ import { logger } from "../lib/logger.js";
 const RETENTION_DAYS = 14;
 
 export function startNotificationCleanupJob() {
-  // Runs once a day at midnight
-  cron.schedule("0 0 * * *", async () => {
+  // Runs once a day at midnight — the returned task is stopped during
+  // graceful shutdown so a restart can't interrupt it mid-run.
+  return cron.schedule("0 0 * * *", async () => {
     try {
       const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
 

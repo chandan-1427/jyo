@@ -7,8 +7,9 @@ import { createNotification } from "../lib/notify.js";
 import { logger } from "../lib/logger.js";
 
 export function startExpiryJob() {
-  // Runs every 5 minutes
-  cron.schedule("*/5 * * * *", async () => {
+  // Runs every 5 minutes — the returned task is stopped during graceful
+  // shutdown so a restart can't interrupt one mid-run.
+  return cron.schedule("*/5 * * * *", async () => {
     try {
       const now = new Date();
 
