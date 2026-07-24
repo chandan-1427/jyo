@@ -102,9 +102,6 @@ jobs:
     needs: frontend
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -114,6 +111,11 @@ jobs:
       # builds on Vercel's actual infrastructure instead, same as the old
       # git-integration auto-deploy did — we only need the deploy gated
       # behind CI passing, not the build to literally run inside CI.
+      #
+      # Runs from the repo root, not `frontend/` — the Vercel project's
+      # own "Root Directory" setting is already "frontend" (left over
+      # from when it was git-connected), so running this from inside
+      # frontend/ too would make Vercel look for frontend/frontend.
       - name: Deploy to Vercel
         run: npx --yes vercel@latest deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}"
         env:
