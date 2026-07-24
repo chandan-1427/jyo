@@ -50,18 +50,19 @@ export default function Profile() {
   const [success, setSuccess] = useState(false);
 
   // Seed the editable form once when the profile first loads — subsequent
-  // background revalidations shouldn't clobber in-progress edits.
-  useEffect(() => {
-    if (profile && !formInitialized) {
-      setForm({
-        name: profile.name ?? "",
-        phone: profile.phone ?? "",
-        locationText: profile.locationText ?? "",
-        description: profile.description ?? "",
-      });
-      setFormInitialized(true);
-    }
-  }, [profile, formInitialized]);
+  // background revalidations shouldn't clobber in-progress edits. Adjusting
+  // state during render (React's documented pattern for this) rather than
+  // in an effect, since this only needs to happen for the render where
+  // `profile` first becomes available, not as a side effect after commit.
+  if (profile && !formInitialized) {
+    setForm({
+      name: profile.name ?? "",
+      phone: profile.phone ?? "",
+      locationText: profile.locationText ?? "",
+      description: profile.description ?? "",
+    });
+    setFormInitialized(true);
+  }
 
   const saveMutation = useMutation({
     mutationFn: (formData: typeof form) =>

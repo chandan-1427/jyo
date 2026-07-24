@@ -74,8 +74,7 @@ export default function CreatePost() {
       .finally(() => setLocLoading(false));
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const setField = (name: string, value: string) => {
     setForm((prev) => {
       const next = { ...prev, [name]: value };
       if (name === "pickupWindowStart" && next.pickupWindowEnd && next.pickupWindowEnd <= value) {
@@ -83,6 +82,10 @@ export default function CreatePost() {
       }
       return next;
     });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setField(e.target.name, e.target.value);
   };
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,9 +204,7 @@ export default function CreatePost() {
       </span>
       <DateTimePicker
         value={form.pickupWindowStart}
-        onChange={(val) =>
-          handleChange({ target: { name: "pickupWindowStart", value: val } } as any)
-        }
+        onChange={(val) => setField("pickupWindowStart", val)}
         min={minStart}
       />
     </div>
@@ -213,9 +214,7 @@ export default function CreatePost() {
       </span>
       <DateTimePicker
         value={form.pickupWindowEnd}
-        onChange={(val) =>
-          handleChange({ target: { name: "pickupWindowEnd", value: val } } as any)
-        }
+        onChange={(val) => setField("pickupWindowEnd", val)}
         min={minEnd}
       />
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -22,32 +23,33 @@ const navLinks = [
   { label: "My Requests", path: "/my-requests" },
 ];
 
+const notificationsKey = ["notifications"] as const;
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMobileNotifs, setShowMobileNotifs] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const { data: notifications = [] } = useQuery({
+    queryKey: notificationsKey,
+    queryFn: () => apiFetch("/notifications").then((r) => r.notifications as Notification[]),
+    enabled: !!user,
+  });
 
-  const fetchNotifications = async () => {
-    try {
-      const data = await apiFetch("/notifications");
-      setNotifications(data.notifications);
-    } catch {
-      // fail silently
-    }
-  };
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleMarkAllRead = async () => {
     await apiFetch("/notifications/read-all", { method: "PUT" });
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) =>
+      prev.map((n) => ({ ...n, read: true }))
+    );
   };
 
   useEffect(() => {
@@ -67,8 +69,6 @@ export default function Navbar() {
   useEffect(() => {
     if (!user) return;
 
-    fetchNotifications();
-
     const channel = supabase
       .channel("notifications")
       .on(
@@ -80,7 +80,13 @@ export default function Navbar() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          const row = payload.new as Record<string, any>;
+          const row = payload.new as {
+            id: string;
+            message: string;
+            read: boolean;
+            created_at: string;
+            post_id: string | null;
+          };
           const newNotif: Notification = {
             id: row.id,
             message: row.message,
@@ -88,7 +94,7 @@ export default function Navbar() {
             createdAt: row.created_at,
             postId: row.post_id,
           };
-          setNotifications((prev) => [newNotif, ...prev]);
+          queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) => [newNotif, ...prev]);
         }
       )
       .subscribe();
@@ -96,7 +102,7 @@ export default function Navbar() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, queryClient]);
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -111,7 +117,10 @@ export default function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const NotificationsList = () =>
+  // A plain function returning JSX, not a nested component — declaring a
+  // component inside another component's body redefines it (and resets
+  // its identity/state) on every render.
+  const renderNotificationsList = () =>
     notifications.length === 0 ? (
       <p className="text-sm text-subtle text-center py-6">No notifications yet</p>
     ) : (
@@ -201,7 +210,7 @@ export default function Navbar() {
                   <p className="text-[13px] font-semibold text-foreground">Notifications</p>
                 </div>
                 <div className="max-h-72 overflow-y-auto">
-                  <NotificationsList />
+                  {renderNotificationsList()}
                 </div>
               </div>
             )}
@@ -265,7 +274,7 @@ export default function Navbar() {
                 <p className="text-[13px] font-semibold text-foreground">Notifications</p>
               </div>
               <div className="max-h-72 overflow-y-auto">
-                <NotificationsList />
+                {renderNotificationsList()}
               </div>
             </div>
           )}

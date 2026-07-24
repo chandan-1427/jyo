@@ -40,7 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Custom hook — never import AuthContext directly, always use this
+// Custom hook — never import AuthContext directly, always use this. The
+// context+hook-in-one-file pattern is the standard idiom here; splitting
+// useAuth into its own file just to satisfy Fast Refresh would only add
+// import indirection everywhere it's used, for no real benefit.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
