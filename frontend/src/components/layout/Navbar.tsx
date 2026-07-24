@@ -20,7 +20,6 @@ const navLinks = [
   { label: "Post Food", path: "/create" },
   { label: "My Posts", path: "/my-posts" },
   { label: "My Requests", path: "/my-requests" },
-  { label: "Profile", path: "/profile" },
 ];
 
 export default function Navbar() {
@@ -163,7 +162,16 @@ export default function Navbar() {
 
         {/* Desktop right side */}
         <div className="hidden sm:flex items-center gap-4">
-          <span className="text-sm text-subtle">{user?.name}</span>
+          <Link
+            to="/profile"
+            className={`text-sm font-medium transition-colors duration-150 ${
+              isActive("/profile")
+                ? "text-foreground"
+                : "text-subtle hover:text-muted"
+            }`}
+          >
+            {user?.name}
+          </Link>
 
           {/* Desktop notification bell + dropdown */}
           <div className="relative" ref={notifRef}>
@@ -277,7 +285,17 @@ export default function Navbar() {
             </Link>
           ))}
           <div className="border-t border-border pt-4 flex items-center justify-between">
-            <span className="text-sm text-subtle">{user?.name}</span>
+            <Link
+              to="/profile"
+              onClick={() => setMenuOpen(false)}
+              className={`text-sm font-medium transition-colors duration-150 ${
+                isActive("/profile")
+                  ? "text-foreground"
+                  : "text-subtle hover:text-muted"
+              }`}
+            >
+              {user?.name}
+            </Link>
             <button
               onClick={handleLogout}
               disabled={loggingOut}
