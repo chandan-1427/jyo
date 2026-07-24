@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { Bell, Menu, X, LogOut, Loader2 } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
-import { Logo } from "./ui/Logo";
+import { Logo } from "../ui/Logo";
 
 type Notification = {
   id: string;

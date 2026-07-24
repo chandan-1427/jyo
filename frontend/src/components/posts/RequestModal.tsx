@@ -4,9 +4,9 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { uploadImage } from "@/lib/supabase";
 import { getCurrentLocation } from "@/lib/location";
 import { AlertCircle, Camera, X } from "lucide-react";
-import { Field } from "./ui/Field";
-import { Input } from "./ui/Input";
-import { LinkButton } from "./ui/LinkButton";
+import { Field } from "../ui/Field";
+import { Input } from "../ui/Input";
+import { LinkButton } from "../ui/LinkButton";
 
 type Props = {
   postId: string;

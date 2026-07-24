@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
-import Layout from "./components/Layout";
-import SplashScreen from "./components/SplashScreen";
+import Layout from "./components/layout/Layout";
+import SplashScreen from "./components/layout/SplashScreen";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";

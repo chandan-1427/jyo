@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { getCurrentLocation, type Coords } from "@/lib/location";
 import type { FoodPost } from "@/types/api";
-import PostCard from "@/components/PostCard";
+import PostCard from "@/components/posts/PostCard";
 import { MapPin, RefreshCw, Loader2, UtensilsCrossed, AlertCircle } from "lucide-react";
 
 export default function Feed() {

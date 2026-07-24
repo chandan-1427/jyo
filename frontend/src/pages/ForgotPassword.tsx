@@ -5,7 +5,7 @@ import { Mail, CheckCircle2 } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Input } from "@/components/ui/Input";
 import { LinkButton } from "@/components/ui/LinkButton";
-import { Field } from "@/components/auth/Field";
+import { Field } from "@/components/ui/Field";
 import { authInputStyles } from "@/components/auth/authStyles";
 import { BackButton } from "@/components/auth/BackButton";
 import { validateForm, forgotPasswordSchema } from "@/lib/validation";

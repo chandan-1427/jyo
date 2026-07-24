@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import type { FoodPost, PickupRequest } from "@/types/api";
-import RequestModal from "@/components/RequestModal";
+import RequestModal from "@/components/posts/RequestModal";
 import { formatPickupWindow } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { LinkButton } from "@/components/ui/LinkButton";

@@ -8,7 +8,7 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/ui/Logo";
 import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
-import { Field } from "@/components/auth/Field";
+import { Field } from "@/components/ui/Field";
 import { authInputStyles, AUTH_BENEFITS } from "@/components/auth/authStyles";
 import { BackButton } from "@/components/auth/BackButton";
 import { validateForm, loginSchema } from "@/lib/validation";
