@@ -70,6 +70,36 @@ function NextSteps() {
   );
 }
 
+function ApprovedPickerView({ status }: { status: FoodPost["status"] }) {
+  if (status === "completed") {
+    return (
+      <>
+        <InfoBanner variant="success" icon={CheckCircle2}>
+          You collected this food. Thanks for helping reduce waste!
+        </InfoBanner>
+        <NextSteps />
+      </>
+    );
+  }
+
+  if (status === "expired") {
+    return (
+      <>
+        <InfoBanner variant="danger" icon={TimerOff}>
+          The pickup window expired before this was marked collected.
+        </InfoBanner>
+        <NextSteps />
+      </>
+    );
+  }
+
+  return (
+    <InfoBanner variant="success" icon={CheckCircle2}>
+      Your request was approved. Head to the location to collect the food.
+    </InfoBanner>
+  );
+}
+
 function PosterView({
   post, pendingRequest, actionLoading, actionError, onApprove, onReject, onComplete,
 }: {
@@ -429,20 +459,7 @@ export default function PostDetail() {
 
         {/* Right — actions */}
         <div className="flex flex-col gap-4">
-          {isApprovedPicker && post.status === "completed" && (
-            <>
-              <InfoBanner variant="success" icon={CheckCircle2}>
-                You collected this food. Thanks for helping reduce waste!
-              </InfoBanner>
-              <NextSteps />
-            </>
-          )}
-
-          {isApprovedPicker && post.status !== "completed" && (
-            <InfoBanner variant="success" icon={CheckCircle2}>
-              Your request was approved. Head to the location to collect the food.
-            </InfoBanner>
-          )}
+          {isApprovedPicker && <ApprovedPickerView status={post.status} />}
 
           {isPoster && (
             <PosterView
