@@ -5,18 +5,18 @@ import Layout from "./components/layout/Layout";
 import SplashScreen from "./components/layout/SplashScreen";
 
 import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
 import Profile from "./pages/Profile";
-import Feed from "./pages/Feed";
-import PostDetail from "./pages/PostDetail";
-import CreatePost from "./pages/CreatePost";
-import MyPosts from "./pages/MyPosts";
-import MyRequests from "./pages/MyRequests";
+import Feed from "./pages/posts/Feed";
+import PostDetail from "./pages/posts/PostDetail";
+import CreatePost from "./pages/posts/CreatePost";
+import MyPosts from "./pages/posts/MyPosts";
+import MyRequests from "./pages/posts/MyRequests";
 import NotFound from "./pages/NotFound";
-import VerifyEmail from "./pages/VerifyEmail";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/auth/VerifyEmail";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 
 function AuthGuard() {
   const { user, loading } = useAuth();
