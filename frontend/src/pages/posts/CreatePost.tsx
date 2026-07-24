@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Camera, X, Clock, AlertCircle } from "lucide-react";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { uploadImage } from "@/lib/supabase";
 import { getCurrentLocation, type Coords } from "@/lib/location";
 import { Input } from "@/components/ui/Input";
@@ -23,6 +24,7 @@ function nowLocal(): string {
 
 export default function CreatePost() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [form, setForm] = useState({
     title: "",
@@ -33,14 +35,42 @@ export default function CreatePost() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [coords, setCoords] = useState<Coords | null>(null);
-  const [loading, setLoading] = useState(false);
   const [locLoading, setLocLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const photoUrl = await uploadImage(photoFile!, "food-photos");
+      const start = new Date(form.pickupWindowStart).toISOString();
+      const end = new Date(form.pickupWindowEnd).toISOString();
+
+      return apiFetch("/posts", {
+        method: "POST",
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description,
+          photoUrl,
+          pickupLat: coords!.lat,
+          pickupLng: coords!.lng,
+          pickupWindowStart: start,
+          pickupWindowEnd: end,
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts", "mine"] });
+      queryClient.invalidateQueries({ queryKey: ["posts", "feed"] });
+      navigate("/my-posts");
+    },
+  });
+
+  const loading = createMutation.isPending;
+  const error = formError || createMutation.error?.message || "";
 
   useEffect(() => {
     getCurrentLocation()
       .then(setCoords)
-      .catch(() => setError("Could not detect your location. Please enable location access."))
+      .catch(() => setFormError("Could not detect your location. Please enable location access."))
       .finally(() => setLocLoading(false));
   }, []);
 
@@ -67,48 +97,28 @@ export default function CreatePost() {
     setPhotoPreview("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setFormError("");
 
     if (!coords) {
-      setError("Location is required to post food. Please enable location access.");
+      setFormError("Location is required to post food. Please enable location access.");
       return;
     }
     if (!photoFile) {
-      setError("Please add a photo of the food.");
+      setFormError("Please add a photo of the food.");
       return;
     }
 
-    const start = new Date(form.pickupWindowStart).toISOString();
-    const end = new Date(form.pickupWindowEnd).toISOString();
+    const start = new Date(form.pickupWindowStart);
+    const end = new Date(form.pickupWindowEnd);
 
-    if (new Date(end) <= new Date(start)) {
-      setError("Pickup end time must be after start time.");
+    if (end <= start) {
+      setFormError("Pickup end time must be after start time.");
       return;
     }
 
-    setLoading(true);
-    try {
-      const photoUrl = await uploadImage(photoFile, "food-photos");
-      await apiFetch("/posts", {
-        method: "POST",
-        body: JSON.stringify({
-          title: form.title,
-          description: form.description,
-          photoUrl,
-          pickupLat: coords.lat,
-          pickupLng: coords.lng,
-          pickupWindowStart: start,
-          pickupWindowEnd: end,
-        }),
-      });
-      navigate("/my-posts");
-    } catch (err: unknown) {
-      if (err instanceof ApiError) setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    createMutation.mutate();
   };
 
   const minStart = nowLocal();

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Loader2, UtensilsCrossed, Trash2, AlertCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import type { FoodPost } from "@/types/api";
@@ -9,35 +10,26 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export default function MyPosts() {
   const navigate = useNavigate();
-  const [posts, setPosts] = useState<FoodPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  useEffect(() => {
-    apiFetch("/posts/mine")
-      .then((data) => setPosts(data.posts))
-      .catch((err: unknown) => {
-        if (err instanceof Error) setError(err.message);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading, error } = useQuery<{ posts: FoodPost[] }>({
+    queryKey: ["posts", "mine"],
+    queryFn: () => apiFetch("/posts/mine"),
+  });
+  const posts = data?.posts ?? [];
 
-  const handleDelete = async (postId: string) => {
-    setDeletingId(postId);
+  const deleteMutation = useMutation({
+    mutationFn: (postId: string) => apiFetch(`/posts/${postId}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts", "mine"] }),
+  });
+
+  const handleDelete = (postId: string) => {
     setConfirmId(null);
-    try {
-      await apiFetch(`/posts/${postId}`, { method: "DELETE" });
-      setPosts((prev) => prev.filter((p) => p.id !== postId));
-    } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-    } finally {
-      setDeletingId(null);
-    }
+    deleteMutation.mutate(postId);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-subtle animate-spin" />
@@ -51,7 +43,7 @@ export default function MyPosts() {
       <div className="px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
         <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3 max-w-sm w-full">
           <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{error}</p>
+          <p className="text-sm text-red-400 leading-snug">{error.message}</p>
         </div>
         <button
           onClick={() => window.location.reload()}
@@ -101,7 +93,7 @@ export default function MyPosts() {
           {posts.map((post) => {
             const isDeletable = post.status !== "closed" && post.status !== "completed";
             const isConfirming = confirmId === post.id;
-            const isDeleting = deletingId === post.id;
+            const isDeleting = deleteMutation.isPending && deleteMutation.variables === post.id;
 
             return (
               <div

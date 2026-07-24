@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, HandPlatter, X, AlertCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -17,37 +17,20 @@ type MyRequest = {
 
 export default function MyRequests() {
   const navigate = useNavigate();
-  const [requests, setRequests] = useState<MyRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [cancelError, setCancelError] = useState("");
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchRequests = () => {
-    apiFetch("/requests/mine")
-      .then((data) => setRequests(data.requests))
-      .catch((err: unknown) => {
-        if (err instanceof Error) setError(err.message);
-      })
-      .finally(() => setLoading(false));
-  };
+  const { data, isLoading, error } = useQuery<{ requests: MyRequest[] }>({
+    queryKey: ["requests", "mine"],
+    queryFn: () => apiFetch("/requests/mine"),
+  });
+  const requests = data?.requests ?? [];
 
-  useEffect(() => { fetchRequests(); }, []);
+  const cancelMutation = useMutation({
+    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/cancel`, { method: "PUT" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["requests", "mine"] }),
+  });
 
-  const handleCancel = async (requestId: string) => {
-    setCancelError("");
-    setCancellingId(requestId);
-    try {
-      await apiFetch(`/requests/${requestId}/cancel`, { method: "PUT" });
-      fetchRequests();
-    } catch (err: unknown) {
-      if (err instanceof Error) setCancelError(err.message);
-    } finally {
-      setCancellingId(null);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-subtle animate-spin" />
@@ -61,7 +44,7 @@ export default function MyRequests() {
       <div className="px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
         <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3 max-w-sm w-full">
           <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{error}</p>
+          <p className="text-sm text-red-400 leading-snug">{error.message}</p>
         </div>
         <button
           onClick={() => window.location.reload()}
@@ -83,10 +66,10 @@ export default function MyRequests() {
       </div>
 
       {/* Cancel error — surfaced once, above the list, not a native alert() */}
-      {cancelError && (
+      {cancelMutation.error && (
         <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
           <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{cancelError}</p>
+          <p className="text-sm text-red-400 leading-snug">{cancelMutation.error.message}</p>
         </div>
       )}
 
@@ -129,11 +112,11 @@ export default function MyRequests() {
               {req.status === "pending" && (
                 <div className="mt-auto pt-2.5 border-t border-border flex items-center justify-end">
                   <button
-                    onClick={() => handleCancel(req.id)}
-                    disabled={cancellingId === req.id}
+                    onClick={() => cancelMutation.mutate(req.id)}
+                    disabled={cancelMutation.isPending && cancelMutation.variables === req.id}
                     className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-subtle hover:text-red-400 transition-colors disabled:opacity-40"
                   >
-                    {cancellingId === req.id
+                    {cancelMutation.isPending && cancelMutation.variables === req.id
                       ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       : <X className="w-3.5 h-3.5" />
                     }

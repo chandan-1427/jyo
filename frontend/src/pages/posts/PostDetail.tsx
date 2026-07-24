@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, MapPin, Clock, Loader2, AlertCircle, X,
   CheckCircle2, UtensilsCrossed, ExternalLink, TimerOff, Ban,
@@ -313,65 +314,43 @@ function VisitorView({ status, onRequest }: { status: FoodPost["status"]; onRequ
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [data, setData] = useState<PostDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState("");
 
-  const fetchPost = async () => {
-    try {
-      const res = await apiFetch(`/posts/${id}`);
-      setData(res);
-    } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const { data, isPending: loading, error } = useQuery<PostDetailData>({
+    queryKey: ["posts", id],
+    queryFn: () => apiFetch(`/posts/${id}`),
+    enabled: !!id,
+  });
+
+  const invalidatePost = () => {
+    queryClient.invalidateQueries({ queryKey: ["posts", id] });
+    queryClient.invalidateQueries({ queryKey: ["posts", "mine"] });
   };
 
-  useEffect(() => { fetchPost(); }, [id]);
+  const approveMutation = useMutation({
+    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/approve`, { method: "PUT" }),
+    onSuccess: invalidatePost,
+  });
 
-  const handleApprove = async (requestId: string) => {
-    setActionError("");
-    setActionLoading(true);
-    try {
-      await apiFetch(`/requests/${requestId}/approve`, { method: "PUT" });
-      await fetchPost();
-    } catch (err: unknown) {
-      if (err instanceof Error) setActionError(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const rejectMutation = useMutation({
+    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/reject`, { method: "PUT" }),
+    onSuccess: invalidatePost,
+  });
 
-  const handleReject = async (requestId: string) => {
-    setActionError("");
-    setActionLoading(true);
-    try {
-      await apiFetch(`/requests/${requestId}/reject`, { method: "PUT" });
-      await fetchPost();
-    } catch (err: unknown) {
-      if (err instanceof Error) setActionError(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const completeMutation = useMutation({
+    mutationFn: () => apiFetch(`/posts/${id}/complete`, { method: "PUT" }),
+    onSuccess: invalidatePost,
+  });
 
-  const handleComplete = async () => {
-    setActionError(""); // was missing — stale errors could otherwise linger
-    setActionLoading(true);
-    try {
-      await apiFetch(`/posts/${data?.post.id}/complete`, { method: "PUT" });
-      await fetchPost();
-    } catch (err: unknown) {
-      if (err instanceof Error) setActionError(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const actionLoading = approveMutation.isPending || rejectMutation.isPending || completeMutation.isPending;
+  const actionError =
+    approveMutation.error?.message || rejectMutation.error?.message || completeMutation.error?.message || "";
+
+  const handleApprove = (requestId: string) => approveMutation.mutate(requestId);
+  const handleReject = (requestId: string) => rejectMutation.mutate(requestId);
+  const handleComplete = () => completeMutation.mutate();
 
   if (loading) {
     return (
@@ -387,7 +366,7 @@ export default function PostDetail() {
       <div className="px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
         <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3 max-w-sm w-full">
           <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{error || "Post not found."}</p>
+          <p className="text-sm text-red-400 leading-snug">{error?.message || "Post not found."}</p>
         </div>
         <button
           onClick={() => navigate("/feed")}
@@ -483,7 +462,7 @@ export default function PostDetail() {
         <RequestModal
           postId={post.id}
           onClose={() => setShowModal(false)}
-          onSuccess={() => { setShowModal(false); fetchPost(); }}
+          onSuccess={() => { setShowModal(false); invalidatePost(); }}
         />
       )}
     </div>

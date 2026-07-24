@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { getCurrentLocation, type Coords } from "@/lib/location";
 import type { FoodPost } from "@/types/api";
@@ -7,53 +8,42 @@ import PostCard from "@/components/posts/PostCard";
 import { MapPin, RefreshCw, Loader2, UtensilsCrossed, AlertCircle } from "lucide-react";
 
 export default function Feed() {
-  const [posts, setPosts] = useState<FoodPost[]>([]);
   const [coords, setCoords] = useState<Coords | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [locating, setLocating] = useState(true);
   const [locationError, setLocationError] = useState("");
-  const [fetchError, setFetchError] = useState("");
-
-  const fetchPosts = useCallback(async (c: Coords) => {
-    try {
-      const data = await apiFetch(`/posts?lat=${c.lat}&lng=${c.lng}`);
-      setPosts(data.posts);
-      setFetchError("");
-    } catch (err: unknown) {
-      if (err instanceof Error) setFetchError(err.message);
-    }
-  }, []);
 
   useEffect(() => {
     getCurrentLocation()
-      .then((c) => {
-        setCoords(c);
-        return fetchPosts(c);
-      })
+      .then(setCoords)
       .catch((err: unknown) => {
         if (err instanceof Error) setLocationError(err.message);
       })
-      .finally(() => setLoading(false));
-  }, [fetchPosts]);
+      .finally(() => setLocating(false));
+  }, []);
 
-  useEffect(() => {
-    if (!coords) return;
-    const interval = setInterval(() => fetchPosts(coords), 15_000);
-    return () => clearInterval(interval);
-  }, [coords, fetchPosts]);
+  const {
+    data,
+    error: fetchError,
+    isPending: postsLoading,
+    isFetching: refreshing,
+    refetch,
+  } = useQuery<{ posts: FoodPost[] }>({
+    queryKey: ["posts", "feed", coords?.lat, coords?.lng],
+    queryFn: () => apiFetch(`/posts?lat=${coords!.lat}&lng=${coords!.lng}`),
+    enabled: !!coords,
+    refetchInterval: 15_000,
+  });
+  const posts = data?.posts ?? [];
 
-  const handleRefresh = async () => {
-    if (!coords || refreshing) return;
-    setRefreshing(true);
-    await fetchPosts(coords);
-    setRefreshing(false);
-  };
+  const handleRefresh = () => refetch();
 
-  if (loading) {
+  if (locating || postsLoading) {
     return (
       <div className="px-4 py-24 flex flex-col items-center gap-3 font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-subtle animate-spin" />
-        <p className="text-sm text-subtle">Detecting your location…</p>
+        <p className="text-sm text-subtle">
+          {locating ? "Detecting your location…" : "Loading nearby food…"}
+        </p>
       </div>
     );
   }
@@ -105,7 +95,7 @@ export default function Feed() {
       {fetchError && (
         <div className="mb-6 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
           <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{fetchError}</p>
+          <p className="text-sm text-red-400 leading-snug">{fetchError.message}</p>
         </div>
       )}
 

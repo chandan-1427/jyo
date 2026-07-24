@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { uploadImage } from "@/lib/supabase";
 import { getCurrentLocation } from "@/lib/location";
 import { AlertCircle, Camera, X } from "lucide-react";
@@ -16,37 +17,20 @@ type Props = {
 
 export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const [pickerName, setPickerName] = useState(user?.name ?? "");
   const [etaMinutes, setEtaMinutes] = useState("");
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [selfiePreview, setSelfiePreview] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
 
-  const handleSelfie = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setSelfieFile(file);
-    setSelfiePreview(URL.createObjectURL(file));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (!selfieFile) {
-      setError("Please upload a selfie so the poster can identify you");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
+  const requestMutation = useMutation({
+    mutationFn: async () => {
       const coords = await getCurrentLocation();
-      const selfieUrl = await uploadImage(selfieFile, "selfies");
+      const selfieUrl = await uploadImage(selfieFile!, "selfies");
 
-      await apiFetch("/requests", {
+      return apiFetch("/requests", {
         method: "POST",
         body: JSON.stringify({
           postId,
@@ -57,13 +41,33 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
           lng: coords.lng,
         }),
       });
-
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["requests", "mine"] });
       onSuccess();
-    } catch (err: unknown) {
-      if (err instanceof ApiError) setError(err.message);
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  const loading = requestMutation.isPending;
+  const error = formError || requestMutation.error?.message || "";
+
+  const handleSelfie = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelfieFile(file);
+    setSelfiePreview(URL.createObjectURL(file));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+
+    if (!selfieFile) {
+      setFormError("Please upload a selfie so the poster can identify you");
+      return;
     }
+
+    requestMutation.mutate();
   };
 
   return (
