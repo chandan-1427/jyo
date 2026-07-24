@@ -2,16 +2,7 @@ import "dotenv/config";
 import { env } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-
-import { requestLogger } from "./middleware/requestLogger.js";
-
-import { authRoutes } from "./routes/auth.js";
-import { userRoutes } from "./routes/users.js";
-import { postRoutes } from "./routes/posts.js";
-import { requestRoutes } from "./routes/requests.js";
-import { notificationRoutes } from "./routes/notifications.js";
+import { createApp } from "./app.js";
 
 import { startExpiryJob } from "./jobs/expiry.js";
 import { startNotificationCleanupJob } from "./jobs/notificationCleanup.js";
@@ -25,49 +16,7 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-const app = new Hono();
-
-const allowedOrigins = [
-  "https://jyo.co.in",
-  "https://www.jyo.co.in",
-  "http://localhost:5173",
-];
-
-app.use("*", requestLogger);
-
-app.use(
-  "*",
-  cors({
-    origin: (origin) => {
-      if (!origin || allowedOrigins.includes(origin)) return origin;
-      return null;
-    },
-    credentials: true,
-    allowHeaders: ["Content-Type"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  })
-);
-
-app.onError((err, c) => {
-  logger.error(
-    {
-      err,
-      requestId: c.get("requestId"),
-      method: c.req.method,
-      path: c.req.path,
-    },
-    "Unhandled error"
-  );
-  return c.json({ error: "Internal server error" }, 500);
-});
-
-app.get("/", (c) => c.json({ status: "ok" }));
-
-app.route("/auth", authRoutes);
-app.route("/users", userRoutes);
-app.route("/posts", postRoutes);
-app.route("/requests", requestRoutes);
-app.route("/notifications", notificationRoutes);
+const app = createApp();
 
 startExpiryJob();
 startNotificationCleanupJob();
