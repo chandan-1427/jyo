@@ -108,42 +108,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Pull Vercel project settings
-        # npx rather than a global `pnpm add -g vercel` — pnpm's global
-        # installs need a configured PNPM_HOME/global bin dir that
-        # pnpm/action-setup doesn't set up, and npx sidesteps that
-        # entirely (this is also Vercel's own documented CI pattern).
-        run: npx --yes vercel@latest pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Debug shell/PATH before Vercel build
-        run: |
-          echo "PATH=$PATH"
-          echo "SHELL=$SHELL"
-          which sh || echo "sh not found via which"
-          ls -la /bin/sh || echo "/bin/sh missing"
-          ls -la /usr/bin/sh || echo "/usr/bin/sh missing"
-
-      - name: Build via Vercel CLI
-        run: npx --yes vercel@latest build --prod --token="${{ secrets.VERCEL_TOKEN }}"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Deploy prebuilt output to Vercel
-        run: npx --yes vercel@latest deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+      # No local `vercel build` step — its build-sandbox emulation hit a
+      # CLI bug (v57 + Node 24: "spawn sh ENOENT" despite PATH/sh being
+      # fine in this job). `vercel deploy --prod` uploads the source and
+      # builds on Vercel's actual infrastructure instead, same as the old
+      # git-integration auto-deploy did — we only need the deploy gated
+      # behind CI passing, not the build to literally run inside CI.
+      - name: Deploy to Vercel
+        run: npx --yes vercel@latest deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
