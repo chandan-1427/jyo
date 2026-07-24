@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch, ApiError } from "@/lib/api";
@@ -20,13 +21,41 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const loginMutation = useMutation({
+    mutationFn: (payload: { email: string; password: string }) =>
+      apiFetch("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+    onSuccess: (data) => {
+      login(data.user);
+      navigate("/feed");
+    },
+    onError: (err: unknown) => {
+      if (err instanceof ApiError) {
+        if (err.message.includes("verify your email")) {
+          setNeedsVerification(true);
+        } else {
+          setError(err.message);
+        }
+      }
+    },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: (email: string) =>
+      apiFetch("/auth/resend-verification", { method: "POST", body: JSON.stringify({ email }) }),
+    onSuccess: (data) => setResendMessage(data.message),
+    onError: (err: unknown) => {
+      if (err instanceof ApiError) setResendMessage(err.message);
+    },
+  });
+
+  const loading = loginMutation.isPending;
+  const resendLoading = resendMutation.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setFieldErrors({});
@@ -39,42 +68,12 @@ export default function Login() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const data = await apiFetch("/auth/login", {
-        method: "POST",
-        body: JSON.stringify(validation.data),
-      });
-      login(data.user);
-      navigate("/feed");
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        if (err.message.includes("verify your email")) {
-          setNeedsVerification(true);
-        } else {
-          setError(err.message);
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
+    loginMutation.mutate(validation.data);
   };
 
-  const handleResendVerification = async () => {
-    setResendLoading(true);
+  const handleResendVerification = () => {
     setResendMessage("");
-
-    try {
-      const data = await apiFetch("/auth/resend-verification", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      setResendMessage(data.message);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) setResendMessage(err.message);
-    } finally {
-      setResendLoading(false);
-    }
+    resendMutation.mutate(email);
   };
 
   return (

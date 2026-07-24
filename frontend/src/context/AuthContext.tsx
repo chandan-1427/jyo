@@ -1,50 +1,40 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-
-type AuthUser = {
-  id: string;
-  name: string;
-  email: string;
-};
+import { authMeKey, fetchAuthMe, type Profile } from "@/lib/queries/auth";
 
 type AuthContextType = {
-  user: AuthUser | null;
+  user: Profile | null;
   loading: boolean;
-  login: (user: AuthUser) => void;
+  login: (user: Profile) => void;
   logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  // On app load — check if already logged in
-  useEffect(() => {
-    apiFetch("/users/me")
-      .then((data) => setUser(data.user))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: user, isLoading: loading } = useQuery({
+    queryKey: authMeKey,
+    queryFn: fetchAuthMe,
+  });
 
-  const login = (user: AuthUser) => {
-    setUser(user);
+  const login = (user: Profile) => {
+    // Seed the cache synchronously so route guards see the logged-in user
+    // right away, then refresh in the background to fill in full profile
+    // fields the login response doesn't include (phone, locationText, etc).
+    queryClient.setQueryData(authMeKey, user);
+    queryClient.invalidateQueries({ queryKey: authMeKey });
   };
 
   const logout = async () => {
     await apiFetch("/auth/logout", { method: "POST" });
-    setUser(null);
+    queryClient.setQueryData(authMeKey, null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user: user ?? null, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

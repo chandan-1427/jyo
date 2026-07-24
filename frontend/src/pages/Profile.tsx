@@ -1,19 +1,11 @@
 import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { authMeKey, fetchAuthMe } from "@/lib/queries/auth";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { LinkButton } from "@/components/ui/LinkButton";
-
-type ProfileData = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  locationText: string | null;
-  description: string | null;
-  createdAt: string;
-};
 
 function Field({
   label,
@@ -41,34 +33,44 @@ function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
 }
 
 export default function Profile() {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data: profile, isLoading: loading } = useQuery({
+    queryKey: authMeKey,
+    queryFn: fetchAuthMe,
+  });
+
   const [form, setForm] = useState({
     name: "",
     phone: "",
     locationText: "",
     description: "",
   });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [formInitialized, setFormInitialized] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Seed the editable form once when the profile first loads — subsequent
+  // background revalidations shouldn't clobber in-progress edits.
   useEffect(() => {
-    apiFetch("/users/me")
-      .then((data) => {
-        setProfile(data.user);
-        setForm({
-          name: data.user.name ?? "",
-          phone: data.user.phone ?? "",
-          locationText: data.user.locationText ?? "",
-          description: data.user.description ?? "",
-        });
-      })
-      .catch((err: unknown) => {
-        if (err instanceof Error) setError(err.message);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    if (profile && !formInitialized) {
+      setForm({
+        name: profile.name ?? "",
+        phone: profile.phone ?? "",
+        locationText: profile.locationText ?? "",
+        description: profile.description ?? "",
+      });
+      setFormInitialized(true);
+    }
+  }, [profile, formInitialized]);
+
+  const saveMutation = useMutation({
+    mutationFn: (formData: typeof form) =>
+      apiFetch("/users/me", { method: "PUT", body: JSON.stringify(formData) }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(authMeKey, data.user);
+      setSuccess(true);
+    },
+  });
 
   useEffect(() => {
     if (!success) return;
@@ -77,34 +79,24 @@ export default function Profile() {
   }, [success]);
 
   useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => setError(""), 4000);
+    if (!saveMutation.error) return;
+    const timer = setTimeout(() => saveMutation.reset(), 4000);
     return () => clearTimeout(timer);
-  }, [error]);
+  }, [saveMutation.error, saveMutation]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setSuccess(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setSuccess(false);
-    setSaving(true);
-    try {
-      const data = await apiFetch("/users/me", {
-        method: "PUT",
-        body: JSON.stringify(form),
-      });
-      setProfile(data.user);
-      setSuccess(true);
-    } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate(form);
   };
+
+  const saving = saveMutation.isPending;
+  const error = saveMutation.error?.message || "";
 
   if (loading) {
     return (
@@ -142,7 +134,7 @@ export default function Profile() {
           <div className="w-full border-t border-border pt-4">
             <p className="text-xs text-subtle">Member since</p>
             <p className="text-sm text-muted mt-0.5">
-              {profile
+              {profile?.createdAt
                 ? new Date(profile.createdAt).toLocaleDateString("en-IN", {
                     day: "numeric", month: "long", year: "numeric",
                   })

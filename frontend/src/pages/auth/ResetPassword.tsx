@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { apiFetch, ApiError } from "@/lib/api";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
@@ -16,12 +17,22 @@ export default function ResetPassword() {
   const token = searchParams.get("token") ?? "";
 
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const resetMutation = useMutation({
+    mutationFn: (payload: { token: string; password: string }) =>
+      apiFetch("/auth/reset-password", { method: "POST", body: JSON.stringify(payload) }),
+    onSuccess: () => setSuccess(true),
+    onError: (err: unknown) => {
+      if (err instanceof ApiError) setError(err.message);
+    },
+  });
+
+  const loading = resetMutation.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setFieldErrors({});
@@ -32,18 +43,7 @@ export default function ResetPassword() {
       return;
     }
 
-    setLoading(true);
-    try {
-      await apiFetch("/auth/reset-password", {
-        method: "POST",
-        body: JSON.stringify({ token, ...validation.data }),
-      });
-      setSuccess(true);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    resetMutation.mutate({ token, ...validation.data });
   };
 
   return (

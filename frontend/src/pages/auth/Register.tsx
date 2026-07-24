@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Mail, CheckCircle2 } from "lucide-react";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -22,15 +23,28 @@ export default function Register() {
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
+
+  const registerMutation = useMutation({
+    mutationFn: (payload: typeof form) =>
+      apiFetch("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
+    onSuccess: () => setRegistered(true),
+    onError: (err: unknown) => {
+      if (err instanceof ApiError) {
+        setError(err.message);
+        if (err.details) setFieldErrors(err.details);
+      }
+    },
+  });
+
+  const loading = registerMutation.isPending;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setFieldErrors({});
@@ -41,18 +55,7 @@ export default function Register() {
       return; // stop here — no network request for input that's already known-invalid
     }
 
-    setLoading(true);
-    try {
-      await apiFetch("/auth/register", { method: "POST", body: JSON.stringify(validation.data) });
-      setRegistered(true);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-        if (err.details) setFieldErrors(err.details);
-      }
-    } finally {
-      setLoading(false);
-    }
+    registerMutation.mutate(validation.data);
   };
 
   return (
@@ -127,6 +130,7 @@ export default function Register() {
                     setRegistered(false);
                     setForm({ name: "", email: "", phone: "", password: "" });
                     setError("");
+                    registerMutation.reset();
                   }}
                   className="font-medium text-foreground hover:underline underline-offset-2"
                 >

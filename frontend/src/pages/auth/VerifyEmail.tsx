@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { Link } from "react-router-dom";
 import { CheckCircle2, XCircle, Loader2, Mail } from "lucide-react";
@@ -8,27 +8,21 @@ import { LinkButton } from "@/components/ui/LinkButton";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [message, setMessage] = useState("");
+  const token = searchParams.get("token");
 
-  useEffect(() => {
-    const token = searchParams.get("token");
-    if (!token) {
-      setStatus("error");
-      setMessage("Invalid verification link.");
-      return;
-    }
+  const { data, isPending, error } = useQuery({
+    queryKey: ["auth", "verify-email", token],
+    queryFn: () => apiFetch(`/auth/verify-email?token=${token}`),
+    enabled: !!token,
+    retry: false,
+  });
 
-    apiFetch(`/auth/verify-email?token=${token}`)
-      .then((data) => {
-        setStatus("success");
-        setMessage(data.message);
-      })
-      .catch((err: unknown) => {
-        setStatus("error");
-        setMessage(err instanceof Error ? err.message : "Verification failed.");
-      });
-  }, []);
+  const status = !token ? "error" : isPending ? "loading" : error ? "error" : "success";
+  const message = !token
+    ? "Invalid verification link."
+    : error
+      ? (error instanceof Error ? error.message : "Verification failed.")
+      : data?.message;
 
   return (
     <div className="min-h-screen flex flex-col">

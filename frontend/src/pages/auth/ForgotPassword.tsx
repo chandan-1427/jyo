@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Mail, CheckCircle2 } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
@@ -12,14 +13,23 @@ import { validateForm, forgotPasswordSchema } from "@/lib/validation";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const forgotMutation = useMutation({
+    mutationFn: (payload: { email: string }) =>
+      apiFetch("/auth/forgot-password", { method: "POST", body: JSON.stringify(payload) }),
+    onSuccess: (data) => setMessage(data.message),
+    onError: (err: unknown) => {
+      if (err instanceof ApiError) setError(err.message);
+    },
+  });
+
+  const loading = forgotMutation.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
     setMessage("");
     setFieldErrors({});
@@ -27,21 +37,10 @@ export default function ForgotPassword() {
     const validation = validateForm(forgotPasswordSchema, { email });
     if (!validation.success) {
       setFieldErrors(validation.fieldErrors);
-      setLoading(false); // validation failed before the try/finally below ever runs
       return;
     }
 
-    try {
-      const data = await apiFetch("/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify(validation.data),
-      });
-      setMessage(data.message);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    forgotMutation.mutate(validation.data);
   };
 
   return (
@@ -91,7 +90,7 @@ export default function ForgotPassword() {
               <LinkButton
                 as="button"
                 label="Try again"
-                onClick={() => { setMessage(""); setEmail(""); }}
+                onClick={() => { setMessage(""); setEmail(""); forgotMutation.reset(); }}
                 className="w-full"
               />
 
