@@ -32,6 +32,7 @@ export default function Navbar() {
   const [showMobileNotifs, setShowMobileNotifs] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const mobileRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -53,6 +54,10 @@ export default function Navbar() {
     const handler = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setShowNotifs(false);
+      }
+      if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+        setShowMobileNotifs(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -223,7 +228,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile: bell + hamburger */}
-        <div className="sm:hidden flex items-center gap-1">
+        <div className="sm:hidden relative flex items-center gap-1" ref={mobileRef}>
           <button
             onClick={() => {
               setMenuOpen(false);
@@ -233,18 +238,18 @@ export default function Navbar() {
                 return next;
               });
             }}
-            className="cursor-pointer relative flex items-center justify-center w-8 h-8 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150"
+            className="cursor-pointer relative flex items-center justify-center w-11 h-11 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150"
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-accent text-background text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+              <span className="absolute top-1.5 right-1.5 bg-accent text-background text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center leading-none">
                 {unreadCount}
               </span>
             )}
           </button>
 
           <button
-            className="cursor-pointer flex items-center justify-center w-8 h-8 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150"
+            className="cursor-pointer flex items-center justify-center w-11 h-11 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150"
             onClick={() => {
               setShowMobileNotifs(false);
               setMenuOpen((prev) => !prev);
@@ -252,70 +257,70 @@ export default function Navbar() {
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
+
+          {/* Mobile notifications panel */}
+          {showMobileNotifs && (
+            <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface rounded-xl border border-border shadow-lg z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
+                <p className="text-[13px] font-semibold text-foreground">Notifications</p>
+              </div>
+              <div className="max-h-72 overflow-y-auto">
+                <NotificationsList />
+              </div>
+            </div>
+          )}
+
+          {/* Mobile nav menu */}
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-surface rounded-xl border border-border shadow-lg z-50 px-4 py-4 flex flex-col gap-4">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setMenuOpen(false)}
+                  className={`text-sm font-medium transition-colors duration-150 ${
+                    isActive(link.path)
+                      ? "text-foreground"
+                      : "text-subtle hover:text-muted"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <div className="border-t border-border pt-4 flex items-center justify-between">
+                <Link
+                  to="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className={`text-sm font-medium transition-colors duration-150 ${
+                    isActive("/profile")
+                      ? "text-foreground"
+                      : "text-subtle hover:text-muted"
+                  }`}
+                >
+                  {user?.name}
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-subtle hover:text-foreground transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-subtle"
+                >
+                  {loggingOut ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Logging out…
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="w-3.5 h-3.5" />
+                      Logout
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Mobile notifications panel */}
-      {showMobileNotifs && (
-        <div className="sm:hidden bg-surface border-t border-border">
-          <div className="px-4 py-3 border-b border-border">
-            <p className="text-[13px] font-semibold text-foreground">Notifications</p>
-          </div>
-          <div className="max-h-72 overflow-y-auto">
-            <NotificationsList />
-          </div>
-        </div>
-      )}
-
-      {/* Mobile nav menu */}
-      {menuOpen && (
-        <div className="sm:hidden border-t border-border px-4 py-4 flex flex-col gap-4">
-          {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              onClick={() => setMenuOpen(false)}
-              className={`text-sm font-medium transition-colors duration-150 ${
-                isActive(link.path)
-                  ? "text-foreground"
-                  : "text-subtle hover:text-muted"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <div className="border-t border-border pt-4 flex items-center justify-between">
-            <Link
-              to="/profile"
-              onClick={() => setMenuOpen(false)}
-              className={`text-sm font-medium transition-colors duration-150 ${
-                isActive("/profile")
-                  ? "text-foreground"
-                  : "text-subtle hover:text-muted"
-              }`}
-            >
-              {user?.name}
-            </Link>
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-subtle hover:text-foreground transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-subtle"
-            >
-              {loggingOut ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Logging out…
-                </>
-              ) : (
-                <>
-                  <LogOut className="w-3.5 h-3.5" />
-                  Logout
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
     </nav>
   );
 }
