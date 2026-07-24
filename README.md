@@ -3,6 +3,7 @@
 Free community food sharing for Tirupati, India.
 
 [![Live](https://img.shields.io/badge/Live-jyo.co.in-2D6A4F?style=flat-square)](https://www.jyo.co.in)
+[![CI](https://github.com/chandan-1427/jyo/actions/workflows/ci.yml/badge.svg)](https://github.com/chandan-1427/jyo/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
 [![Built for Tirupati](https://img.shields.io/badge/Built%20for-Tirupati%20%F0%9F%87%AE%F0%9F%87%B3-orange?style=flat-square)](https://www.jyo.co.in)
 
