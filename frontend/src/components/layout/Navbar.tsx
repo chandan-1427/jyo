@@ -139,7 +139,7 @@ export default function Navbar() {
     );
 
   return (
-    <nav className="bg-background sticky top-0 z-50 font-medium tracking-wide">
+    <nav className="bg-background sticky top-0 z-50 font-medium">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
 
         <Logo to="/feed" />
