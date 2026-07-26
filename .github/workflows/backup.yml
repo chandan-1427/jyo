@@ -16,6 +16,10 @@ jobs:
       # --format=custom produces a compressed, pg_restore-only dump — not
       # plain SQL, but much smaller and lets you restore just specific
       # tables if needed instead of the whole database.
+      # BACKUP_DATABASE_URL must be Supabase's Session pooler connection
+      # string, not "Direct connection" — direct connections are IPv6-only
+      # and this runner is IPv4-only, so pg_dump fails with "Network is
+      # unreachable" against it.
       - name: Dump database
         run: pg_dump --no-owner --format=custom --file=backup.dump "$DATABASE_URL"
         env:

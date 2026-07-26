@@ -77,7 +77,7 @@ Supabase's free tier does not include automatic backups — a bad migration or a
 
 ### One-time setup
 
-1. In Supabase: **Settings → Database → Connection string**, copy the **Direct connection** string (not the "Transaction pooler" one — `pg_dump` needs a direct session, not a pooled one).
+1. In Supabase: **Settings → Database → Connection string**, copy the **Session pooler** string — not "Direct connection". Supabase's direct connection is IPv6-only, and GitHub Actions runners are IPv4-only, so `pg_dump` fails with "Network is unreachable" against it. The session pooler supports the session-level operations `pg_dump` needs and works over IPv4.
 2. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**, name it `BACKUP_DATABASE_URL`, paste that connection string.
 
 That's it — the workflow picks it up automatically on its next scheduled run.
@@ -87,7 +87,7 @@ That's it — the workflow picks it up automatically on its next scheduled run.
 1. Download the `.dump` file from the relevant workflow run's Artifacts section (Actions tab → the run → scroll to Artifacts).
 2. Restore it into a database with `pg_restore`:
    ```bash
-   pg_restore --no-owner --clean --if-exists -d "<direct-connection-string>" backup.dump
+   pg_restore --no-owner --clean --if-exists -d "<connection-string>" backup.dump
    ```
    `--clean --if-exists` drops existing objects before recreating them from the dump — point this at a fresh/throwaway database first if you're unsure, not directly at production, unless you're intentionally rolling back.
 
