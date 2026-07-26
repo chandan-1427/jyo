@@ -10,18 +10,25 @@ jobs:
     name: Backup Supabase Postgres
     runs-on: ubuntu-latest
     steps:
-      - name: Install postgresql-client
-        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
-
+      # Run pg_dump from a Postgres 18 container rather than the Ubuntu
+      # runner's own apt package (16.x) — pg_dump refuses to dump from a
+      # server newer than itself, and Supabase runs 17.x. A newer client
+      # can always safely dump an older server, so this stays correct
+      # even if Supabase upgrades again later; bump the tag if they ever
+      # move past 18.
+      #
       # --format=custom produces a compressed, pg_restore-only dump — not
       # plain SQL, but much smaller and lets you restore just specific
       # tables if needed instead of the whole database.
+      #
       # BACKUP_DATABASE_URL must be Supabase's Session pooler connection
       # string, not "Direct connection" — direct connections are IPv6-only
       # and this runner is IPv4-only, so pg_dump fails with "Network is
       # unreachable" against it.
       - name: Dump database
-        run: pg_dump --no-owner --format=custom --file=backup.dump "$DATABASE_URL"
+        run: |
+          docker run --rm -v "$PWD:/backup" postgres:18 \
+            pg_dump --no-owner --format=custom --file=/backup/backup.dump "$DATABASE_URL"
         env:
           DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
 
