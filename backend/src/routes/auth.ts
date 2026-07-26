@@ -14,6 +14,7 @@ import {
 } from "../lib/mailer.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
+import { findUserByEmail } from "../lib/finders.js";
 
 export const authRoutes = new Hono();
 
@@ -76,13 +77,9 @@ authRoutes.post("/register", registerLimiter, async (c) => {
 
   const { name, email, password, phone } = result.data;
 
-  const existing = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  const existing = await findUserByEmail(email);
 
-  if (existing.length > 0) {
+  if (existing) {
     return c.json({ error: "Email already registered" }, 400);
   }
 
@@ -127,11 +124,7 @@ authRoutes.post("/login", loginLimiter, async (c) => {
   const { email, password } = result.data;
 
   // Find user
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  const user = await findUserByEmail(email);
 
   if (!user) {
     // Still run a bcrypt comparison so the response takes roughly the same
@@ -214,11 +207,7 @@ authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
 
   const { email } = result.data;
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  const user = await findUserByEmail(email);
 
   // Always return success even if email not found — prevents email enumeration
   if (!user) {
@@ -285,11 +274,7 @@ authRoutes.post("/resend-verification", resendVerificationLimiter, async (c) => 
 
   const { email } = result.data;
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  const user = await findUserByEmail(email);
 
   // Always return success even if user not found
   if (!user) {

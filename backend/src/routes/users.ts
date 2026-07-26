@@ -14,6 +14,18 @@ const updateProfileSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
+// Shared between the GET /me select and PUT /me's update().returning() —
+// both want the same public profile shape, just via a different query.
+const profileColumns = {
+  id: users.id,
+  name: users.name,
+  email: users.email,
+  phone: users.phone,
+  locationText: users.locationText,
+  description: users.description,
+  createdAt: users.createdAt,
+};
+
 // Apply auth middleware to all user routes
 userRoutes.use("*", authMiddleware);
 
@@ -22,15 +34,7 @@ userRoutes.get("/me", async (c) => {
   const { userId } = c.get("user");
 
   const [user] = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      phone: users.phone,
-      locationText: users.locationText,
-      description: users.description,
-      createdAt: users.createdAt,
-    })
+    .select(profileColumns)
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -70,15 +74,7 @@ userRoutes.put("/me", async (c) => {
     .update(users)
     .set(updates)
     .where(eq(users.id, userId))
-    .returning({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      phone: users.phone,
-      locationText: users.locationText,
-      description: users.description,
-      createdAt: users.createdAt,
-    });
+    .returning(profileColumns);
 
   return c.json({ message: "Profile updated", user: updatedUser });
 });
