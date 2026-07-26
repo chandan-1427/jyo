@@ -6,6 +6,7 @@ import { eq, or, and, gte, desc } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
 import { uploadFile, deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
+import { isValidUuid, findPostById } from "../lib/finders.js";
 import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
@@ -127,7 +128,7 @@ postRoutes.get("/:id", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
 
-  if (!z.uuid().safeParse(postId).success) {
+  if (!isValidUuid(postId)) {
     return c.json({ error: "Post not found" }, 404);
   }
 
@@ -217,15 +218,11 @@ postRoutes.put("/:id/complete", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
 
-  if (!z.uuid().safeParse(postId).success) {
+  if (!isValidUuid(postId)) {
     return c.json({ error: "Post not found" }, 404);
   }
 
-  const [post] = await db
-    .select()
-    .from(foodPosts)
-    .where(eq(foodPosts.id, postId))
-    .limit(1);
+  const post = await findPostById(postId);
 
   if (!post) {
     return c.json({ error: "Post not found" }, 404);
@@ -260,15 +257,11 @@ postRoutes.delete("/:id", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
 
-  if (!z.uuid().safeParse(postId).success) {
+  if (!isValidUuid(postId)) {
     return c.json({ error: "Post not found" }, 404);
   }
 
-  const [post] = await db
-    .select()
-    .from(foodPosts)
-    .where(eq(foodPosts.id, postId))
-    .limit(1);
+  const post = await findPostById(postId);
 
   if (!post) {
     return c.json({ error: "Post not found" }, 404);

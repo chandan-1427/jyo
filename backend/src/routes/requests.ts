@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
-import { foodPosts, pickupRequests, users } from "../db/schema.js";
+import { foodPosts, pickupRequests } from "../db/schema.js";
 import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/haversine.js";
@@ -13,6 +13,7 @@ import { createNotification } from "../lib/notify.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { ConflictError } from "../lib/errors.js";
+import { isValidUuid, findPostById, findRequestById, findUserEmail } from "../lib/finders.js";
 
 export const requestRoutes = new Hono();
 
@@ -39,11 +40,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
 
   const { postId, pickerName, selfieUrl, etaMinutes, lat, lng } = result.data;
 
-  const [post] = await db
-    .select()
-    .from(foodPosts)
-    .where(eq(foodPosts.id, postId))
-    .limit(1);
+  const post = await findPostById(postId);
 
   if (!post) {
     return c.json({ error: "Post not found" }, 404);
@@ -86,11 +83,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     })
     .returning();
 
-  const [poster] = await db
-    .select({ email: users.email })
-    .from(users)
-    .where(eq(users.id, post.posterId))
-    .limit(1);
+  const posterEmail = await findUserEmail(post.posterId);
 
   createNotification(
     post.posterId,
@@ -99,7 +92,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     "request_received"
   ).catch((err) => logger.error({ err, postId, pickupRequestId: request.id }, "Failed to create request_received notification"));
 
-  notifyPoster(poster.email, "request_received");
+  if (posterEmail) notifyPoster(posterEmail, "request_received");
 
   return c.json({ message: "Request submitted", request }, 201);
 });
@@ -109,25 +102,17 @@ requestRoutes.put("/:id/approve", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
-  if (!z.uuid().safeParse(requestId).success) {
+  if (!isValidUuid(requestId)) {
     return c.json({ error: "Invalid request ID" }, 400);
   }
 
-  const [request] = await db
-    .select()
-    .from(pickupRequests)
-    .where(eq(pickupRequests.id, requestId))
-    .limit(1);
+  const request = await findRequestById(requestId);
 
   if (!request) {
     return c.json({ error: "Request not found" }, 404);
   }
 
-  const [post] = await db
-    .select()
-    .from(foodPosts)
-    .where(eq(foodPosts.id, request.postId))
-    .limit(1);
+  const post = await findPostById(request.postId);
 
   if (!post) {
     return c.json({ error: "Post not found" }, 404);
@@ -174,11 +159,7 @@ requestRoutes.put("/:id/approve", async (c) => {
     return c.json({ error: "This request has already been processed" }, 400);
   }
 
-  const [picker] = await db
-    .select({ email: users.email })
-    .from(users)
-    .where(eq(users.id, request.pickerId))
-    .limit(1);
+  const pickerEmail = await findUserEmail(request.pickerId);
 
   createNotification(
     request.pickerId,
@@ -187,7 +168,7 @@ requestRoutes.put("/:id/approve", async (c) => {
     "request_approved"
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_approved notification"));
 
-  notifyPicker(picker.email, "request_approved");
+  if (pickerEmail) notifyPicker(pickerEmail, "request_approved");
   // duplicate `await notifyPicker(...)` call removed — was sending this
   // email twice on every approval
 
@@ -199,25 +180,17 @@ requestRoutes.put("/:id/reject", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
-  if (!z.uuid().safeParse(requestId).success) {
+  if (!isValidUuid(requestId)) {
     return c.json({ error: "Invalid request ID" }, 400);
   }
 
-  const [request] = await db
-    .select()
-    .from(pickupRequests)
-    .where(eq(pickupRequests.id, requestId))
-    .limit(1);
+  const request = await findRequestById(requestId);
 
   if (!request) {
     return c.json({ error: "Request not found" }, 404);
   }
 
-  const [post] = await db
-    .select()
-    .from(foodPosts)
-    .where(eq(foodPosts.id, request.postId))
-    .limit(1);
+  const post = await findPostById(request.postId);
 
   if (!post) {
     return c.json({ error: "Post not found" }, 404);
@@ -259,11 +232,7 @@ requestRoutes.put("/:id/reject", async (c) => {
     return c.json({ error: "This request has already been processed" }, 400);
   }
 
-  const [picker] = await db
-    .select({ email: users.email })
-    .from(users)
-    .where(eq(users.id, request.pickerId))
-    .limit(1);
+  const pickerEmail = await findUserEmail(request.pickerId);
 
   createNotification(
     request.pickerId,
@@ -272,7 +241,7 @@ requestRoutes.put("/:id/reject", async (c) => {
     "request_rejected"
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_rejected notification"));
 
-  notifyPicker(picker.email, "request_rejected");
+  if (pickerEmail) notifyPicker(pickerEmail, "request_rejected");
   // duplicate call removed here too
 
   return c.json({ message: "Request rejected" });
@@ -283,15 +252,11 @@ requestRoutes.put("/:id/cancel", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
-  if (!z.uuid().safeParse(requestId).success) {
+  if (!isValidUuid(requestId)) {
     return c.json({ error: "Invalid request ID" }, 400);
   }
 
-  const [request] = await db
-    .select()
-    .from(pickupRequests)
-    .where(eq(pickupRequests.id, requestId))
-    .limit(1);
+  const request = await findRequestById(requestId);
 
   if (!request) {
     return c.json({ error: "Request not found" }, 404);
@@ -333,21 +298,13 @@ requestRoutes.put("/:id/cancel", async (c) => {
     return c.json({ error: "This request has already been processed" }, 400);
   }
 
-  const [post] = await db
-    .select({ posterId: foodPosts.posterId })
-    .from(foodPosts)
-    .where(eq(foodPosts.id, request.postId))
-    .limit(1);
+  const post = await findPostById(request.postId);
 
   if (!post) {
     return c.json({ error: "Post not found" }, 404);
   }
 
-  const [poster] = await db
-    .select({ email: users.email })
-    .from(users)
-    .where(eq(users.id, post.posterId))
-    .limit(1);
+  const posterEmail = await findUserEmail(post.posterId);
 
   createNotification(
     post.posterId,
@@ -356,7 +313,7 @@ requestRoutes.put("/:id/cancel", async (c) => {
     "request_cancelled"
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_cancelled notification"));
 
-  notifyPoster(poster.email, "request_cancelled");
+  if (posterEmail) notifyPoster(posterEmail, "request_cancelled");
   // duplicate call removed here too
 
   return c.json({ message: "Request cancelled" });
