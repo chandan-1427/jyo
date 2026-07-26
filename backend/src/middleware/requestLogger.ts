@@ -1,6 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import crypto from "crypto";
 import { logger } from "../lib/logger.js";
+import { getClientIp } from "../lib/clientIp.js";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -34,6 +35,7 @@ export const requestLogger = createMiddleware(async (c, next) => {
     status,
     durationMs,
     userId: user?.userId,
+    ip: getClientIp(c),
   };
   const message = `${method} ${path} ${status} ${durationMs}ms`;
 

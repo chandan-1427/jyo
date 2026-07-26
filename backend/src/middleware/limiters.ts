@@ -1,13 +1,16 @@
 import { createMiddleware } from "hono/factory";
 import { rateLimiter } from "hono-rate-limiter";
-import { getConnInfo } from "@hono/node-server/conninfo";
+import { getClientIp } from "../lib/clientIp.js";
 import { env } from "../env.js";
 
-// Uses the actual socket remote address rather than the client-suppliable
-// X-Forwarded-For header, which anyone can spoof to get a fresh rate-limit
-// bucket per request. If this ever runs behind a trusted reverse proxy that
-// overwrites X-Forwarded-For, switch back to reading that header instead.
-const ipKey = (c: any) => getConnInfo(c).remote.address ?? "unknown";
+// Render sits in front of this app as a reverse proxy (with Cloudflare in
+// front of that), so the raw socket address only ever sees Render's own
+// internal connection to the container — never the real client. That
+// made every IP-keyed limiter below a single global bucket shared by
+// every user of the app: one person's failed logins locked out everyone
+// else too. getClientIp() reads the real client IP from X-Forwarded-For
+// instead — see lib/clientIp.ts for why that's trustworthy here.
+const ipKey = (c: any) => getClientIp(c);
 const userKey = (c: any) => c.get("user")?.userId ?? ipKey(c); // falls back to IP if no auth
 
 const tooMany = { error: "Too many attempts. Please try again later." };
