@@ -34,8 +34,10 @@ Jyo is a web app that connects households with leftover food to students and nei
 |---|---|---|
 | React | ^19.2.5 | UI framework |
 | React Router DOM | ^7.15.0 | Client-side routing |
+| TanStack Query | ^5.101.4 | Server-state caching and mutations |
 | Tailwind CSS | ^4.3.0 | Styling |
 | @supabase/supabase-js | ^2.105.4 | Auth session (Supabase client) |
+| @sentry/react | ^10.68.0 | Error tracking (optional) |
 | lucide-react | ^1.14.0 | Icons |
 | clsx | ^2.1.1 | Conditional classnames |
 | tailwind-merge | ^3.6.0 | Tailwind class merging |
@@ -46,7 +48,7 @@ Jyo is a web app that connects households with leftover food to students and nei
 
 | Package | Version | Purpose |
 |---|---|---|
-| Hono | ^4.12.18 | HTTP framework |
+| Hono | ^4.12.32 | HTTP framework |
 | @hono/node-server | ^1.19.14 | Node.js adapter for Hono |
 | Drizzle ORM | ^0.45.2 | Database ORM |
 | postgres | ^3.4.9 | PostgreSQL driver |
@@ -54,13 +56,15 @@ Jyo is a web app that connects households with leftover food to students and nei
 | bcryptjs | ^3.0.3 | Password hashing |
 | jose | ^6.2.3 | JWT signing and verification |
 | resend | ^6.12.3 | Transactional email |
-| node-cron | ^4.2.1 | Post expiry scheduler |
+| node-cron | ^4.2.1 | Post expiry and notification-cleanup schedulers |
+| @sentry/node | ^10.68.0 | Error tracking (optional) |
+| vitest | ^4.1.10 | Test runner |
 | TypeScript | ^5.8.3 | Type safety |
 | tsx | ^4.7.1 | Dev server runner |
 
 ## Architecture Overview
 
-The frontend is a React SPA deployed on Vercel, talking to a Hono REST API deployed on Render. The database is a PostgreSQL instance hosted on Supabase, accessed through Drizzle ORM. File uploads (food photos and selfie verifications) go directly to Supabase Storage buckets. Transactional and notification emails are sent through Resend. Authentication is handled with HTTP-only cookies carrying a JWT signed with `jose`. DNS is managed on Cloudflare, with the live domain at `jyo.co.in`.
+The frontend is a React SPA deployed on Vercel, talking to a Hono REST API deployed on Render. The database is a PostgreSQL instance hosted on Supabase, accessed through Drizzle ORM. File uploads (food photos and selfie verifications) go directly to Supabase Storage buckets. Transactional and notification emails are sent through Resend. Authentication is handled with HTTP-only cookies carrying a JWT signed with `jose`. Errors on both sides are reported to Sentry (optional — no-op if unconfigured). DNS is managed on Cloudflare, with the live domain at `jyo.co.in`.
 
 ## Local Development Setup
 
@@ -68,6 +72,7 @@ The frontend is a React SPA deployed on Vercel, talking to a Hono REST API deplo
 
 - Node.js 20+
 - pnpm
+- Docker (only needed to run the backend test suite)
 
 ### Clone
 
@@ -76,81 +81,18 @@ git clone https://github.com/chandan-1427/jyo.git
 cd jyo
 ```
 
-### Backend
+Backend and frontend each have their own setup, scripts, and environment variable reference in their own README:
 
-```bash
-cd backend
-cp .env.example .env
-# Fill in all values in .env (see Environment Variables below)
-pnpm install
-pnpm dev
-```
-
-The backend runs on `http://localhost:3000` by default.
-
-To run database migrations:
-
-```bash
-pnpm db:migrate
-```
-
-### Frontend
-
-```bash
-cd frontend
-cp .env.example .env
-# Fill in all values in .env (see Environment Variables below)
-pnpm install
-pnpm dev
-```
-
-The frontend runs on `http://localhost:5173` by default.
-
-## Environment Variables
-
-### Backend (`backend/.env`)
-
-| Variable | Description | Where to get it |
-|---|---|---|
-| `PORT` | Port the server listens on | Set to `3000` or any free port |
-| `APP_ENV` | Environment mode (`development` or `production`) | Set manually |
-| `DATABASE_URL` | PostgreSQL connection string | Supabase project → Settings → Database |
-| `JWT_SECRET` | Secret used to sign JWTs | Generate a strong random string |
-| `CLIENT_URL` | Frontend URL for CORS | Your frontend URL or `http://localhost:5173` |
-| `APP_URL` | Public URL of the app used in email links | Your frontend URL or `http://localhost:5173` |
-| `SUPABASE_URL` | Supabase project URL | Supabase project → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (bypasses RLS) | Supabase project → Settings → API |
-| `RESEND_API_KEY` | API key for sending emails | Resend dashboard |
-| `SENTRY_DSN` | Error tracking (optional — omit to disable) | Sentry project → Settings → Client Keys (DSN) |
-
-### Frontend (`frontend/.env`)
-
-| Variable | Description | Where to get it |
-|---|---|---|
-| `VITE_API_URL` | Backend API base URL | Your backend URL or `http://localhost:3000` |
-| `VITE_SUPABASE_URL` | Supabase project URL | Supabase project → Settings → API |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon (public) key | Supabase project → Settings → API |
-| `VITE_APP_ENV` | Environment mode (`development` or `production`) | Set manually |
-| `VITE_SENTRY_DSN` | Error tracking (optional — omit to disable) | Sentry project → Settings → Client Keys (DSN) |
+- [backend/README.md](./backend/README.md) — setup, scripts, tests, env vars
+- [frontend/README.md](./frontend/README.md) — setup, scripts, env vars
 
 ## Project Structure
 
 ```
-backend/src/
-├── db/          # Drizzle schema and database client
-├── routes/      # Hono route handlers (auth, users, posts, requests, notifications)
-├── middleware/  # JWT auth middleware
-├── lib/         # Utilities: haversine distance, mailer, notifications, storage
-├── jobs/        # Cron jobs (post expiry scheduler)
-└── index.ts     # App entry point, server setup, CORS config
-
-frontend/src/
-├── pages/       # Route-level page components
-├── components/  # Shared components (Navbar, PostCard, RequestModal, etc.)
-│   └── ui/      # Low-level UI primitives (Input, Field, Button, Badge, etc.)
-├── context/     # React context (AuthContext)
-├── lib/         # API client, utilities, Supabase client, location helpers
-└── types/       # TypeScript types for API responses
+jyo/
+├── backend/   # Hono REST API — see backend/README.md for its internal structure
+├── frontend/  # React SPA — see frontend/README.md for its internal structure
+└── .github/   # CI/CD workflow (test, build, gated deploy to Render/Vercel)
 ```
 
 ## Post Status Lifecycle
@@ -169,7 +111,7 @@ Deploys are driven entirely by CI, not by Render/Vercel's own git integrations �
 
 - **CI/CD**: `.github/workflows/ci.yml` runs on every push/PR to `main`. The `backend` job spins up a disposable Postgres container, builds, migrates, and runs the full test suite; the `frontend` job lints and builds. Only on an actual push to `main`, and only if its corresponding job passed, `deploy-backend` and `deploy-frontend` jobs run.
 - **Backend**: hosted on Render as a web service (start command `node dist/index.js`, built with `tsc`). `deploy-backend` triggers Render's deploy hook (`RENDER_DEPLOY_HOOK_URL` secret) — Render then pulls the latest commit and builds/deploys on its own infrastructure. Auto-deploy-on-push is disabled in the Render dashboard so this hook is the only trigger.
-- **Frontend**: hosted on Vercel, but built *inside* CI rather than by Vercel itself — `deploy-frontend` runs `vercel pull` / `vercel build --prod` / `vercel deploy --prebuilt --prod` using `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` secrets, then ships that finished build straight to production. The GitHub integration in Vercel is disconnected so it can't double-deploy independently of CI.
+- **Frontend**: hosted on Vercel. `deploy-frontend` runs `vercel deploy --prod` using `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` secrets, which uploads the source and builds it on Vercel's own infrastructure — functionally the same as the old git-integration auto-deploy, just triggered by CI passing instead of a raw push. The GitHub integration in Vercel is disconnected so it can't double-deploy independently of CI.
 - **Database and Storage**: both on Supabase. Create a project, run migrations with `pnpm db:migrate`, and create two storage buckets named `food-photos` and `selfies` with public access.
 
 ## Adapting for Your City
