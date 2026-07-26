@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import * as Sentry from "@sentry/node";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, lt, and, inArray } from "drizzle-orm";
@@ -66,6 +67,7 @@ export function startExpiryJob() {
       }
     } catch (err) {
       logger.error({ err }, "Expiry job failed");
+      Sentry.captureException(err);
     }
   });
 }

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import * as Sentry from "@sentry/node";
 import { logger } from "./lib/logger.js";
 
 import { requestLogger } from "./middleware/requestLogger.js";
@@ -38,15 +39,21 @@ export function createApp() {
   );
 
   app.onError((err, c) => {
+    const requestId = c.get("requestId");
+
     logger.error(
-      {
-        err,
-        requestId: c.get("requestId"),
-        method: c.req.method,
-        path: c.req.path,
-      },
+      { err, requestId, method: c.req.method, path: c.req.path },
       "Unhandled error"
     );
+
+    // Routes return their own clean 4xx JSON directly for expected
+    // failures (bad input, wrong password, unauthorized, etc.) — anything
+    // that reaches here is, by construction, a genuinely unexpected bug
+    // worth reporting, not routine traffic.
+    Sentry.captureException(err, {
+      extra: { requestId, method: c.req.method, path: c.req.path },
+    });
+
     return c.json({ error: "Internal server error" }, 500);
   });
 

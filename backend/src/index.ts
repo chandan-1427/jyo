@@ -1,4 +1,6 @@
 import "dotenv/config";
+import "./instrument.js";
+import * as Sentry from "@sentry/node";
 import { env } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { serve } from "@hono/node-server";
@@ -10,11 +12,16 @@ import { startNotificationCleanupJob } from "./jobs/notificationCleanup.js";
 
 process.on("unhandledRejection", (reason) => {
   logger.fatal({ err: reason }, "Unhandled promise rejection");
+  Sentry.captureException(reason);
 });
 
 process.on("uncaughtException", (err) => {
   logger.fatal({ err }, "Uncaught exception");
-  process.exit(1);
+  Sentry.captureException(err);
+  // Sentry sends events over the network asynchronously — exiting right
+  // after captureException risks the process dying before the report for
+  // the very crash that caused it ever gets sent.
+  Sentry.flush(2000).finally(() => process.exit(1));
 });
 
 const app = createApp();
@@ -63,6 +70,7 @@ async function shutdown(signal: string) {
     });
 
     await closeDb();
+    await Sentry.flush(2000);
 
     logger.info("Shutdown complete");
     clearTimeout(forceExit);

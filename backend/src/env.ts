@@ -29,4 +29,7 @@ export const env = {
   LOG_LEVEL:
     process.env.LOG_LEVEL ??
     (process.env.APP_ENV === "production" ? "info" : "debug"),
+  // Optional — Sentry is a no-op when unset, so local dev and the test
+  // suite don't need it configured at all.
+  SENTRY_DSN: process.env.SENTRY_DSN,
 };

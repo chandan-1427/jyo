@@ -121,6 +121,7 @@ The frontend runs on `http://localhost:5173` by default.
 | `SUPABASE_URL` | Supabase project URL | Supabase project → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (bypasses RLS) | Supabase project → Settings → API |
 | `RESEND_API_KEY` | API key for sending emails | Resend dashboard |
+| `SENTRY_DSN` | Error tracking (optional — omit to disable) | Sentry project → Settings → Client Keys (DSN) |
 
 ### Frontend (`frontend/.env`)
 
@@ -130,6 +131,7 @@ The frontend runs on `http://localhost:5173` by default.
 | `VITE_SUPABASE_URL` | Supabase project URL | Supabase project → Settings → API |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon (public) key | Supabase project → Settings → API |
 | `VITE_APP_ENV` | Environment mode (`development` or `production`) | Set manually |
+| `VITE_SENTRY_DSN` | Error tracking (optional — omit to disable) | Sentry project → Settings → Client Keys (DSN) |
 
 ## Project Structure
 

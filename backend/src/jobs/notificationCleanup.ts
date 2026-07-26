@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import * as Sentry from "@sentry/node";
 import { db } from "../db/index.js";
 import { notifications } from "../db/schema.js";
 import { lt } from "drizzle-orm";
@@ -23,6 +24,7 @@ export function startNotificationCleanupJob() {
       }
     } catch (err) {
       logger.error({ err }, "Notification cleanup job failed");
+      Sentry.captureException(err);
     }
   });
 }
