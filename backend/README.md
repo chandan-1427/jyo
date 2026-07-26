@@ -71,6 +71,26 @@ The test suite runs against `.env.test` (committed — it's all dummy/test-only 
 | `RESEND_API_KEY` | API key for sending emails | Resend dashboard |
 | `SENTRY_DSN` | Error tracking (optional — omit to disable) | Sentry project → Settings → Client Keys (DSN) |
 
+## Database Backups
+
+Supabase's free tier does not include automatic backups — a bad migration or an accidental delete has no way back without one. `.github/workflows/backup.yml` runs a `pg_dump` against the database every night at 03:00 UTC and stores the result as a GitHub Actions artifact (kept for 30 days). You can also trigger it on demand from the Actions tab (`Database Backup` → `Run workflow`).
+
+### One-time setup
+
+1. In Supabase: **Settings → Database → Connection string**, copy the **Direct connection** string (not the "Transaction pooler" one — `pg_dump` needs a direct session, not a pooled one).
+2. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**, name it `BACKUP_DATABASE_URL`, paste that connection string.
+
+That's it — the workflow picks it up automatically on its next scheduled run.
+
+### Restoring from a backup
+
+1. Download the `.dump` file from the relevant workflow run's Artifacts section (Actions tab → the run → scroll to Artifacts).
+2. Restore it into a database with `pg_restore`:
+   ```bash
+   pg_restore --no-owner --clean --if-exists -d "<direct-connection-string>" backup.dump
+   ```
+   `--clean --if-exists` drops existing objects before recreating them from the dump — point this at a fresh/throwaway database first if you're unsure, not directly at production, unless you're intentionally rolling back.
+
 ## Project Structure
 
 ```
