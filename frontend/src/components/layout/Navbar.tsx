@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { Bell, Menu, X, LogOut, Loader2 } from "lucide-react";
+import { Bell, LogOut, Loader2, Home, PlusSquare, Package, PackageOpen, CircleUserRound } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { Logo } from "../ui/Logo";
 
@@ -17,10 +17,15 @@ type Notification = {
 };
 
 const navLinks = [
-  { label: "Feed", path: "/feed" },
-  { label: "Post Food", path: "/create" },
-  { label: "My Posts", path: "/my-posts" },
-  { label: "My Requests", path: "/my-requests" },
+  { label: "Feed", path: "/feed", icon: Home },
+  { label: "Post Food", path: "/create", icon: PlusSquare },
+  { label: "My Posts", path: "/my-posts", icon: Package },
+  { label: "My Requests", path: "/my-requests", icon: PackageOpen },
+];
+
+const mobileTabs = [
+  ...navLinks,
+  { label: "Profile", path: "/profile", icon: CircleUserRound },
 ];
 
 const notificationsKey = ["notifications"] as const;
@@ -30,7 +35,6 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMobileNotifs, setShowMobileNotifs] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -58,7 +62,6 @@ export default function Navbar() {
         setShowNotifs(false);
       }
       if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
         setShowMobileNotifs(false);
       }
     };
@@ -236,11 +239,10 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile: bell + hamburger */}
+        {/* Mobile: bell + logout (nav links live in the bottom tab bar) */}
         <div className="sm:hidden relative flex items-center gap-1" ref={mobileRef}>
           <button
             onClick={() => {
-              setMenuOpen(false);
               setShowMobileNotifs((prev) => {
                 const next = !prev;
                 if (next && unreadCount > 0) handleMarkAllRead();
@@ -258,13 +260,15 @@ export default function Navbar() {
           </button>
 
           <button
-            className="cursor-pointer flex items-center justify-center w-11 h-11 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150"
-            onClick={() => {
-              setShowMobileNotifs(false);
-              setMenuOpen((prev) => !prev);
-            }}
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="cursor-pointer flex items-center justify-center w-11 h-11 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {loggingOut ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <LogOut className="w-5 h-5" />
+            )}
           </button>
 
           {/* Mobile notifications panel */}
@@ -278,56 +282,27 @@ export default function Navbar() {
               </div>
             </div>
           )}
+        </div>
+      </div>
 
-          {/* Mobile nav menu */}
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-surface rounded-xl border border-border shadow-lg z-50 px-4 py-4 flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setMenuOpen(false)}
-                  className={`text-sm font-medium transition-colors duration-150 ${
-                    isActive(link.path)
-                      ? "text-foreground"
-                      : "text-subtle hover:text-muted"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="border-t border-border pt-4 flex items-center justify-between">
-                <Link
-                  to="/profile"
-                  onClick={() => setMenuOpen(false)}
-                  className={`text-sm font-medium transition-colors duration-150 ${
-                    isActive("/profile")
-                      ? "text-foreground"
-                      : "text-subtle hover:text-muted"
-                  }`}
-                >
-                  {user?.name}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-subtle hover:text-foreground transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-subtle"
-                >
-                  {loggingOut ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Logging out…
-                    </>
-                  ) : (
-                    <>
-                      <LogOut className="w-3.5 h-3.5" />
-                      Logout
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
+      {/* Mobile bottom tab bar */}
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background border-t border-border pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-center justify-around h-14">
+          {mobileTabs.map(({ label, path, icon: Icon }) => {
+            const active = isActive(path);
+            return (
+              <Link
+                key={path}
+                to={path}
+                aria-label={label}
+                className={`flex items-center justify-center flex-1 h-full transition-colors duration-150 ${
+                  active ? "text-foreground" : "text-subtle"
+                }`}
+              >
+                <Icon className="w-6 h-6" strokeWidth={active ? 2.25 : 1.75} />
+              </Link>
+            );
+          })}
         </div>
       </div>
     </nav>
