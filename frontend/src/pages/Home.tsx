@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import pic1 from "@/assets/pic1.webp";
-import { Package, PackageOpen } from "lucide-react";
+import screenshotFeed from "@/assets/screenshot-feed.png";
+import screenshotApprove from "@/assets/screenshot-approve.png";
+import { Package, PackageOpen, MapPin, Info, ShieldCheck } from "lucide-react";
 
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Logo } from "@/components/ui/Logo";
@@ -49,9 +50,18 @@ const SAFETY_CARDS = [
   },
 ];
 
+const AREAS = [
+  "Tirupati city",
+  "Tiruchanur",
+  "Renigunta",
+  "Alipiri",
+  "SV University",
+  "Karakambadi",
+  "Chandragiri",
+];
+
 const NOTES = {
   "Important to know": [
-    "Currently available only within and around Tirupati. Example areas covered: Tirupati city, Tiruchanur, Renigunta, Alipiri, SV University, Karakambadi side, and Chandragiri.",
     "All pickups are self-collected - no delivery involved.",
     "No payments or money involved at any step.",
     "Exact pickup location is shared only after the poster approves a request.",
@@ -62,6 +72,11 @@ const NOTES = {
     "Your personal information is never shared publicly.",
     "Pickup location details are revealed only to the approved person.",
   ],
+};
+
+const NOTES_ICONS: Record<string, typeof Info> = {
+  "Important to know": Info,
+  "Safety & Privacy": ShieldCheck,
 };
 
 const POSTER_BENEFITS = [
@@ -135,7 +150,7 @@ export default function Home() {
           >
             Log in
           </Link>
-          <LinkButton as="link" to="/register" label="Join Community" />
+          <LinkButton as="link" to="/register" label="Get Started" />
         </div>
       </div>
     </header>
@@ -145,7 +160,12 @@ export default function Home() {
       {/* Hero */}
       <section className="grid lg:grid-cols-2 gap-16 items-center py-16 lg:py-20 px-6">
         <div className="flex flex-col">
-          <EyebrowLabel>Community food sharing · Tirupati</EyebrowLabel>
+          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-border text-xs text-subtle w-fit">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            Just launched · Be one of the first in Tirupati
+          </div>
+
+          <EyebrowLabel>Community food sharing</EyebrowLabel>
 
           <h1 className="font-medium text-4xl lg:text-[2.75rem] leading-[1.15] mb-6 tracking-tight">
             Good food shouldn't be thrown away while someone nearby needs it.
@@ -177,19 +197,39 @@ export default function Home() {
         </div>
 
         {/* Hero image */}
-        <div className="relative w-full h-[420px] lg:h-[560px] rounded-xl overflow-hidden bg-surface">
+        <div className="relative w-full h-[420px] lg:h-[560px] rounded-xl overflow-hidden bg-surface border border-border">
           {!imgLoaded && (
             <div className="absolute inset-0 animate-pulse bg-surface" />
           )}
           <img
-            src={pic1}
-            alt="Food sharing in Tirupati"
+            src={screenshotFeed}
+            alt="The Jyo feed showing nearby food posts available for pickup"
             loading="eager"
             decoding="sync"
             fetchPriority="high"
             onLoad={() => setImgLoaded(true)}
-            className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+            className={`w-full h-full object-cover object-top transition-opacity duration-500 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
           />
+        </div>
+      </section>
+
+      {/* Coverage area */}
+      <section className="px-6 pb-15">
+        <div className="flex items-center gap-2 mb-4">
+          <MapPin className="w-4 h-4 text-subtle" />
+          <p className="text-sm text-subtle">
+            Live within ~20 km of Tirupati bus stand, covering:
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {AREAS.map((area) => (
+            <span
+              key={area}
+              className="px-3 py-1.5 rounded-full border border-border text-xs text-muted"
+            >
+              {area}
+            </span>
+          ))}
         </div>
       </section>
 
@@ -213,6 +253,15 @@ export default function Home() {
               <p className="text-sm leading-relaxed">{desc}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-6 rounded-xl border border-border overflow-hidden bg-surface">
+          <img
+            src={screenshotApprove}
+            alt="Poster reviewing a pickup request with the requester's name, selfie, and estimated arrival time before approving"
+            loading="lazy"
+            className="w-full h-auto"
+          />
         </div>
       </section>
 
@@ -248,14 +297,20 @@ export default function Home() {
 
       {/* Info panels */}
       <section className="px-6 grid md:grid-cols-2 gap-4 pb-5">
-        {Object.entries(NOTES).map(([heading, items]) => (
-          <Card key={heading}>
-            <h3 className="font-semibold text-sm text-foreground mb-5">
-              {heading}
-            </h3>
-            <BulletList items={items} />
-          </Card>
-        ))}
+        {Object.entries(NOTES).map(([heading, items]) => {
+          const Icon = NOTES_ICONS[heading];
+          return (
+            <Card key={heading}>
+              <div className="flex items-center gap-2 mb-5">
+                <Icon className="w-4 h-4 text-subtle" />
+                <h3 className="font-semibold text-sm text-foreground">
+                  {heading}
+                </h3>
+              </div>
+              <BulletList items={items} />
+            </Card>
+          );
+        })}
       </section>
 
       {/* Safety & Privacy */}
@@ -280,7 +335,7 @@ export default function Home() {
       {/* Final CTA */}
       <section className="px-6 py-15 text-center">
         <p className="text-sm font-medium mb-4">
-          Free to join · No payments · Tirupati
+          Free to join · No payments · Early days in Tirupati
         </p>
         <h2 className="font-medium text-2xl lg:text-3xl tracking-tight mb-8">
           Ready to share or find food?
