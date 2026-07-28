@@ -7,7 +7,6 @@ import { Logo } from "@/components/ui/Logo";
 import { Input } from "@/components/ui/Input";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Field } from "@/components/ui/Field";
-import { authInputStyles } from "@/components/auth/authStyles";
 import { BackButton } from "@/components/auth/BackButton";
 import { validateForm, forgotPasswordSchema } from "@/lib/validation";
 
@@ -118,7 +117,6 @@ export default function ForgotPassword() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     autoComplete="email"
-                    className={authInputStyles}
                     required
                   />
                   {fieldErrors.email && <p className="text-xs text-red-400">{fieldErrors.email[0]}</p>}

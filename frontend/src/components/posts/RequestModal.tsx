@@ -140,7 +140,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
                 </button>
               </div>
             ) : (
-              <label className="mt-1 border border-dashed border-border rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-neutral-600 hover:bg-background transition-colors group">
+              <label className="mt-1 border border-dashed border-border rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-border-strong hover:bg-background transition-colors group">
                 <Camera className="w-5 h-5 text-subtle group-hover:text-muted transition-colors mb-1.5" />
                 <span className="text-xs text-subtle group-hover:text-muted transition-colors">
                   Tap to upload selfie

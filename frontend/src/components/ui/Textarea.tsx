@@ -13,7 +13,9 @@ export function Textarea({ className, ...props }: TextareaProps) {
         "placeholder:text-subtle",
         "outline-none resize-none",
         "transition-[border-color,box-shadow] duration-200 ease-in-out",
-        "focus:border-neutral-600 focus:shadow-[0_0_0_3px_rgba(235,235,235,0.06)]",
+        // Kept byte-identical to Input.tsx's focus treatment on purpose — the
+      // two must stay indistinguishable in a form.
+      "focus:border-border-strong focus:ring-[3px] focus:ring-foreground/[0.06]",
         className
       )}
       {...props}

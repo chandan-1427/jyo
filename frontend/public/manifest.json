@@ -4,8 +4,8 @@
   "description": "Free food sharing for Tirupati",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fff7ed",
-  "theme_color": "#f97316",
+  "background_color": "#17140F",
+  "theme_color": "#17140F",
   "icons": [
     {
       "src": "/icons-192.png",

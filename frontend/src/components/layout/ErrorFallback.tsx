@@ -18,7 +18,13 @@ export function ErrorFallback() {
 
       <button
         onClick={() => window.location.assign("/")}
-        className="mt-1 inline-flex items-center justify-center text-sm font-semibold tracking-tight px-6 py-2.5 rounded-lg bg-[#F2F0EC] hover:bg-white active:scale-[0.97] text-[#1B1A19] cursor-pointer transition-all duration-150 ease-out shadow-sm hover:shadow-md"
+        // Visually identical to LinkButton's primary variant, but deliberately
+        // NOT imported from it — see the note above; this must not depend on
+        // anything that could be what crashed. Previously an arbitrary-value
+        // #F2F0EC fill with #1B1A19 label text, the latter a copy-paste of the
+        // old --color-background. Tokenised so the duplication can no longer
+        // drift out of sync with the palette.
+        className="mt-1 inline-flex items-center justify-center text-sm font-semibold tracking-tight px-6 py-2.5 rounded-lg bg-foreground hover:bg-white active:scale-[0.97] text-background cursor-pointer transition-all duration-150 ease-out shadow-sm hover:shadow-md"
       >
         Reload Jyo
       </button>

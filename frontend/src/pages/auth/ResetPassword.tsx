@@ -7,7 +7,6 @@ import { Logo } from "@/components/ui/Logo";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Field } from "@/components/ui/Field";
-import { authInputStyles } from "@/components/auth/authStyles";
 import { BackButton } from "@/components/auth/BackButton";
 import { validateForm, resetPasswordSchema } from "@/lib/validation";
 
@@ -152,7 +151,6 @@ export default function ResetPassword() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create a new password"
                     autoComplete="new-password"
-                    className={authInputStyles}
                     required
                   />
                   {fieldErrors.password && <p className="text-xs text-red-400">{fieldErrors.password[0]}</p>}

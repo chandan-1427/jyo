@@ -25,7 +25,7 @@ function MapsLink({ lat, lng }: { lat: number; lng: number }) {
       href={`https://www.google.com/maps?q=${lat},${lng}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="w-fit inline-flex items-center gap-2 border border-border text-muted hover:border-neutral-600 hover:text-foreground bg-surface px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
+      className="w-fit inline-flex items-center gap-2 border border-border text-muted hover:border-border-strong hover:text-foreground bg-surface px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
     >
       <MapPin className="w-4 h-4" />
       Open in Google Maps
@@ -45,7 +45,10 @@ function InfoBanner({
 }) {
   const styles = {
     success: "bg-emerald-950/30 border-emerald-900/40 text-emerald-400",
-    warning: "bg-amber-950/30 border-amber-900/40 text-amber-400",
+    // Terracotta, not amber — amber was the old accent value verbatim. Safe to
+    // rely on a mere 21° hue shift here only because Callout always renders an
+    // Icon alongside, so colour is never the sole carrier of meaning.
+    warning: "bg-warning/10 border-warning/30 text-warning",
     muted:   "bg-surface border-border text-subtle",
     danger:  "bg-red-950/30 border-red-900/40 text-red-400",
   };
@@ -62,7 +65,7 @@ function NextSteps() {
     <div className="flex gap-3">
       <Link
         to="/feed"
-        className="flex-1 text-center cursor-pointer border border-border text-muted hover:border-neutral-600 hover:bg-surface rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
+        className="flex-1 text-center cursor-pointer border border-border text-muted hover:border-border-strong hover:bg-surface rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
       >
         Browse Feed
       </Link>
@@ -210,7 +213,7 @@ function PosterView({
             <button
               onClick={() => onReject(pendingRequest.id)}
               disabled={actionLoading}
-              className="flex-1 cursor-pointer border border-border text-muted hover:border-neutral-600 hover:bg-surface rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 cursor-pointer border border-border text-muted hover:border-border-strong hover:bg-surface rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {actionLoading ? "Rejecting…" : "Reject"}
