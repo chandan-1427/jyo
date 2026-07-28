@@ -206,18 +206,6 @@ export default function Home() {
       <section className="px-5 sm:px-6 pt-14 pb-16 sm:pt-20 sm:pb-20">
         <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
 
-          {/* Live signal. Kept because "just launched" is honest and scarcity is
-              a real reason to act; moved above the H1 and stripped to one line.
-              `animate-pulse` because a static dot claiming "live" is a lie the
-              eye notices. */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-surface text-xs text-subtle">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-70 animate-ping" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
-            </span>
-            Live now in Tirupati
-          </div>
-
           {/*
             H1. The old one was a 12-word ethical statement — true, but it asked
             the reader to agree with a principle before knowing what the product
@@ -233,14 +221,14 @@ export default function Home() {
             default type.
           */}
           <h1 className="mt-6 max-w-[22ch] font-semibold text-[2rem] sm:text-5xl lg:text-[3.25rem] leading-[1.08] tracking-[-0.03em] text-foreground text-balance">
-            Extra food tonight?{" "}
+            ఎక్కువ food ఉందా?{" "}
             {/* The two sentences are separated by COLOUR, not by a hard <br>.
                 A forced break fought `text-balance` and stranded "now." alone
                 on a third line — an orphan is the most visible typographic
                 error a hero can have. Letting it wrap freely, balanced, and
                 capping the measure at 22ch keeps the lines even at every
                 width instead of only at the one I happened to test. */}
-            <span className="text-muted">Someone nearby is hungry right now.</span>
+            <span className="text-muted">దగ్గరలో ఉన్నవారితో పంచుకోండి.</span>
           </h1>
 
           {/*
@@ -259,7 +247,7 @@ export default function Home() {
             375px screen.
           */}
           <p className="mt-4 font-geist text-lg sm:text-xl text-subtle" lang="te">
-            {/* Telugu headline goes here */}
+            మీ దగ్గరలో ఎవరో ఆకలితో ఉన్నారు.
           </p>
 
           {/*
