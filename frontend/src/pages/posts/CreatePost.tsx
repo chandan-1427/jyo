@@ -161,7 +161,7 @@ export default function CreatePost() {
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center h-80 lg:h-96 rounded-xl border border-dashed border-border bg-surface cursor-pointer hover:bg-surface/60 hover:border-neutral-600 transition-colors duration-150 group">
+              <label className="flex flex-col items-center justify-center h-80 lg:h-96 rounded-xl border border-dashed border-border bg-surface cursor-pointer hover:border-border-strong transition-colors duration-150 group">
                 <Camera className="w-6 h-6 text-subtle group-hover:text-muted transition-colors mb-2" />
                 <span className="text-sm text-subtle group-hover:text-muted transition-colors">
                   Tap to add a food photo

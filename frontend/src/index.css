@@ -4,13 +4,58 @@
   --font-geist: "Geist Variable", sans-serif;
   --font-inter: "Inter Variable", sans-serif;
 
-  --color-background: #1B1A19;
-  --color-foreground: #EBEBEB;
-  --color-muted: #B8B8B8;
-  --color-subtle: #8C8C8C;
-  --color-border: #2A2A28;
-  --color-surface: #202020;
-  --color-accent: #FBBF24;
+  /* Warm-dark palette. Every value below is contrast-verified against its
+     intended backdrop — see the ratio noted on each line. Token NAMES are
+     unchanged on purpose: `muted` (51 uses) and `subtle` (111 uses) are
+     revalued in place, so nothing downstream needs renaming.
+
+     The base is a warm espresso rather than a cool near-black because this
+     page sells food shared from someone's kitchen. Cool near-black reads as
+     a developer tool; warm dark also lets food photography — the only real
+     colour in the product — sit in-family instead of fighting the chrome. */
+
+  --color-background: #17140F; /* base canvas */
+  --color-surface:    #2E271E; /* raised. 1.25:1 vs base, so a card fill is
+                                  actually VISIBLE. The old #202020 was 1.07:1
+                                  against its base — borders did all the work
+                                  and a 40%-opacity surface rendered as
+                                  nothing at all. */
+  --color-border:     #42382B; /* 1.60:1 vs base, 1.29:1 vs surface — legible
+                                  as an edge in BOTH contexts, which the old
+                                  #2A2A28 was not once placed on a card. */
+
+  --color-foreground: #F4F0E8; /* 16.2:1 — headings, emphasis */
+  --color-muted:      #CFC7BA; /* 11.0:1 base / 8.8:1 surface — body copy.
+                                  Passes AAA on both, so the global
+                                  `p, li { color: muted }` rule below is now
+                                  safe rather than merely tolerable. */
+  --color-subtle:     #A79E90; /* 6.9:1 base / 5.6:1 surface — metadata only,
+                                  and never below 14px. */
+
+  --color-accent:     #F5A524; /* 9.0:1. Used at most twice per screen. An
+                                  accent spent four weak times is noise; spent
+                                  once it carries the page's warmth. */
+
+  /* Hover/focus border — the one genuinely unnamed semantic slot in this
+     system, currently leaking stock `neutral-600` (#525252) at 18 sites.
+     That grey is pure COOL and reads visibly blue against a warm base.
+
+     Luminance is matched deliberately — 2.31:1 vs neutral-600's 2.35:1 — so
+     the sweep is a drop-in with identical perceived weight, no retuning.
+
+     Named `border-strong` rather than `hover-border` so the generated utility
+     reads `hover:border-border-strong`, not `hover:border-hover-border`. */
+  --color-border-strong: #5C4F3D;
+
+  /* Genuine caution only. Terracotta, 21° of hue from the accent — which is
+     the MAXIMUM separation achievable while staying warm and passing AA
+     (5.8:1 base / 4.7:1 surface). 21° is not enough on its own, so every use
+     pairs this with an icon; colour is never the sole signal.
+
+     This exists because the old accent WAS `amber-400` (#FBBF24) exactly:
+     brand and warning were the same colour by accident. Progress states like
+     `pending` are no longer coloured at all — see StatusBadge. */
+  --color-warning: #E0724A;
 }
 
 @layer base {
@@ -34,24 +79,35 @@
     text-decoration: none;
   }
 
+  /* Was #7a7a7a on #fffafa — a cool grey that reads muddy over warm brown.
+     Tokenised so it can never drift from the palette again. */
   ::selection {
-    background: #7a7a7a;
-    color: #fffafa;
+    background: var(--color-border-strong);
+    color: var(--color-foreground);
   }
 
   html {
+    /* Tells the browser to render native UI — form controls, the date/time
+       inputs in DateTimePicker, default scrollbars — in dark mode. Without
+       this the app was unconditionally dark while its native controls stayed
+       light, and that mismatch gets MORE visible as the base darkens. */
+    color-scheme: dark;
+
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.22) var(--color-surface);
+    scrollbar-color: var(--color-border-strong) var(--color-surface);
     scroll-behavior: smooth;
   }
 
+  /* These three were pure-white alpha (0.18/0.22/0.28). White at low alpha
+     over a warm base composites to a DESATURATED COOL grey, which read as a
+     seam down the edge of an otherwise warm page. Now in-family. */
   ::-webkit-scrollbar { width: 10px; }
   ::-webkit-scrollbar-track { background: var(--color-surface); }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.18);
+    background: var(--color-border-strong);
     border: 2px solid var(--color-surface);
     border-radius: 999px;
   }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-subtle); }
   ::-webkit-scrollbar-corner { background: var(--color-surface); }
 }

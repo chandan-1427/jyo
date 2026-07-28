@@ -133,7 +133,7 @@ export function DateTimePicker({ value, onChange, min, placeholder = "Select dat
         className={cn(
           "w-full flex items-center gap-2 rounded-lg border border-border bg-background",
           "px-3.5 py-2.5 text-sm text-left transition-colors duration-150",
-          "hover:border-neutral-600",
+          "hover:border-border-strong",
           value ? "text-foreground" : "text-subtle"
         )}
       >
@@ -208,21 +208,21 @@ export function DateTimePicker({ value, onChange, min, placeholder = "Select dat
               <select
                 value={currentHour}
                 onChange={(e) => updateTime(Number(e.target.value), currentMinuteRounded, currentPeriod as "AM" | "PM")}
-                className="flex-1 rounded-md border border-border bg-background text-sm text-foreground px-2 py-1.5 outline-none focus:border-neutral-600"
+                className="flex-1 rounded-md border border-border bg-background text-sm text-foreground px-2 py-1.5 outline-none focus:border-border-strong"
               >
                 {HOURS.map((h) => <option key={h} value={h}>{pad(h)}</option>)}
               </select>
               <select
                 value={currentMinuteRounded}
                 onChange={(e) => updateTime(currentHour, Number(e.target.value), currentPeriod as "AM" | "PM")}
-                className="flex-1 rounded-md border border-border bg-background text-sm text-foreground px-2 py-1.5 outline-none focus:border-neutral-600"
+                className="flex-1 rounded-md border border-border bg-background text-sm text-foreground px-2 py-1.5 outline-none focus:border-border-strong"
               >
                 {MINUTES.map((m) => <option key={m} value={m}>{pad(m)}</option>)}
               </select>
               <select
                 value={currentPeriod}
                 onChange={(e) => updateTime(currentHour, currentMinuteRounded, e.target.value as "AM" | "PM")}
-                className="flex-1 rounded-md border border-border bg-background text-sm text-foreground px-2 py-1.5 outline-none focus:border-neutral-600"
+                className="flex-1 rounded-md border border-border bg-background text-sm text-foreground px-2 py-1.5 outline-none focus:border-border-strong"
               >
                 <option value="AM">AM</option>
                 <option value="PM">PM</option>

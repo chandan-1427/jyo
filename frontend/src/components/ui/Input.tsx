@@ -13,7 +13,9 @@ export function Input({ className, ...props }: InputProps) {
         "placeholder:text-subtle",
         "outline-none",
         "transition-[border-color,box-shadow] duration-200 ease-in-out",
-        "focus:border-neutral-600 focus:shadow-[0_0_0_3px_rgba(235,235,235,0.06)]",
+        // Was `rgba(235,235,235,0.06)` — a hardcoded copy of the OLD foreground.
+      // Token-derived now, so the focus glow can never drift from the palette.
+      "focus:border-border-strong focus:ring-[3px] focus:ring-foreground/[0.06]",
         className
       )}
       {...props}

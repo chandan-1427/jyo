@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/ui/Logo";
 import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
 import { Field } from "@/components/ui/Field";
-import { authInputStyles, AUTH_BENEFITS } from "@/components/auth/authStyles";
+import { AUTH_BENEFITS } from "@/components/auth/authStyles";
 import { BackButton } from "@/components/auth/BackButton";
 import { validateForm, loginSchema } from "@/lib/validation";
 
@@ -110,10 +110,10 @@ export default function Login() {
           )}
 
           {needsVerification && (
-            <div className="mb-4 rounded-lg border border-amber-800/40 bg-amber-950/30 px-4 py-3 flex flex-col gap-3">
+            <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 flex flex-col gap-3">
               <div className="flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-px" />
-                <p className="text-sm text-amber-300 leading-snug">
+                <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-px" />
+                <p className="text-sm text-warning leading-snug">
                   Your email is not verified. Please check your inbox for the verification link.
                 </p>
               </div>
@@ -127,7 +127,7 @@ export default function Login() {
                 <button
                   onClick={handleResendVerification}
                   disabled={resendLoading}
-                  className="cursor-pointer ml-6 w-fit flex items-center gap-1.5 rounded-md border border-amber-800/50 bg-transparent px-3 py-1.5 text-sm font-medium text-amber-300 hover:bg-amber-900/30 hover:text-amber-200 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="cursor-pointer ml-6 w-fit flex items-center gap-1.5 rounded-md border border-warning/40 bg-transparent px-3 py-1.5 text-sm font-medium text-warning hover:bg-warning/10 hover:text-foreground transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {resendLoading ? (
                     <>
@@ -154,7 +154,6 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 autoComplete="email"
-                className={authInputStyles}
                 required
               />
               {fieldErrors.email && <p className="text-xs text-red-400">{fieldErrors.email[0]}</p>}
@@ -167,7 +166,6 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
                 autoComplete="current-password"
-                className={authInputStyles}
                 required
               />
               {fieldErrors.password && <p className="text-xs text-red-400">{fieldErrors.password[0]}</p>}

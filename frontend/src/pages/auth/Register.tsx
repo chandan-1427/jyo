@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/ui/Logo";
 import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
 import { Field } from "@/components/ui/Field";
-import { authInputStyles, AUTH_BENEFITS } from "@/components/auth/authStyles";
+import { AUTH_BENEFITS } from "@/components/auth/authStyles";
 import { BackButton } from "@/components/auth/BackButton";
 import { validateForm, registerSchema } from "@/lib/validation";
 
@@ -157,7 +157,6 @@ export default function Register() {
                     onChange={handleChange}
                     placeholder="Your full name"
                     autoComplete="name"
-                    className={authInputStyles}
                     required
                   />
                   {fieldErrors.name && <p className="text-xs text-red-400">{fieldErrors.name[0]}</p>}
@@ -171,7 +170,6 @@ export default function Register() {
                     onChange={handleChange}
                     placeholder="you@example.com"
                     autoComplete="email"
-                    className={authInputStyles}
                     required
                   />
                   {fieldErrors.email && <p className="text-xs text-red-400">{fieldErrors.email[0]}</p>}
@@ -188,7 +186,6 @@ export default function Register() {
                     onKeyDown={allowOnlyDigits}
                     placeholder="10-digit mobile number"
                     autoComplete="tel"
-                    className={authInputStyles}
                     required
                   />
                   {fieldErrors.phone && <p className="text-xs text-red-400">{fieldErrors.phone[0]}</p>}
@@ -201,7 +198,6 @@ export default function Register() {
                     onChange={handleChange}
                     placeholder="Create a password"
                     autoComplete="new-password"
-                    className={authInputStyles}
                     required
                   />
                   {fieldErrors.password && <p className="text-xs text-red-400">{fieldErrors.password[0]}</p>}

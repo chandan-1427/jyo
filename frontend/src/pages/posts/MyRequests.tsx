@@ -93,7 +93,7 @@ export default function MyRequests() {
           {requests.map((req) => (
             <div
               key={req.id}
-              className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5 hover:border-neutral-600 transition-colors duration-150 group"
+              className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-2.5 hover:border-border-strong transition-colors duration-150 group"
             >
               {/* Info */}
               <div

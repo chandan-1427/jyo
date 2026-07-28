@@ -98,7 +98,7 @@ export default function MyPosts() {
             return (
               <div
                 key={post.id}
-                className="bg-surface border border-border rounded-xl overflow-hidden hover:border-neutral-600 transition-colors duration-150 flex flex-col group"
+                className="bg-surface border border-border rounded-xl overflow-hidden hover:border-border-strong transition-colors duration-150 flex flex-col group"
               >
                 {/* Thumbnail */}
                 <div

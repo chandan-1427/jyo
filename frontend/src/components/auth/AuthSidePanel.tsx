@@ -9,7 +9,7 @@ interface AuthSidePanelProps {
 
 export function AuthSidePanel({ headline, subtext, benefits }: AuthSidePanelProps) {
   return (
-    <div className="hidden lg:flex flex-col justify-between p-12 border-r border-border bg-surface/40">
+    <div className="hidden lg:flex flex-col justify-between p-12 border-r border-border bg-surface">
       <Logo />
 
       <div className="max-w-sm">

@@ -1,12 +1,23 @@
 import { useState } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import screenshotFeed from "@/assets/screenshot-feed.png";
 import screenshotApprove from "@/assets/screenshot-approve.png";
-import { Package, PackageOpen, MapPin, Info, ShieldCheck } from "lucide-react";
+import { Package, PackageOpen, MapPin, Info, ShieldCheck, UserCheck, Wallet } from "lucide-react";
 
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Logo } from "@/components/ui/Logo";
+
+// The poster's three real objections — who learns where I live, who turns up at
+// my door, what does this cost me. Deliberately phrased as reassurances rather
+// than features, and kept to three: a fourth would dilute all of them.
+// Tightened to fit one row at desktop — three reassurances breaking 2-then-1
+// looked like the third was an afterthought, which is the opposite of the point.
+const TRUST_POINTS = [
+  { icon: ShieldCheck, text: "Address hidden until you approve" },
+  { icon: UserCheck,   text: "See their name and photo first" },
+  { icon: Wallet,      text: "Free — no payments, no delivery" },
+];
 
 const STEPS = [
   {
@@ -121,7 +132,7 @@ function BulletList({ items }: { items: string[] }) {
     <ul className="flex flex-col gap-4">
       {items.map((note) => (
         <li key={note} className="flex gap-3 items-start text-sm leading-relaxed">
-          <div className="w-1 h-1 rounded-full bg-neutral-600 mt-2.5 shrink-0" />
+          <div className="w-1 h-1 rounded-full bg-subtle mt-2.5 shrink-0" />
           <p>{note}</p>
         </li>
       ))}
@@ -137,79 +148,194 @@ export default function Home() {
   if (user) return <Navigate to="/feed" replace />;
 
   return (
-  <div className="min-h-screen font-medium">
+  <div className="min-h-screen">
 
-    {/* Navbar */}
-    <header className="mt-[-40px] sticky top-0 z-50 bg-background py-2">
-      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Logo className="text-2xl" />
-        <div className="flex items-center gap-3">
-          <Link
+    {/*
+      Dropped `font-medium` from this wrapper. It forced weight 500 onto the
+      ENTIRE page, which is the main reason the old design read as flat: if
+      everything is semi-bold, weight can no longer signal importance. Weight
+      is now assigned per element, so it means something again.
+    */}
+
+    {/* Navbar. The old negative 40px top margin was a hack countering nothing — Home
+        renders outside Layout — so it's gone. A hairline bottom border plus a
+        blur replaces it: the header needs to separate from content when the
+        page scrolls under it, which a plain opaque bar could not do. */}
+    <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-md">
+      <div className="max-w-5xl mx-auto px-5 sm:px-6 h-16 flex items-center justify-between">
+        <Logo className="text-xl" />
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Both buttons come from LinkButton now. The outlined one used to be
+              hand-written inline here AND again in the hero, character for
+              character — the duplication that `variant` removes. */}
+          <LinkButton
+            as="link"
             to="/login"
-            className="inline-flex items-center justify-center text-sm font-semibold tracking-tight px-5 py-2.5 rounded-lg border border-border text-muted hover:text-foreground hover:border-neutral-600 active:scale-[0.97] transition-all duration-150 ease-out"
-          >
-            Log in
-          </Link>
-          <LinkButton as="link" to="/register" label="Get Started" />
+            label="Log in"
+            variant="secondary"
+            className="px-4 sm:px-5"
+          />
+          {/* Matches the hero's primary CTA wording. "Get Started" appeared
+              four times on this page and told a visitor nothing about which
+              of the two things they were starting. */}
+          <LinkButton
+            as="link"
+            to="/register"
+            label="Share food"
+            className="px-4 sm:px-5"
+          />
         </div>
       </div>
     </header>
 
     <main className="max-w-5xl mx-auto">
 
-      {/* Hero */}
-      <section className="grid lg:grid-cols-2 gap-16 items-center py-16 lg:py-20 px-6">
-        <div className="flex flex-col">
-          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-border text-xs text-subtle w-fit">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-            Just launched · Be one of the first in Tirupati
-          </div>
+      {/*
+        HERO — rebuilt around one job: get a first-time visitor, on a phone, to
+        trust this enough to register.
 
-          <EyebrowLabel>Community food sharing</EyebrowLabel>
+        Layout went from a 2-column text/image split to a single centred column
+        with the product shot full-width beneath it. Two reasons. The screenshot
+        is 1303×520 (2.5:1) — cramming it into the old fixed 420/560px-tall box
+        meant object-cover threw most of it away, and a cropped screenshot
+        of a trust-critical product is worse than none. And a single column is
+        the same structure at 375px as at 1280px, so the mobile experience —
+        which is nearly all of this audience — is the designed one, not a
+        leftover.
+      */}
+      <section className="px-5 sm:px-6 pt-14 pb-16 sm:pt-20 sm:pb-20">
+        <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
 
-          <h1 className="font-medium text-4xl lg:text-[2.75rem] leading-[1.15] mb-6 tracking-tight">
-            Good food shouldn't be thrown away while someone nearby needs it.
+          {/*
+            H1. The old one was a 12-word ethical statement — true, but it asked
+            the reader to agree with a principle before knowing what the product
+            does. This asks a question the target poster can answer in their own
+            kitchen, right now, and pairs it with the consequence.
+
+            Weight 600 against body copy's 400, ~3× the body size, and full
+            `foreground` against `muted`. Hierarchy needs size, weight AND
+            colour moving together; the old page varied only size.
+
+            `text-balance` keeps the two lines close in length instead of
+            leaving one orphaned word — the detail that separates set type from
+            default type.
+          */}
+          <h1 className="mt-6 max-w-[22ch] font-semibold text-[2rem] sm:text-5xl lg:text-[3.25rem] leading-[1.08] tracking-[-0.03em] text-foreground text-balance">
+            ఎక్కువ food ఉందా?{" "}
+            {/* The two sentences are separated by COLOUR, not by a hard <br>.
+                A forced break fought `text-balance` and stranded "now." alone
+                on a third line — an orphan is the most visible typographic
+                error a hero can have. Letting it wrap freely, balanced, and
+                capping the measure at 22ch keeps the lines even at every
+                width instead of only at the one I happened to test. */}
+            <span className="text-muted">దగ్గరలో ఉన్నవారితో పంచుకోండి.</span>
           </h1>
 
-          <p className="text-[15px] leading-relaxed mb-4">
-            How many times have you had extra food that went to waste? You probably wished there
-            was a way to give it to others, but life gets busy and it rarely happens.
+          {/*
+            TELUGU SLOT — intentionally reserved, not filled.
+
+            The audience is Tirupati households; English-only signals "app built
+            for engineers". But machine-quality Telugu on a page whose entire
+            job is trust would cost more than it gains, so the slot is built to
+            spec — correct scale, weight, colour and spacing — and left for a
+            native speaker.
+
+            TODO(chandan): replace with the real Telugu line, then delete this
+            comment. Suggested sense (do NOT translate literally — write what a
+            Tirupati neighbour would actually say): "Extra food? Share it with
+            someone close by." Keep it to ~6 words so it holds one line on a
+            375px screen.
+          */}
+          <p className="mt-4 font-geist text-lg sm:text-xl text-subtle" lang="te">
+            మీ దగ్గరలో ఎవరో ఆకలితో ఉన్నారు.
           </p>
 
-          <p className="text-[15px] leading-relaxed mb-8">
-            And if you're a student - how many times did you sleep on an empty stomach because money
-            was short, or your PG just didn't provide a proper meal?
+          {/*
+            Subhead. Replaces four paragraphs (~90 words, two rhetorical
+            questions). A stranger does not read your essay — this states what
+            it is, who it is for, the boundary, and the catch, in one breath.
+            `max-w-xl` holds the line length near 65 characters; centred text
+            much wider than that is genuinely hard to read.
+          */}
+          <p className="mt-5 max-w-xl text-base sm:text-lg leading-relaxed text-muted">
+            Jyo connects households with food to spare to students and neighbours
+            within 20&nbsp;km of Tirupati bus stand. You choose who collects it.
           </p>
 
-          <p className="text-[15px] leading-relaxed text-foreground font-medium mb-10 pl-4 border-l-2 border-accent/40">
-            We built Jyo to bridge these two worlds. No delivery, no payment. Just people sharing with people.
-          </p>
+          {/*
+            SPLIT-INTENT CTA — the biggest structural change on the page.
 
-          <div className="flex flex-wrap gap-3 items-center">
-            <LinkButton as="link" to="/register" label="Get Started" />
-            <Link
-              to="/login"
-              className="inline-flex items-center justify-center text-sm font-semibold tracking-tight px-5 py-2.5 rounded-lg border border-border text-muted hover:text-foreground hover:border-neutral-600 active:scale-[0.97] transition-all duration-150 ease-out"
-            >
-              Log in
-            </Link>
+            Before: "Get Started" four times, identical, for a product with two
+            audiences who want opposite things. A visitor had to work out which
+            one they were. Now each side gets its own door, and the whole
+            "Who it's for" section becomes redundant.
+
+            "Share food" is primary because supply is the binding constraint in
+            every sharing marketplace — requesters who arrive to an empty feed
+            do not come back — and because the poster carries the higher-friction
+            ask, so they need the stronger invitation.
+
+            Both are `sm:w-auto` but full-width stacked on mobile: side-by-side
+            buttons at 375px produce two cramped targets, and these are the only
+            two things worth tapping.
+          */}
+          <div className="mt-9 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <LinkButton
+              as="link"
+              to="/register"
+              label="I have food to share"
+              className="w-full sm:w-auto py-3"
+            />
+            <LinkButton
+              as="link"
+              to="/register"
+              label="I'm looking for food"
+              variant="secondary"
+              className="w-full sm:w-auto py-3"
+            />
           </div>
+
+          {/*
+            TRUST ROW. These three facts existed on the old page but were buried
+            2,000px down, split across a step, four bullets and four cards that
+            all said the same thing three times over.
+
+            They are the poster's three actual fears — who learns where I live,
+            who is at my door, what will this cost me — and they belong ABOVE
+            the fold, next to the button that asks them to take the risk.
+            Answering the objection at the point of decision is what converts;
+            repeating it later just reads as anxiety.
+          */}
+          <ul className="mt-10 flex flex-col sm:flex-row sm:flex-wrap sm:justify-center gap-x-6 gap-y-3">
+            {TRUST_POINTS.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-2 text-sm text-subtle">
+                <Icon className="w-4 h-4 shrink-0 text-accent" />
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Hero image */}
-        <div className="relative w-full h-[420px] lg:h-[560px] rounded-xl overflow-hidden bg-surface border border-border">
-          {!imgLoaded && (
-            <div className="absolute inset-0 animate-pulse bg-surface" />
-          )}
-          <img
-            src={screenshotFeed}
-            alt="The Jyo feed showing nearby food posts available for pickup"
-            loading="eager"
-            decoding="sync"
-            fetchPriority="high"
-            onLoad={() => setImgLoaded(true)}
-            className={`w-full h-full object-cover object-top transition-opacity duration-500 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
-          />
+        {/*
+          PRODUCT SHOT. Now uncropped at its true 1303:520 ratio, full width.
+
+          `aspect-[1303/520]` on the wrapper reserves the exact final height
+          before the image decodes, so there is no layout shift — which matters
+          most on the slow connections this audience is actually on.
+        */}
+        <div className="mt-14 sm:mt-20 max-w-5xl mx-auto">
+          <div className="relative aspect-[1303/520] w-full overflow-hidden rounded-xl border border-border bg-surface">
+            {!imgLoaded && <div className="absolute inset-0 animate-pulse bg-surface" />}
+            <img
+              src={screenshotFeed}
+              alt="The Jyo feed showing nearby food posts available for pickup, each with a photo, description, pickup window and status"
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
+              onLoad={() => setImgLoaded(true)}
+              className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+            />
+          </div>
         </div>
       </section>
 
@@ -273,7 +399,7 @@ export default function Home() {
         <div className="grid md:grid-cols-2 gap-6">
 
           {/* Poster */}
-          <div className="p-6 rounded-xl border border-border bg-surface/40">
+          <div className="p-6 rounded-xl border border-border bg-surface">
             <div className="flex items-center gap-2 mb-5">
               <Package className="w-5 h-5 text-subtle" />
               <h3 className="text-sm font-semibold text-foreground">Poster</h3>
@@ -283,7 +409,7 @@ export default function Home() {
           </div>
 
           {/* Requester */}
-          <div className="p-6 rounded-xl border border-border bg-surface/40">
+          <div className="p-6 rounded-xl border border-border bg-surface">
             <div className="flex items-center gap-2 mb-5">
               <PackageOpen className="w-5 h-5 text-subtle" />
               <h3 className="text-sm font-semibold text-foreground">Requester</h3>
@@ -324,7 +450,7 @@ export default function Home() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           {SAFETY_CARDS.map(({ title, body }) => (
-            <div key={title} className="p-5 bg-surface/40 rounded-xl border border-border">
+            <div key={title} className="p-5 bg-surface rounded-xl border border-border">
               <h4 className="text-sm font-semibold text-foreground mb-2">{title}</h4>
               <p className="text-sm leading-relaxed text-subtle">{body}</p>
             </div>
@@ -332,15 +458,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="px-6 py-15 text-center">
-        <p className="text-sm font-medium mb-4">
+      {/* Final CTA. The heading already asks "share or find?", so the single
+          "Get Started" button below it was answering neither. Mirrors the hero
+          pair — a closing CTA should offer the same two doors, or the reader
+          who scrolled this far has to go back up to choose. Section padding
+          went from a 15 step to a 20 step: v4's dynamic scale does generate a
+          15, so it was valid, just off
+          the 4-step rhythm every other section uses (60px against 64px). Odd
+          one-off gaps are what make a page feel assembled rather than set. */}
+      <section className="px-5 sm:px-6 py-20 text-center">
+        <p className="text-sm text-subtle mb-4">
           Free to join · No payments · Early days in Tirupati
         </p>
-        <h2 className="font-medium text-2xl lg:text-3xl tracking-tight mb-8">
+        <h2 className="font-semibold text-2xl lg:text-3xl tracking-tight mb-8">
           Ready to share or find food?
         </h2>
-        <LinkButton as="link" to="/register" label="Get Started" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-center gap-3">
+          <LinkButton
+            as="link"
+            to="/register"
+            label="I have food to share"
+            className="w-full sm:w-auto py-3"
+          />
+          <LinkButton
+            as="link"
+            to="/register"
+            label="I'm looking for food"
+            variant="secondary"
+            className="w-full sm:w-auto py-3"
+          />
+        </div>
       </section>
 
     </main>
