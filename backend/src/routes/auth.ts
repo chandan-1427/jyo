@@ -4,7 +4,7 @@ import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, and, lt } from "drizzle-orm";
 import crypto from "crypto";
 import { forgotPasswordLimiter, resetPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
@@ -79,7 +79,16 @@ authRoutes.post("/register", registerLimiter, async (c) => {
 
   const existing = await findUserByEmail(email);
 
-  if (existing) {
+  // An unverified signup whose token has expired never got cleaned up yet
+  // (the daily cleanup job may not have run) — treat it as reclaimable
+  // rather than permanently squatting the email address.
+  const reclaimable =
+    existing &&
+    !existing.emailVerified &&
+    existing.verificationTokenExpiry !== null &&
+    existing.verificationTokenExpiry < new Date();
+
+  if (existing && !reclaimable) {
     return c.json({ error: "Email already registered" }, 400);
   }
 
@@ -88,18 +97,41 @@ authRoutes.post("/register", registerLimiter, async (c) => {
   const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
 
   let newUser;
-  try {
-    [newUser] = await db
-      .insert(users)
-      .values({ name, email, passwordHash, phone, verificationToken, verificationTokenExpiry })
+  if (reclaimable) {
+    // Conditional update guarded on the same expired/unverified state we
+    // just checked — if another request reclaimed or verified this row in
+    // between, zero rows match and we report the email as taken instead of
+    // silently overwriting a now-live account.
+    const [updated] = await db
+      .update(users)
+      .set({ name, passwordHash, phone, verificationToken, verificationTokenExpiry })
+      .where(
+        and(
+          eq(users.id, existing.id),
+          eq(users.emailVerified, false),
+          lt(users.verificationTokenExpiry, new Date())
+        )
+      )
       .returning({ id: users.id, name: users.name, email: users.email });
-  } catch (err: any) {
-    // Unique-violation: two concurrent registrations raced past the
-    // "existing" check above for the same email.
-    if (err?.code === "23505") {
+
+    if (!updated) {
       return c.json({ error: "Email already registered" }, 400);
     }
-    throw err;
+    newUser = updated;
+  } else {
+    try {
+      [newUser] = await db
+        .insert(users)
+        .values({ name, email, passwordHash, phone, verificationToken, verificationTokenExpiry })
+        .returning({ id: users.id, name: users.name, email: users.email });
+    } catch (err: any) {
+      // Unique-violation: two concurrent registrations raced past the
+      // "existing" check above for the same email.
+      if (err?.code === "23505") {
+        return c.json({ error: "Email already registered" }, 400);
+      }
+      throw err;
+    }
   }
 
   // Send verification email — fire and forget
