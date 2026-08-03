@@ -231,21 +231,6 @@ export default function Home() {
             <span className="text-muted">దగ్గరలో ఉన్నవారితో పంచుకోండి.</span>
           </h1>
 
-          {/*
-            TELUGU SLOT — intentionally reserved, not filled.
-
-            The audience is Tirupati households; English-only signals "app built
-            for engineers". But machine-quality Telugu on a page whose entire
-            job is trust would cost more than it gains, so the slot is built to
-            spec — correct scale, weight, colour and spacing — and left for a
-            native speaker.
-
-            TODO(chandan): replace with the real Telugu line, then delete this
-            comment. Suggested sense (do NOT translate literally — write what a
-            Tirupati neighbour would actually say): "Extra food? Share it with
-            someone close by." Keep it to ~6 words so it holds one line on a
-            375px screen.
-          */}
           <p className="mt-4 font-geist text-lg sm:text-xl text-subtle" lang="te">
             మీ దగ్గరలో ఎవరో ఆకలితో ఉన్నారు.
           </p>
