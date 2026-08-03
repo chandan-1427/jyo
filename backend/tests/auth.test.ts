@@ -67,6 +67,37 @@ describe("POST /auth/register", () => {
     const body = await res.json();
     expect(body.details.email).toBeTruthy();
   });
+
+  it("rejects a re-registration while the original verification token is still live", async () => {
+    await postJson("/auth/register", validUser);
+    const res = await postJson("/auth/register", validUser);
+    expect(res.status).toBe(400);
+  });
+
+  it("reclaims the email if the previous signup was never verified and its token expired", async () => {
+    await postJson("/auth/register", validUser);
+    await db
+      .update(users)
+      .set({ verificationTokenExpiry: new Date(Date.now() - 1000) })
+      .where(eq(users.email, validUser.email));
+
+    const res = await postJson("/auth/register", { ...validUser, name: "Alice Retry" });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.user).toMatchObject({ name: "Alice Retry", email: validUser.email });
+
+    const [row] = await db.select().from(users).where(eq(users.email, validUser.email));
+    expect(row.emailVerified).toBe(false);
+    expect(row.verificationTokenExpiry!.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("does not reclaim an email that has since been verified", async () => {
+    const { token } = await registerAndCaptureToken({ email: "reclaim-verified@example.com" });
+    await app.request(`/auth/verify-email?token=${token}`);
+
+    const res = await postJson("/auth/register", { ...validUser, email: "reclaim-verified@example.com" });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /auth/verify-email", () => {
