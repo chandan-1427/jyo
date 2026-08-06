@@ -1,4 +1,5 @@
 # Jyo
+<!-- CI trigger test: safe to delete after confirming Actions fires -->
 
 Free community food sharing for Tirupati, India.
 
