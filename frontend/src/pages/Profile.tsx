@@ -272,7 +272,7 @@ export default function Profile() {
             <p className="text-sm text-subtle mt-0.5">{profile?.email}</p>
           </div>
 
-          <div className="w-full border-t border-border pt-4">
+          <div className="w-full border-t border-border pt-5">
             <p className="text-xs text-subtle">Member since</p>
             <p className="text-sm text-muted mt-0.5">
               {profile?.createdAt
