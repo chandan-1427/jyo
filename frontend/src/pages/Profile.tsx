@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Mail } from "lucide-react";
+import { FaGithub, FaInstagram } from "react-icons/fa";
 import { apiFetch } from "@/lib/api";
 import { authMeKey, fetchAuthMe } from "@/lib/queries/auth";
 import { Input } from "@/components/ui/Input";
@@ -31,6 +32,18 @@ function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
   const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
   if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
 }
+
+// Same three destinations as Home.tsx's footer — that page redirects logged-in
+// users straight to /feed, so this is the only place they can reach them.
+const CONNECT_LINKS = [
+  {
+    label: "Mail",
+    icon: Mail,
+    href: "https://mail.google.com/mail/?view=cm&to=jyofoodsharing@gmail.com&su=Jyo Support",
+  },
+  { label: "GitHub", icon: FaGithub, href: "https://github.com/chandan-1427/jyo" },
+  { label: "Instagram", icon: FaInstagram, href: "https://www.instagram.com/jyo_food_sharing" },
+];
 
 export default function Profile() {
   const queryClient = useQueryClient();
@@ -141,6 +154,25 @@ export default function Profile() {
                   })
                 : "—"}
             </p>
+          </div>
+
+          <div className="w-full border-t border-border pt-4">
+            <p className="text-xs text-subtle mb-2.5">Connect with us</p>
+            <div className="flex items-center justify-center gap-3">
+              {CONNECT_LINKS.map(({ label, icon: Icon, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  title={label}
+                  className="flex items-center justify-center w-9 h-9 rounded-lg text-subtle hover:text-foreground hover:bg-background transition-colors duration-150"
+                >
+                  <Icon className="w-4.5 h-4.5" />
+                </a>
+              ))}
+            </div>
           </div>
         </div>
 

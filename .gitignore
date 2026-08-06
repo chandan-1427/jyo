@@ -21,6 +21,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# local notes / scratch docs
+docs/
+
 # editor / OS
 .vscode/*
 !.vscode/extensions.json
