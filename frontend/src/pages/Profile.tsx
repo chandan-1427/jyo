@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, AlertCircle, CheckCircle2, Mail, Camera, X } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Mail, Camera, Upload, Trash2 } from "lucide-react";
 import { FaGithub, FaInstagram } from "react-icons/fa";
 import { apiFetch } from "@/lib/api";
 import { authMeKey, fetchAuthMe } from "@/lib/queries/auth";
@@ -90,7 +90,19 @@ export default function Profile() {
   });
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const avatarMenuRef = useRef<HTMLDivElement>(null);
   const [avatarError, setAvatarError] = useState("");
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) {
+        setShowAvatarMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const avatarUploadMutation = useMutation({
     mutationFn: uploadAvatar,
@@ -180,56 +192,76 @@ export default function Profile() {
         <h1 className="font-semibold text-2xl text-foreground tracking-tight">My Profile</h1>
       </div>
 
-      <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
+      <div className="grid md:grid-cols-[280px_1fr] gap-6 items-start">
 
         {/* Left — identity summary */}
-        <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-4 lg:sticky lg:top-20">
-          <div className="relative group w-16 h-16">
-            {profile?.avatarUrl ? (
-              <img
-                src={profile.avatarUrl}
-                alt={profile.name}
-                className="w-16 h-16 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
-                <span className="text-xl font-semibold text-accent">{initial}</span>
-              </div>
-            )}
-
+        <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-4 md:sticky md:top-20">
+          <div ref={avatarMenuRef} className="relative">
             <button
               type="button"
-              onClick={() => avatarInputRef.current?.click()}
+              onClick={() => setShowAvatarMenu((v) => !v)}
               disabled={avatarBusy}
               aria-label="Change profile photo"
-              className="cursor-pointer absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-default"
+              className="cursor-pointer group relative w-24 h-24 rounded-full overflow-hidden border-2 border-border disabled:cursor-default"
             >
-              {avatarBusy ? (
-                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              {profile?.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <Camera className="w-4 h-4 text-white" />
+                <div className="w-full h-full bg-accent/10 flex items-center justify-center">
+                  <span className="text-3xl font-semibold text-accent">{initial}</span>
+                </div>
               )}
+
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                {avatarBusy ? (
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5 text-white" />
+                )}
+              </div>
             </button>
 
-            {profile?.avatarUrl && !avatarBusy && (
-              <button
-                type="button"
-                onClick={() => avatarRemoveMutation.mutate()}
-                aria-label="Remove profile photo"
-                className="cursor-pointer absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface border border-border text-subtle hover:text-red-400 hover:border-red-900/40 transition-colors flex items-center justify-center"
-              >
-                <X className="w-3 h-3" />
-              </button>
+            {showAvatarMenu && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-44 bg-surface rounded-xl border border-border shadow-lg z-50 overflow-hidden text-left">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAvatarMenu(false);
+                    avatarInputRef.current?.click();
+                  }}
+                  className="cursor-pointer w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-background transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5 text-subtle" />
+                  Upload photo
+                </button>
+                {profile?.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAvatarMenu(false);
+                      avatarRemoveMutation.mutate();
+                    }}
+                    className="cursor-pointer w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-background transition-colors border-t border-border"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove photo
+                  </button>
+                )}
+              </div>
             )}
-
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarSelect}
-              className="hidden"
-            />
           </div>
+
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarSelect}
+            className="hidden"
+          />
 
           {avatarError && (
             <p className="text-xs text-red-400 -mt-2 leading-snug">{avatarError}</p>
@@ -240,7 +272,7 @@ export default function Profile() {
             <p className="text-sm text-subtle mt-0.5">{profile?.email}</p>
           </div>
 
-          <div className="w-full border-t border-border pt-4">
+          <div className="w-full border-t border-border pt-5">
             <p className="text-xs text-subtle">Member since</p>
             <p className="text-sm text-muted mt-0.5">
               {profile?.createdAt
