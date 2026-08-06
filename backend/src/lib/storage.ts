@@ -36,7 +36,7 @@ export const MAX_UPLOAD_REQUEST_BYTES = MAX_FILE_SIZE_BYTES + 1024 * 1024; // 6 
 
 export async function uploadFile(
   buffer: Buffer,
-  bucket: "food-photos" | "selfies"
+  bucket: "food-photos" | "selfies" | "avatars"
 ): Promise<string> {
   if (buffer.length > MAX_FILE_SIZE_BYTES) {
     throw new Error("File is too large. Maximum size is 5MB.");
@@ -77,7 +77,7 @@ export async function uploadFile(
 // over it would leave the DB and storage in a worse mismatch than before.
 export async function deleteFile(
   publicUrl: string,
-  bucket: "food-photos" | "selfies"
+  bucket: "food-photos" | "selfies" | "avatars"
 ): Promise<void> {
   const filename = publicUrl.split("/").pop();
   if (!filename) return;
