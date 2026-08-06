@@ -180,10 +180,10 @@ export default function Profile() {
         <h1 className="font-semibold text-2xl text-foreground tracking-tight">My Profile</h1>
       </div>
 
-      <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
+      <div className="grid md:grid-cols-[280px_1fr] gap-6 items-start">
 
         {/* Left — identity summary */}
-        <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-4 lg:sticky lg:top-20">
+        <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-4 md:sticky md:top-20">
           <div className="relative group w-16 h-16">
             {profile?.avatarUrl ? (
               <img
