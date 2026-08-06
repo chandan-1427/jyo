@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   phone:        text("phone").notNull(),
   locationText: text("location_text"),
   description:  text("description"),
+  avatarUrl:    text("avatar_url"),
   emailVerified:      boolean("email_verified").notNull().default(false),
   verificationToken:  text("verification_token"),
   verificationTokenExpiry: timestamp("verification_token_expiry"),

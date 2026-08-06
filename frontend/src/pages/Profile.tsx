@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, AlertCircle, CheckCircle2, Mail } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Mail, Camera, X } from "lucide-react";
 import { FaGithub, FaInstagram } from "react-icons/fa";
 import { apiFetch } from "@/lib/api";
 import { authMeKey, fetchAuthMe } from "@/lib/queries/auth";
+import { uploadAvatar, removeAvatar } from "@/lib/supabase";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { LinkButton } from "@/components/ui/LinkButton";
+
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5MB — matches the backend's hard limit
 
 function Field({
   label,
@@ -86,6 +89,51 @@ export default function Profile() {
     },
   });
 
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarError, setAvatarError] = useState("");
+
+  const avatarUploadMutation = useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: (user) => queryClient.setQueryData(authMeKey, user),
+    onError: (err: Error) => setAvatarError(err.message),
+  });
+
+  const avatarRemoveMutation = useMutation({
+    mutationFn: removeAvatar,
+    onSuccess: (user) => queryClient.setQueryData(authMeKey, user),
+    onError: (err: Error) => setAvatarError(err.message),
+  });
+
+  const avatarBusy = avatarUploadMutation.isPending || avatarRemoveMutation.isPending;
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file after an error
+    if (!file) return;
+
+    setAvatarError("");
+
+    // Quick client-side checks for immediate feedback — the backend re-validates
+    // both (real size limit, and actual file type via magic bytes, not this
+    // client-supplied MIME type) since this check alone can't be trusted.
+    if (!file.type.startsWith("image/")) {
+      setAvatarError("Please upload an image file.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      setAvatarError("File is too large. Maximum size is 5MB.");
+      return;
+    }
+
+    avatarUploadMutation.mutate(file);
+  };
+
+  useEffect(() => {
+    if (!avatarError) return;
+    const timer = setTimeout(() => setAvatarError(""), 4000);
+    return () => clearTimeout(timer);
+  }, [avatarError]);
+
   useEffect(() => {
     if (!success) return;
     const timer = setTimeout(() => setSuccess(false), 3000);
@@ -136,9 +184,56 @@ export default function Profile() {
 
         {/* Left — identity summary */}
         <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-4 lg:sticky lg:top-20">
-          <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
-            <span className="text-xl font-semibold text-accent">{initial}</span>
+          <div className="relative group w-16 h-16">
+            {profile?.avatarUrl ? (
+              <img
+                src={profile.avatarUrl}
+                alt={profile.name}
+                className="w-16 h-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
+                <span className="text-xl font-semibold text-accent">{initial}</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarBusy}
+              aria-label="Change profile photo"
+              className="cursor-pointer absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-default"
+            >
+              {avatarBusy ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4 text-white" />
+              )}
+            </button>
+
+            {profile?.avatarUrl && !avatarBusy && (
+              <button
+                type="button"
+                onClick={() => avatarRemoveMutation.mutate()}
+                aria-label="Remove profile photo"
+                className="cursor-pointer absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface border border-border text-subtle hover:text-red-400 hover:border-red-900/40 transition-colors flex items-center justify-center"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarSelect}
+              className="hidden"
+            />
           </div>
+
+          {avatarError && (
+            <p className="text-xs text-red-400 -mt-2 leading-snug">{avatarError}</p>
+          )}
 
           <div>
             <p className="text-base font-semibold text-foreground">{profile?.name}</p>

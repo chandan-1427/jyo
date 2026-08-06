@@ -7,6 +7,7 @@ export type Profile = {
   phone?: string;
   locationText?: string | null;
   description?: string | null;
+  avatarUrl?: string | null;
   createdAt?: string;
 };
 
