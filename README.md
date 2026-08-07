@@ -1,4 +1,4 @@
-# Jyo
+# Jyo - Food Sharing
 
 Free community food sharing for Tirupati, India.
 
