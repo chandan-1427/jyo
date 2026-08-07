@@ -47,6 +47,8 @@ export const users = pgTable("users", {
   verificationTokenExpiry: timestamp("verification_token_expiry"),
   resetToken:         text("reset_token"),
   resetTokenExpiry:   timestamp("reset_token_expiry"),
+  isDemo:       boolean("is_demo").notNull().default(false),
+  demoExpiresAt: timestamp("demo_expires_at"),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -63,6 +65,9 @@ export const foodPosts = pgTable("food_posts", {
   pickupWindowEnd:   timestamp("pickup_window_end").notNull(),
   status:            postStatusEnum("status").notNull().default("open"),
   approvedRequestId: uuid("approved_request_id"),             // set after approval
+  seededForUserId:   uuid("seeded_for_user_id").references(() => users.id),
+  isDemo:            boolean("is_demo").notNull().default(false),
+  demoExpiresAt:     timestamp("demo_expires_at"),
   createdAt:         timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -75,6 +80,8 @@ export const pickupRequests = pgTable("pickup_requests", {
   selfieUrl:  text("selfie_url"),
   etaMinutes: integer("eta_minutes").notNull(),
   status:     requestStatusEnum("status").notNull().default("pending"),
+  isDemo:     boolean("is_demo").notNull().default(false),
+  demoExpiresAt: timestamp("demo_expires_at"),
   createdAt:  timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -86,5 +93,7 @@ export const notifications = pgTable("notifications", {
   type:      notificationTypeEnum("type"),
   message:   text("message").notNull(),
   read:      boolean("read").notNull().default(false),
+  isDemo:    boolean("is_demo").notNull().default(false),
+  demoExpiresAt: timestamp("demo_expires_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

@@ -10,6 +10,7 @@ import { closeDb } from "./db/index.js";
 import { startExpiryJob } from "./jobs/expiry.js";
 import { startNotificationCleanupJob } from "./jobs/notificationCleanup.js";
 import { startUnverifiedUserCleanupJob } from "./jobs/unverifiedUserCleanup.js";
+import { startDemoCleanupJob } from "./jobs/demoCleanup.js";
 
 process.on("unhandledRejection", (reason) => {
   logger.fatal({ err: reason }, "Unhandled promise rejection");
@@ -30,6 +31,7 @@ const app = createApp();
 const expiryJob = startExpiryJob();
 const notificationCleanupJob = startNotificationCleanupJob();
 const unverifiedUserCleanupJob = startUnverifiedUserCleanupJob();
+const demoCleanupJob = startDemoCleanupJob();
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   logger.info(
@@ -38,7 +40,7 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
       env: env.APP_ENV,
       cors: env.APP_ENV === "production" ? "jyo.co.in only" : "localhost allowed",
       routes: ["/auth", "/users", "/posts", "/requests", "/notifications"],
-      jobs: ["expiry", "notificationCleanup", "unverifiedUserCleanup"],
+      jobs: ["expiry", "notificationCleanup", "unverifiedUserCleanup", "demoCleanup"],
     },
     "JYO backend started"
   );
@@ -65,7 +67,12 @@ async function shutdown(signal: string) {
   forceExit.unref();
 
   try {
-    await Promise.all([expiryJob.stop(), notificationCleanupJob.stop(), unverifiedUserCleanupJob.stop()]);
+    await Promise.all([
+      expiryJob.stop(),
+      notificationCleanupJob.stop(),
+      unverifiedUserCleanupJob.stop(),
+      demoCleanupJob.stop(),
+    ]);
 
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));

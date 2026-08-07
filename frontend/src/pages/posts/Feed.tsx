@@ -3,14 +3,19 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { getCurrentLocation, type Coords } from "@/lib/location";
+import { isWithinTirupati } from "@/lib/geofence";
+import { useAuth } from "@/context/AuthContext";
 import type { FoodPost } from "@/types/api";
 import PostCard from "@/components/posts/PostCard";
-import { MapPin, RefreshCw, Loader2, UtensilsCrossed, AlertCircle } from "lucide-react";
+import OutOfRegionCard from "@/components/posts/OutOfRegionCard";
+import { MapPin, RefreshCw, Loader2, UtensilsCrossed, AlertCircle, Sparkles } from "lucide-react";
 
 export default function Feed() {
+  const { user, startDemo } = useAuth();
   const [coords, setCoords] = useState<Coords | null>(null);
   const [locating, setLocating] = useState(true);
   const [locationError, setLocationError] = useState("");
+  const [startingDemo, setStartingDemo] = useState(false);
 
   useEffect(() => {
     getCurrentLocation()
@@ -21,6 +26,12 @@ export default function Feed() {
       .finally(() => setLocating(false));
   }, []);
 
+  // Out-of-region visitors get the demo gate instead of an empty feed —
+  // once user.isDemo is true (from either this gate or the header's
+  // "Explore as Demo" button) the real geolocation no longer matters, since
+  // the backend's own geofence bypass takes over. See docs/demo-mode-plan.md.
+  const outOfRegion = !!coords && !user?.isDemo && !isWithinTirupati(coords.lat, coords.lng);
+
   const {
     data,
     error: fetchError,
@@ -30,14 +41,23 @@ export default function Feed() {
   } = useQuery<{ posts: FoodPost[] }>({
     queryKey: ["posts", "feed", coords?.lat, coords?.lng],
     queryFn: () => apiFetch(`/posts?lat=${coords!.lat}&lng=${coords!.lng}`),
-    enabled: !!coords,
+    enabled: !!coords && !outOfRegion,
     refetchInterval: 15_000,
   });
   const posts = data?.posts ?? [];
 
   const handleRefresh = () => refetch();
 
-  if (locating || postsLoading) {
+  const handleStartDemo = async () => {
+    setStartingDemo(true);
+    try {
+      await startDemo();
+    } finally {
+      setStartingDemo(false);
+    }
+  };
+
+  if (locating || (postsLoading && !outOfRegion)) {
     return (
       <div className="px-4 py-24 flex flex-col items-center gap-3 font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-subtle animate-spin" />
@@ -66,6 +86,21 @@ export default function Feed() {
     );
   }
 
+  if (outOfRegion) {
+    return (
+      <div className="px-4 py-8 font-medium tracking-wide">
+        <div className="mb-6">
+          <div className="flex items-center gap-1.5 mb-1">
+            <MapPin className="w-3.5 h-3.5 text-subtle" />
+            <p className="text-sm text-subtle">Outside service area</p>
+          </div>
+          <h1 className="font-semibold text-2xl text-foreground tracking-tight">Nearby Food</h1>
+        </div>
+        <OutOfRegionCard />
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-8 font-medium tracking-wide">
 
@@ -81,14 +116,27 @@ export default function Feed() {
           </h1>
         </div>
 
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-subtle hover:text-foreground transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed mt-1"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </button>
+        <div className="flex items-center gap-4 mt-1">
+          {!user?.isDemo && (
+            <button
+              onClick={handleStartDemo}
+              disabled={startingDemo}
+              className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-accent hover:text-foreground transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {startingDemo ? "Starting…" : "Explore as Demo"}
+            </button>
+          )}
+
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-subtle hover:text-foreground transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {/* Soft error — a refresh failed, but we still show whatever posts we already have */}

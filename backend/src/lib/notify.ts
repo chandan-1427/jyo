@@ -7,7 +7,15 @@ export async function createNotification(
   userId: string,
   message: string,
   postId?: string,
-  type?: NotificationType
+  type?: NotificationType,
+  demoExpiresAt?: Date
 ) {
-  await db.insert(notifications).values({ userId, message, postId, type });
+  await db.insert(notifications).values({
+    userId,
+    message,
+    postId,
+    type,
+    isDemo: !!demoExpiresAt,
+    demoExpiresAt: demoExpiresAt ?? null,
+  });
 }

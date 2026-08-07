@@ -14,6 +14,8 @@ import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { ConflictError } from "../lib/errors.js";
 import { isValidUuid, findPostById, findRequestById, findUserEmail } from "../lib/finders.js";
+import { createRequestRow, approveRequestTx } from "../lib/requestActions.js";
+import { isSyntheticEmail, autoApproveIfDemo } from "../lib/demo.js";
 
 export const requestRoutes = new Hono();
 
@@ -30,7 +32,7 @@ const createRequestSchema = z.object({
 
 // --- Submit pickup request ---
 requestRoutes.post("/", createRequestLimiter, async (c) => {
-  const { userId } = c.get("user");
+  const { userId, isDemo } = c.get("user");
   const body = await c.req.json();
   const result = createRequestSchema.safeParse(body);
 
@@ -55,33 +57,30 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   }
 
   const distance = haversineDistance(lat, lng, post.pickupLat, post.pickupLng);
-  if (env.APP_ENV === "production" && distance > 20) {
+  if (env.APP_ENV === "production" && !isDemo && distance > 20) {
     return c.json({ error: "You are too far from this post to request it" }, 400);
   }
 
   // Atomically claim the post — the status condition in the WHERE clause
   // prevents two concurrent requests from both passing the check above and
-  // creating duplicate pending requests for the same post.
-  const [claimedPost] = await db
-    .update(foodPosts)
-    .set({ status: "pending_approval" })
-    .where(and(eq(foodPosts.id, postId), eq(foodPosts.status, "open")))
-    .returning({ id: foodPosts.id });
+  // creating duplicate pending requests for the same post. Stamped with the
+  // post's own demo flag/expiry so a request against a demo post is swept
+  // up by the cleanup cron too — otherwise it has no demoExpiresAt and
+  // lingers forever.
+  const demoExpiresAt = post.isDemo ? post.demoExpiresAt ?? undefined : undefined;
+  const request = await createRequestRow({
+    postId,
+    pickerId: userId,
+    pickerName,
+    selfieUrl,
+    etaMinutes,
+    isDemo: post.isDemo,
+    demoExpiresAt,
+  });
 
-  if (!claimedPost) {
+  if (!request) {
     return c.json({ error: "This post is no longer available for requests" }, 400);
   }
-
-  const [request] = await db
-    .insert(pickupRequests)
-    .values({
-      postId,
-      pickerId: userId,
-      pickerName,
-      selfieUrl,
-      etaMinutes,
-    })
-    .returning();
 
   const posterEmail = await findUserEmail(post.posterId);
 
@@ -89,10 +88,27 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     post.posterId,
     "Someone wants to pick up your food. Review their request.",
     postId,
-    "request_received"
+    "request_received",
+    demoExpiresAt
   ).catch((err) => logger.error({ err, postId, pickupRequestId: request.id }, "Failed to create request_received notification"));
 
-  if (posterEmail) notifyPoster(posterEmail, "request_received");
+  if (posterEmail && !isSyntheticEmail(posterEmail)) notifyPoster(posterEmail, "request_received");
+
+  // The seeded demo post's "poster" is synthetic with no one to review the
+  // request — auto-approve instantly instead of leaving the visitor
+  // waiting on a review that will never come.
+  if (post.isDemo) {
+    const approved = await autoApproveIfDemo(request.id, postId);
+    if (approved) {
+      createNotification(
+        userId,
+        "Your pickup request was approved. Check the post for the location.",
+        postId,
+        "request_approved",
+        demoExpiresAt
+      ).catch((err) => logger.error({ err, postId, pickupRequestId: request.id }, "Failed to create demo request_approved notification"));
+    }
+  }
 
   return c.json({ message: "Request submitted", request }, 201);
 });
@@ -127,48 +143,28 @@ requestRoutes.put("/:id/approve", async (c) => {
   }
 
   // Two concurrent approve calls (e.g. a double-click) could both pass the
-  // status check above before either write commits. The conditional WHERE
-  // clauses here make each UPDATE a no-op if the row's status already moved
-  // out from under it, and the transaction ensures the request and post
-  // flip together — never one without the other.
-  const approved = await db
-    .transaction(async (tx) => {
-      const [claimedRequest] = await tx
-        .update(pickupRequests)
-        .set({ status: "approved" })
-        .where(and(eq(pickupRequests.id, requestId), eq(pickupRequests.status, "pending")))
-        .returning({ id: pickupRequests.id });
-
-      if (!claimedRequest) throw new ConflictError();
-
-      const [claimedPost] = await tx
-        .update(foodPosts)
-        .set({ status: "closed", approvedRequestId: requestId })
-        .where(and(eq(foodPosts.id, request.postId), eq(foodPosts.status, "pending_approval")))
-        .returning({ id: foodPosts.id });
-
-      if (!claimedPost) throw new ConflictError();
-    })
-    .then(() => true)
-    .catch((err) => {
-      if (err instanceof ConflictError) return false;
-      throw err;
-    });
+  // status check above before either write commits. approveRequestTx's
+  // conditional WHERE clauses make each UPDATE a no-op if the row's status
+  // already moved out from under it, and the transaction ensures the
+  // request and post flip together — never one without the other.
+  const approved = await approveRequestTx(requestId, request.postId);
 
   if (!approved) {
     return c.json({ error: "This request has already been processed" }, 400);
   }
 
   const pickerEmail = await findUserEmail(request.pickerId);
+  const demoExpiresAt = request.isDemo ? request.demoExpiresAt ?? undefined : undefined;
 
   createNotification(
     request.pickerId,
     "Your pickup request was approved. Check the post for the location.",
     request.postId,
-    "request_approved"
+    "request_approved",
+    demoExpiresAt
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_approved notification"));
 
-  if (pickerEmail) notifyPicker(pickerEmail, "request_approved");
+  if (pickerEmail && !isSyntheticEmail(pickerEmail)) notifyPicker(pickerEmail, "request_approved");
   // duplicate `await notifyPicker(...)` call removed — was sending this
   // email twice on every approval
 
@@ -233,15 +229,17 @@ requestRoutes.put("/:id/reject", async (c) => {
   }
 
   const pickerEmail = await findUserEmail(request.pickerId);
+  const demoExpiresAt = request.isDemo ? request.demoExpiresAt ?? undefined : undefined;
 
   createNotification(
     request.pickerId,
     "Your pickup request was rejected.",
     request.postId,
-    "request_rejected"
+    "request_rejected",
+    demoExpiresAt
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_rejected notification"));
 
-  if (pickerEmail) notifyPicker(pickerEmail, "request_rejected");
+  if (pickerEmail && !isSyntheticEmail(pickerEmail)) notifyPicker(pickerEmail, "request_rejected");
   // duplicate call removed here too
 
   return c.json({ message: "Request rejected" });
@@ -305,15 +303,17 @@ requestRoutes.put("/:id/cancel", async (c) => {
   }
 
   const posterEmail = await findUserEmail(post.posterId);
+  const demoExpiresAt = request.isDemo ? request.demoExpiresAt ?? undefined : undefined;
 
   createNotification(
     post.posterId,
     "A picker cancelled their request. Your post is open again.",
     request.postId,
-    "request_cancelled"
+    "request_cancelled",
+    demoExpiresAt
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_cancelled notification"));
 
-  if (posterEmail) notifyPoster(posterEmail, "request_cancelled");
+  if (posterEmail && !isSyntheticEmail(posterEmail)) notifyPoster(posterEmail, "request_cancelled");
   // duplicate call removed here too
 
   return c.json({ message: "Request cancelled" });
@@ -330,6 +330,7 @@ requestRoutes.get("/mine", async (c) => {
       pickerName: pickupRequests.pickerName,
       etaMinutes: pickupRequests.etaMinutes,
       status: pickupRequests.status,
+      isDemo: pickupRequests.isDemo,
       createdAt: pickupRequests.createdAt,
     })
     .from(pickupRequests)

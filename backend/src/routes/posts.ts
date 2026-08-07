@@ -11,6 +11,7 @@ import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
+import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/demo.js";
 
 export const postRoutes = new Hono();
 
@@ -28,7 +29,7 @@ const createPostSchema = z.object({
 
 // --- Create post ---
 postRoutes.post("/", createPostLimiter, async (c) => {
-  const { userId } = c.get("user");
+  const { userId, isDemo } = c.get("user");
   const body = await c.req.json();
   const result = createPostSchema.safeParse(body);
 
@@ -38,12 +39,17 @@ postRoutes.post("/", createPostLimiter, async (c) => {
 
   const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd } = result.data;
 
-  if (env.APP_ENV === "production" && !isWithinTirupati(pickupLat, pickupLng)) {
+  if (env.APP_ENV === "production" && !isDemo && !isWithinTirupati(pickupLat, pickupLng)) {
     return c.json(
       { error: "Jyo is currently only available in Tirupati. Your location is outside the service area." },
       400
     );
   }
+
+  // A demo visitor's own post is itself demo-flagged so it (and the
+  // synthetic request seeded onto it below) disappears with the rest of
+  // their session — see docs/demo-mode-plan.md.
+  const demoExpiresAt = isDemo ? new Date(Date.now() + DEMO_SESSION_MS) : null;
 
   const [post] = await db
     .insert(foodPosts)
@@ -56,19 +62,31 @@ postRoutes.post("/", createPostLimiter, async (c) => {
       pickupLng,
       pickupWindowStart: new Date(pickupWindowStart),
       pickupWindowEnd: new Date(pickupWindowEnd),
+      isDemo,
+      demoExpiresAt,
     })
     .returning();
+
+  if (isDemo && demoExpiresAt) {
+    seedRequestOnOwnPost(post.id, userId, demoExpiresAt)
+      .catch((err) => logger.error({ err, postId: post.id }, "Failed to seed demo request on own post"));
+  }
 
   return c.json({ message: "Post created", post }, 201);
 });
 
 // --- Get feed ---
 postRoutes.get("/", async (c) => {
+  const { userId, isDemo } = c.get("user");
   const userLat = parseFloat(c.req.query("lat") ?? "");
   const userLng = parseFloat(c.req.query("lng") ?? "");
 
   if (isNaN(userLat) || isNaN(userLng)) {
     return c.json({ error: "lat and lng query parameters are required" }, 400);
+  }
+
+  if (isDemo) {
+    await provisionSeededPost(userId, userLat, userLng);
   }
 
   const now = new Date();
@@ -87,6 +105,7 @@ postRoutes.get("/", async (c) => {
       pickupWindowStart: foodPosts.pickupWindowStart,
       pickupWindowEnd: foodPosts.pickupWindowEnd,
       status: foodPosts.status,
+      isDemo: foodPosts.isDemo,
       createdAt: foodPosts.createdAt,
     })
     .from(foodPosts)

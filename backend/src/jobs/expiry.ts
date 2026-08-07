@@ -5,6 +5,7 @@ import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, lt, and, inArray } from "drizzle-orm";
 import { notifyPicker } from "../lib/mailer.js";
 import { createNotification } from "../lib/notify.js";
+import { isSyntheticEmail } from "../lib/demo.js";
 import { logger } from "../lib/logger.js";
 
 export function startExpiryJob() {
@@ -44,14 +45,23 @@ export function startExpiryJob() {
               eq(pickupRequests.status, "pending")
             )
           )
-          .returning({ id: pickupRequests.id, pickerId: pickupRequests.pickerId, postId: pickupRequests.postId });
+          .returning({
+            id: pickupRequests.id,
+            pickerId: pickupRequests.pickerId,
+            postId: pickupRequests.postId,
+            isDemo: pickupRequests.isDemo,
+            demoExpiresAt: pickupRequests.demoExpiresAt,
+          });
 
         for (const req of orphanedRequests) {
+          const demoExpiresAt = req.isDemo ? req.demoExpiresAt ?? undefined : undefined;
+
           createNotification(
             req.pickerId,
             "The food post you requested expired before the poster responded.",
             req.postId,
-            "request_rejected"
+            "request_rejected",
+            demoExpiresAt
           ).catch((err) => logger.error({ err, pickupRequestId: req.id }, "Failed to create expiry notification"));
 
           const [picker] = await db
@@ -60,7 +70,7 @@ export function startExpiryJob() {
             .where(eq(users.id, req.pickerId))
             .limit(1);
 
-          if (picker) {
+          if (picker && !isSyntheticEmail(picker.email)) {
             notifyPicker(picker.email, "request_rejected");
           }
         }

@@ -8,6 +8,7 @@ export type FoodPost = {
   pickupWindowStart: string;
   pickupWindowEnd: string;
   status: "open" | "pending_approval" | "closed" | "expired" | "completed";
+  isDemo?: boolean;
   createdAt: string;
 };
 
@@ -19,5 +20,6 @@ export type PickupRequest = {
   selfieUrl: string | null;
   etaMinutes: number;
   status: "pending" | "approved" | "rejected" | "cancelled";
+  isDemo?: boolean;
   createdAt: string;
 };
