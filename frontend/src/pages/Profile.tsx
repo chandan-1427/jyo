@@ -171,6 +171,12 @@ export default function Profile() {
 
   const saving = saveMutation.isPending;
   const error = saveMutation.error?.message || "";
+  const isDirty =
+    !!profile &&
+    (form.name !== (profile.name ?? "") ||
+      form.phone !== (profile.phone ?? "") ||
+      form.locationText !== (profile.locationText ?? "") ||
+      form.description !== (profile.description ?? ""));
 
   if (loading) {
     return (
@@ -375,7 +381,7 @@ export default function Profile() {
               label={saving ? "Saving…" : "Save Changes"}
               loading={saving}
               loadingLabel="Saving…"
-              disabled={saving}
+              disabled={saving || !isDirty}
               className="mt-1 w-full sm:w-fit sm:self-end"
             />
 
