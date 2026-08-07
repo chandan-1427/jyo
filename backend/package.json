@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.19.15",
-    "@sentry/node": "^10.68.0",
+    "@sentry/node": "^10.69.0",
     "@supabase/supabase-js": "^2.110.8",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
