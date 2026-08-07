@@ -57,7 +57,10 @@ export default function Feed() {
     }
   };
 
-  if (locating || (postsLoading && !outOfRegion)) {
+  // A disabled query (no coords yet, e.g. geolocation failed) reports
+  // isPending: true forever in TanStack Query — gating on !!coords too
+  // stops that from masking the locationError branch below forever.
+  if (locating || (!!coords && postsLoading && !outOfRegion)) {
     return (
       <div className="px-4 py-24 flex flex-col items-center gap-3 font-medium tracking-wide">
         <Loader2 className="w-5 h-5 text-subtle animate-spin" />
