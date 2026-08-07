@@ -15,6 +15,8 @@ import {
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { findUserByEmail } from "../lib/finders.js";
+import { authMiddleware } from "../middleware/auth.js";
+import { DEMO_SESSION_MS } from "../lib/demo.js";
 
 export const authRoutes = new Hono();
 
@@ -126,8 +128,11 @@ authRoutes.post("/register", registerLimiter, async (c) => {
         .returning({ id: users.id, name: users.name, email: users.email });
     } catch (err: any) {
       // Unique-violation: two concurrent registrations raced past the
-      // "existing" check above for the same email.
-      if (err?.code === "23505") {
+      // "existing" check above for the same email. drizzle-orm 0.45's
+      // postgres-js driver wraps the raw driver error in a
+      // DrizzleQueryError with the original PostgresError on `.cause`, so
+      // the unique-violation code has to be checked on both.
+      if (err?.code === "23505" || err?.cause?.code === "23505") {
         return c.json({ error: "Email already registered" }, 400);
       }
       throw err;
@@ -178,7 +183,7 @@ authRoutes.post("/login", loginLimiter, async (c) => {
   }
 
   // Create JWT
-  const token = await new SignJWT({ userId: user.id, email: user.email })
+  const token = await new SignJWT({ userId: user.id, email: user.email, isDemo: user.isDemo })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
     .sign(secret);
@@ -188,7 +193,7 @@ authRoutes.post("/login", loginLimiter, async (c) => {
 
   return c.json({
     message: "Logged in successfully",
-    user: { id: user.id, name: user.name, email: user.email },
+    user: { id: user.id, name: user.name, email: user.email, isDemo: user.isDemo },
   });
 });
 
@@ -196,6 +201,54 @@ authRoutes.post("/login", loginLimiter, async (c) => {
 authRoutes.post("/logout", (c) => {
   deleteCookie(c, "token", cookieOptions);
   return c.json({ message: "Logged out successfully" });
+});
+
+// --- Start demo mode ---
+// Anyone can opt in — visitors outside Tirupati who hit a dead end at the
+// feed, and Tirupati locals exploring the app while there are few real
+// posts to see (see docs/demo-mode-plan.md). Re-signs the session cookie
+// so isDemo is immediately visible to every route without a fresh login.
+authRoutes.post("/demo/start", authMiddleware, async (c) => {
+  const { userId } = c.get("user");
+  const demoExpiresAt = new Date(Date.now() + DEMO_SESSION_MS);
+
+  const [updated] = await db
+    .update(users)
+    .set({ isDemo: true, demoExpiresAt })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id, name: users.name, email: users.email, isDemo: users.isDemo });
+
+  const token = await new SignJWT({ userId: updated.id, email: updated.email, isDemo: true })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("7d")
+    .sign(secret);
+
+  setCookie(c, "token", token, cookieOptions);
+
+  return c.json({ message: "Demo mode started", demoExpiresAt, user: updated });
+});
+
+// --- Stop demo mode ---
+// Lets a user leave early instead of waiting out the full session — demo
+// content they created keeps its own expiry and is swept up by the usual
+// cleanup cron regardless of when they exit.
+authRoutes.post("/demo/stop", authMiddleware, async (c) => {
+  const { userId } = c.get("user");
+
+  const [updated] = await db
+    .update(users)
+    .set({ isDemo: false, demoExpiresAt: null })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id, name: users.name, email: users.email, isDemo: users.isDemo });
+
+  const token = await new SignJWT({ userId: updated.id, email: updated.email, isDemo: false })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("7d")
+    .sign(secret);
+
+  setCookie(c, "token", token, cookieOptions);
+
+  return c.json({ message: "Demo mode ended", user: updated });
 });
 
 // --- Verify email ---

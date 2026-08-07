@@ -50,6 +50,20 @@
       "when": 1786042972485,
       "tag": "0006_panoramic_miss_america",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786117922858,
+      "tag": "0007_misty_wolfpack",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786123561842,
+      "tag": "0008_redefine_seeded_post_active_index",
+      "breakpoints": true
     }
   ]
 }

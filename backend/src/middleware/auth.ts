@@ -6,6 +6,7 @@ import { env } from "../env.js";
 type AuthUser = {
   userId: string;
   email: string;
+  isDemo: boolean;
 };
 
 declare module "hono" {
@@ -29,6 +30,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     c.set("user", {
       userId: payload.userId as string,
       email: payload.email as string,
+      isDemo: (payload.isDemo as boolean) ?? false,
     });
 
     await next();

@@ -27,6 +27,8 @@ const profileColumns = {
   locationText: users.locationText,
   description: users.description,
   avatarUrl: users.avatarUrl,
+  isDemo: users.isDemo,
+  demoExpiresAt: users.demoExpiresAt,
   createdAt: users.createdAt,
 };
 

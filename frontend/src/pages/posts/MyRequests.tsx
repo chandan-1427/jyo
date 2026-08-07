@@ -4,6 +4,7 @@ import { Loader2, HandPlatter, X, AlertCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DemoBadge } from "@/components/ui/DemoBadge";
 
 type MyRequest = {
   id: string;
@@ -12,6 +13,7 @@ type MyRequest = {
   pickerName: string;
   etaMinutes: number;
   status: "pending" | "approved" | "rejected" | "cancelled";
+  isDemo?: boolean;
   createdAt: string;
 };
 
@@ -103,7 +105,10 @@ export default function MyRequests() {
                 <h2 className="font-semibold text-foreground text-sm leading-snug tracking-tight truncate group-hover:text-muted transition-colors">
                   {req.postTitle}
                 </h2>
-                <StatusBadge status={req.status} />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {req.isDemo && <DemoBadge />}
+                  <StatusBadge status={req.status} />
+                </div>
               </div>
 
               <p className="text-xs text-subtle">{formatDate(req.createdAt)}</p>

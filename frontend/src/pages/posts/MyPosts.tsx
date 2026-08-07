@@ -7,6 +7,7 @@ import type { FoodPost } from "@/types/api";
 import { formatDate } from "@/lib/format";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DemoBadge } from "@/components/ui/DemoBadge";
 
 export default function MyPosts() {
   const navigate = useNavigate();
@@ -127,7 +128,10 @@ export default function MyPosts() {
                     <h2 className="font-semibold text-foreground text-sm leading-snug tracking-tight truncate">
                       {post.title}
                     </h2>
-                    <StatusBadge status={post.status} />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {post.isDemo && <DemoBadge />}
+                      <StatusBadge status={post.status} />
+                    </div>
                   </div>
 
                   <p className="text-xs text-subtle">{formatDate(post.createdAt)}</p>

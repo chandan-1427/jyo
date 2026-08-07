@@ -10,6 +10,7 @@ import type { FoodPost, PickupRequest } from "@/types/api";
 import RequestModal from "@/components/posts/RequestModal";
 import { formatPickupWindow } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DemoBadge } from "@/components/ui/DemoBadge";
 import { LinkButton } from "@/components/ui/LinkButton";
 
 type PostDetailData = {
@@ -413,7 +414,10 @@ export default function PostDetail() {
               <h1 className="font-semibold text-xl text-foreground tracking-tight leading-tight">
                 {post.title}
               </h1>
-              <StatusBadge status={post.status} />
+              <div className="flex items-center gap-1.5 shrink-0">
+                {post.isDemo && <DemoBadge />}
+                <StatusBadge status={post.status} />
+              </div>
             </div>
 
             {post.description && (

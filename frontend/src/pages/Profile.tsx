@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, AlertCircle, CheckCircle2, Mail, Camera, Upload, Trash2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Mail, Camera, Upload, Trash2, Sparkles } from "lucide-react";
 import { FaGithub, FaInstagram } from "react-icons/fa";
 import { apiFetch } from "@/lib/api";
 import { authMeKey, fetchAuthMe } from "@/lib/queries/auth";
+import { useAuth } from "@/context/AuthContext";
 import { uploadAvatar, removeAvatar } from "@/lib/supabase";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -50,11 +51,28 @@ const CONNECT_LINKS = [
 
 export default function Profile() {
   const queryClient = useQueryClient();
+  const { startDemo, stopDemo } = useAuth();
 
   const { data: profile, isLoading: loading } = useQuery({
     queryKey: authMeKey,
     queryFn: fetchAuthMe,
   });
+
+  const [demoActionLoading, setDemoActionLoading] = useState(false);
+  const [demoActionError, setDemoActionError] = useState("");
+
+  const handleDemoToggle = async () => {
+    setDemoActionLoading(true);
+    setDemoActionError("");
+    try {
+      if (profile?.isDemo) await stopDemo();
+      else await startDemo();
+    } catch (err) {
+      setDemoActionError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setDemoActionLoading(false);
+    }
+  };
 
   const [form, setForm] = useState({
     name: "",
@@ -287,6 +305,23 @@ export default function Profile() {
                   })
                 : "—"}
             </p>
+          </div>
+
+          <div className="w-full border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={handleDemoToggle}
+              disabled={demoActionLoading}
+              className="cursor-pointer w-full flex items-center justify-center gap-1.5 text-sm font-medium text-accent hover:text-foreground transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {demoActionLoading
+                ? (profile?.isDemo ? "Ending…" : "Starting…")
+                : (profile?.isDemo ? "Exit Demo" : "Start Demo")}
+            </button>
+            {demoActionError && (
+              <p className="text-xs text-red-400 mt-1.5 text-center leading-snug">{demoActionError}</p>
+            )}
           </div>
 
           <div className="w-full border-t border-border pt-4">

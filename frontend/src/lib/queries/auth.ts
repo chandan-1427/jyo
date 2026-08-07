@@ -8,6 +8,8 @@ export type Profile = {
   locationText?: string | null;
   description?: string | null;
   avatarUrl?: string | null;
+  isDemo?: boolean;
+  demoExpiresAt?: string | null;
   createdAt?: string;
 };
 

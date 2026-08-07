@@ -3,6 +3,7 @@ import { UtensilsCrossed, Clock } from "lucide-react";
 import type { FoodPost } from "@/types/api";
 import { formatPickupWindow } from "@/lib/format";
 import { StatusBadge } from "../ui/StatusBadge";
+import { DemoBadge } from "../ui/DemoBadge";
 
 type Props = {
   post: FoodPost;
@@ -34,7 +35,10 @@ export default function PostCard({ post }: Props) {
           <h2 className="font-semibold text-foreground text-sm leading-snug tracking-tight">
             {post.title}
           </h2>
-          <StatusBadge status={post.status} />
+          <div className="flex items-center gap-1.5 shrink-0">
+            {post.isDemo && <DemoBadge />}
+            <StatusBadge status={post.status} />
+          </div>
         </div>
 
         {post.description && (
