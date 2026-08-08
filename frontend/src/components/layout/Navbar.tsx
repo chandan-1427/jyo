@@ -2,8 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
+import { apiFetch, BASE_URL } from "@/lib/api";
 import { Bell, LogOut, Loader2, Home, PlusSquare, Package, PackageOpen, CircleUserRound } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { Logo } from "../ui/Logo";
@@ -72,38 +71,17 @@ export default function Navbar() {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel("notifications")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const row = payload.new as {
-            id: string;
-            message: string;
-            read: boolean;
-            created_at: string;
-            post_id: string | null;
-          };
-          const newNotif: Notification = {
-            id: row.id,
-            message: row.message,
-            read: row.read,
-            createdAt: row.created_at,
-            postId: row.post_id,
-          };
-          queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) => [newNotif, ...prev]);
-        }
-      )
-      .subscribe();
+    const source = new EventSource(`${BASE_URL}/notifications/stream`, {
+      withCredentials: true,
+    });
+
+    source.addEventListener("notification", (e: MessageEvent<string>) => {
+      const newNotif = JSON.parse(e.data) as Notification;
+      queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) => [newNotif, ...prev]);
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      source.close();
     };
   }, [user, queryClient]);
 

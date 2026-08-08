@@ -6,6 +6,7 @@ import { logger } from "./lib/logger.js";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { closeDb } from "./db/index.js";
+import { closeAllStreams } from "./lib/notificationStream.js";
 
 import { startExpiryJob } from "./jobs/expiry.js";
 import { startNotificationCleanupJob } from "./jobs/notificationCleanup.js";
@@ -73,6 +74,10 @@ async function shutdown(signal: string) {
       unverifiedUserCleanupJob.stop(),
       demoCleanupJob.stop(),
     ]);
+
+    // Open SSE connections (notifications) never end on their own, so
+    // server.close() below would hang waiting on them until forceExit.
+    closeAllStreams();
 
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
