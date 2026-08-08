@@ -64,6 +64,13 @@
       "when": 1786123561842,
       "tag": "0008_redefine_seeded_post_active_index",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786180080053,
+      "tag": "0009_enable_rls",
+      "breakpoints": true
     }
   ]
 }
