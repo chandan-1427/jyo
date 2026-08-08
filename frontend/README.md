@@ -9,7 +9,6 @@ React SPA for [Jyo](../README.md), a free community food-sharing app for Tirupat
 | React + React Router DOM | UI framework and client-side routing |
 | TanStack Query | Server-state caching and mutations |
 | Tailwind CSS | Styling |
-| @supabase/supabase-js | Auth session + realtime notifications |
 | @sentry/react | Error tracking (optional) |
 | lucide-react | Icons |
 | clsx + tailwind-merge | Conditional/merged classnames |
@@ -41,8 +40,6 @@ Runs on `http://localhost:5173` by default.
 | Variable | Description | Where to get it |
 |---|---|---|
 | `VITE_API_URL` | Backend API base URL | Your backend URL or `http://localhost:3000` |
-| `VITE_SUPABASE_URL` | Supabase project URL | Supabase project → Settings → API |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon (public) key | Supabase project → Settings → API |
 | `VITE_APP_ENV` | Environment mode (`development` or `production`) | Set manually |
 | `VITE_SENTRY_DSN` | Error tracking (optional — omit to disable) | Sentry project → Settings → Client Keys (DSN) |
 
