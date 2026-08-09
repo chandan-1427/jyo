@@ -6,7 +6,7 @@ import { logger } from "./lib/logger.js";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { closeDb } from "./db/index.js";
-import { closeAllStreams } from "./lib/notificationStream.js";
+import { closeAllStreams } from "./lib/notifications/notificationStream.js";
 
 import { startExpiryJob } from "./jobs/expiry.js";
 import { startNotificationCleanupJob } from "./jobs/notificationCleanup.js";

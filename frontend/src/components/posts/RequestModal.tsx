@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api/api";
 import { uploadImage } from "@/lib/supabase";
-import { getCurrentLocation } from "@/lib/location";
+import { getCurrentLocation } from "@/lib/location/location";
 import { AlertCircle, Camera, X } from "lucide-react";
 import { Field } from "../ui/Field";
 import { Input } from "../ui/Input";

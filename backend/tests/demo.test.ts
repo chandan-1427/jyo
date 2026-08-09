@@ -13,7 +13,7 @@ import { db } from "../src/db/index.js";
 import { users, foodPosts, pickupRequests, notifications } from "../src/db/schema.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
-import { isSyntheticEmail, provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../src/lib/demo.js";
+import { isSyntheticEmail, provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../src/lib/domain/demo.js";
 import { runDemoCleanup } from "../src/jobs/demoCleanup.js";
 
 const app = createApp();

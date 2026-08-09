@@ -4,14 +4,14 @@ import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, gte, desc } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
-import { haversineDistance, isWithinTirupati } from "../lib/haversine.js";
+import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
 import { uploadFile, deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
-import { isValidUuid, findPostById } from "../lib/finders.js";
+import { isValidUuid, findPostById } from "../lib/domain/finders.js";
 import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
-import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/demo.js";
+import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/domain/demo.js";
 
 export const postRoutes = new Hono();
 

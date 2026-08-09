@@ -1,10 +1,10 @@
 import crypto from "crypto";
 import { eq, and, gt } from "drizzle-orm";
-import { db } from "../db/index.js";
-import { users, foodPosts } from "../db/schema.js";
+import { db } from "../../db/index.js";
+import { users, foodPosts } from "../../db/schema.js";
 import { createRequestRow, approveRequestTx } from "./requestActions.js";
-import { createNotification } from "./notify.js";
-import { logger } from "./logger.js";
+import { createNotification } from "../notifications/notify.js";
+import { logger } from "../logger.js";
 
 // A demo session — the seeded post, the pending request on the visitor's
 // own post, and any synthetic counterparty accounts — all disappear this

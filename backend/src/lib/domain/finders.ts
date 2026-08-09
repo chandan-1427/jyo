@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { db } from "../db/index.js";
-import { foodPosts, pickupRequests, users } from "../db/schema.js";
+import { db } from "../../db/index.js";
+import { foodPosts, pickupRequests, users } from "../../db/schema.js";
 
 export function isValidUuid(value: string): boolean {
   return z.uuid().safeParse(value).success;

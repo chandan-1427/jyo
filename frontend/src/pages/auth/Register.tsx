@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api/api";
 import { Mail, CheckCircle2 } from "lucide-react";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";

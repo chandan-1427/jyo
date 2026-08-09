@@ -1,5 +1,5 @@
-import { db } from "../db/index.js";
-import { notifications, notificationTypeEnum } from "../db/schema.js";
+import { db } from "../../db/index.js";
+import { notifications, notificationTypeEnum } from "../../db/schema.js";
 import { publish } from "./notificationStream.js";
 
 type NotificationType = (typeof notificationTypeEnum.enumValues)[number];

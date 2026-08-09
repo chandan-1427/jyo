@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api/api";
 import { Mail, CheckCircle2 } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Input } from "@/components/ui/Input";
