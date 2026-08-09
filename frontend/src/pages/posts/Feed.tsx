@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
-import { getCurrentLocation, type Coords } from "@/lib/location";
-import { isWithinTirupati } from "@/lib/geofence";
+import { apiFetch } from "@/lib/api/api";
+import { getCurrentLocation, type Coords } from "@/lib/location/location";
+import { isWithinTirupati } from "@/lib/location/geofence";
 import { useAuth } from "@/context/AuthContext";
 import type { FoodPost } from "@/types/api";
 import PostCard from "@/components/posts/PostCard";

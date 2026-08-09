@@ -4,8 +4,8 @@ import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, lt, and, inArray } from "drizzle-orm";
 import { notifyPicker } from "../lib/mailer.js";
-import { createNotification } from "../lib/notify.js";
-import { isSyntheticEmail } from "../lib/demo.js";
+import { createNotification } from "../lib/notifications/notify.js";
+import { isSyntheticEmail } from "../lib/domain/demo.js";
 import { logger } from "../lib/logger.js";
 
 export function startExpiryJob() {

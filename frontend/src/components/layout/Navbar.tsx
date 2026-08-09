@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch, BASE_URL } from "@/lib/api";
+import { apiFetch, BASE_URL } from "@/lib/api/api";
 import { Bell, LogOut, Loader2, Home, PlusSquare, Package, PackageOpen, CircleUserRound } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { Logo } from "../ui/Logo";

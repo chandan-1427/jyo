@@ -1,4 +1,4 @@
-import type { Profile } from "@/lib/queries/auth";
+import type { Profile } from "@/lib/api/queries/auth";
 
 export async function uploadImage(
   file: File,

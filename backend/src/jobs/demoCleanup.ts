@@ -4,7 +4,7 @@ import { db } from "../db/index.js";
 import { notifications, pickupRequests, foodPosts, users } from "../db/schema.js";
 import { and, isNotNull, lt, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
-import { isSyntheticEmail } from "../lib/demo.js";
+import { isSyntheticEmail } from "../lib/domain/demo.js";
 
 // Deletes everything tagged with a past demoExpiresAt, in FK-safe order:
 // notifications -> pickupRequests -> foodPosts -> users. Mirrors the

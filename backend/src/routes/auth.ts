@@ -14,9 +14,9 @@ import {
 } from "../lib/mailer.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
-import { findUserByEmail } from "../lib/finders.js";
+import { findUserByEmail } from "../lib/domain/finders.js";
 import { authMiddleware } from "../middleware/auth.js";
-import { DEMO_SESSION_MS } from "../lib/demo.js";
+import { DEMO_SESSION_MS } from "../lib/domain/demo.js";
 
 export const authRoutes = new Hono();
 

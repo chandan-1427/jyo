@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
-import { authMeKey, fetchAuthMe, type Profile } from "@/lib/queries/auth";
+import { apiFetch } from "@/lib/api/api";
+import { authMeKey, fetchAuthMe, type Profile } from "@/lib/api/queries/auth";
 
 type AuthContextType = {
   user: Profile | null;

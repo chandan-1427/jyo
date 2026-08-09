@@ -4,18 +4,18 @@ import { db } from "../db/index.js";
 import { foodPosts, pickupRequests } from "../db/schema.js";
 import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
-import { haversineDistance } from "../lib/haversine.js";
+import { haversineDistance } from "../lib/geo/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
 import { uploadFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { createRequestLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
-import { createNotification } from "../lib/notify.js";
+import { createNotification } from "../lib/notifications/notify.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { ConflictError } from "../lib/errors.js";
-import { isValidUuid, findPostById, findRequestById, findUserEmail } from "../lib/finders.js";
-import { createRequestRow, approveRequestTx } from "../lib/requestActions.js";
-import { isSyntheticEmail, autoApproveIfDemo } from "../lib/demo.js";
+import { isValidUuid, findPostById, findRequestById, findUserEmail } from "../lib/domain/finders.js";
+import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
+import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
 
 export const requestRoutes = new Hono();
 

@@ -4,7 +4,7 @@ import { db } from "../db/index.js";
 import { notifications } from "../db/schema.js";
 import { eq, desc } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
-import { subscribe, unsubscribe } from "../lib/notificationStream.js";
+import { subscribe, unsubscribe } from "../lib/notifications/notificationStream.js";
 
 export const notificationRoutes = new Hono();
 

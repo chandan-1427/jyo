@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Loader2, UtensilsCrossed, Trash2, AlertCircle } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api/api";
 import type { FoodPost } from "@/types/api";
 import { formatDate } from "@/lib/format";
 import { LinkButton } from "@/components/ui/LinkButton";

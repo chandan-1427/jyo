@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api/api";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Input } from "@/components/ui/Input";
