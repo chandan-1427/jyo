@@ -24,7 +24,12 @@ notificationRoutes.get("/stream", (c) => {
     subscribe(userId, stream);
 
     const heartbeat = setInterval(() => {
-      if (!stream.closed) stream.writeSSE({ event: "ping", data: "" });
+      if (stream.closed) return;
+      // The client can disconnect between the closed-check above and this
+      // write actually going out — that's a routine disconnect, not a bug,
+      // so it must not surface as an unhandled rejection (index.ts's
+      // handler would report it to Sentry as fatal).
+      stream.writeSSE({ event: "ping", data: "" }).catch(() => {});
     }, HEARTBEAT_MS);
 
     await new Promise<void>((resolve) => stream.onAbort(resolve));
