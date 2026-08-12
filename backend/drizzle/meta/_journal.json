@@ -71,6 +71,13 @@
       "when": 1786180080053,
       "tag": "0009_enable_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786557904308,
+      "tag": "0010_long_johnny_storm",
+      "breakpoints": true
     }
   ]
 }
