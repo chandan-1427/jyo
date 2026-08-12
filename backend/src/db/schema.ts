@@ -6,7 +6,8 @@ import {
   timestamp,
   doublePrecision,
   integer,
-  boolean
+  boolean,
+  index
 } from "drizzle-orm/pg-core";
 
 // --- Enums ---
@@ -69,7 +70,12 @@ export const foodPosts = pgTable("food_posts", {
   isDemo:            boolean("is_demo").notNull().default(false),
   demoExpiresAt:     timestamp("demo_expires_at"),
   createdAt:         timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // Feed query (posts.ts) and the expiry cron (jobs/expiry.ts) both filter
+  // on exactly this pair.
+  index("food_posts_status_window_end_idx").on(table.status, table.pickupWindowEnd),
+  index("food_posts_poster_id_idx").on(table.posterId),
+]);
 
 // --- Pickup Requests ---
 export const pickupRequests = pgTable("pickup_requests", {
@@ -83,7 +89,10 @@ export const pickupRequests = pgTable("pickup_requests", {
   isDemo:     boolean("is_demo").notNull().default(false),
   demoExpiresAt: timestamp("demo_expires_at"),
   createdAt:  timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("pickup_requests_post_id_idx").on(table.postId),
+  index("pickup_requests_picker_id_idx").on(table.pickerId),
+]);
 
 // --- Notifications ---
 export const notifications = pgTable("notifications", {
@@ -96,4 +105,6 @@ export const notifications = pgTable("notifications", {
   isDemo:    boolean("is_demo").notNull().default(false),
   demoExpiresAt: timestamp("demo_expires_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("notifications_user_id_idx").on(table.userId),
+]);

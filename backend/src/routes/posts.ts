@@ -17,15 +17,24 @@ export const postRoutes = new Hono();
 
 postRoutes.use("*", authMiddleware);
 
-const createPostSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters").max(100),
-  description: z.string().max(500).optional(),
-  photoUrl: z.url("Invalid photo URL").optional(),
-  pickupLat: z.number().min(-90).max(90),
-  pickupLng: z.number().min(-180).max(180),
-  pickupWindowStart: z.iso.datetime("Invalid start time"),
-  pickupWindowEnd: z.iso.datetime("Invalid end time"),
-});
+const createPostSchema = z
+  .object({
+    title: z.string().min(3, "Title must be at least 3 characters").max(100),
+    description: z.string().max(500).optional(),
+    photoUrl: z.url("Invalid photo URL").optional(),
+    pickupLat: z.number().min(-90).max(90),
+    pickupLng: z.number().min(-180).max(180),
+    pickupWindowStart: z.iso.datetime("Invalid start time"),
+    pickupWindowEnd: z.iso.datetime("Invalid end time"),
+  })
+  .refine((data) => new Date(data.pickupWindowEnd) > new Date(data.pickupWindowStart), {
+    message: "Pickup window end must be after pickup window start",
+    path: ["pickupWindowEnd"],
+  })
+  .refine((data) => new Date(data.pickupWindowEnd) > new Date(), {
+    message: "Pickup window end must be in the future",
+    path: ["pickupWindowEnd"],
+  });
 
 // --- Create post ---
 postRoutes.post("/", createPostLimiter, async (c) => {
@@ -116,7 +125,13 @@ postRoutes.get("/", async (c) => {
           eq(foodPosts.status, "open"),
           eq(foodPosts.status, "pending_approval")
         ),
-        gte(foodPosts.pickupWindowEnd, now)
+        gte(foodPosts.pickupWindowEnd, now),
+        // Demo posts are seeded for one specific visitor's session — never
+        // show them to anyone else's real feed.
+        or(
+          eq(foodPosts.isDemo, false),
+          eq(foodPosts.seededForUserId, userId)
+        )
       )
     );
 
