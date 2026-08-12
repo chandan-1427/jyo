@@ -52,6 +52,13 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     return c.json({ error: "You cannot request your own food post" }, 400);
   }
 
+  // Demo posts are seeded for one specific visitor's session and
+  // auto-approve unconditionally below — anyone else requesting one would
+  // get a fake "approved" post for food that doesn't exist.
+  if (post.isDemo && post.seededForUserId !== userId) {
+    return c.json({ error: "This post is no longer available for requests" }, 400);
+  }
+
   if (post.status !== "open") {
     return c.json({ error: "This post is no longer available for requests" }, 400);
   }

@@ -116,7 +116,13 @@ postRoutes.get("/", async (c) => {
           eq(foodPosts.status, "open"),
           eq(foodPosts.status, "pending_approval")
         ),
-        gte(foodPosts.pickupWindowEnd, now)
+        gte(foodPosts.pickupWindowEnd, now),
+        // Demo posts are seeded for one specific visitor's session — never
+        // show them to anyone else's real feed.
+        or(
+          eq(foodPosts.isDemo, false),
+          eq(foodPosts.seededForUserId, userId)
+        )
       )
     );
 
