@@ -29,6 +29,11 @@ export const resetPasswordSchema = z.object({
     .max(100, "Password is too long"),
 });
 
+export const createPostSchema = z.object({
+  title: z.string().trim().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
+  description: z.string().max(500, "Description is too long").optional(),
+});
+
 export function validateForm<T extends z.ZodType>(
   schema: T,
   data: unknown

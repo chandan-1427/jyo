@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Camera, X, Clock, AlertCircle } from "lucide-react";
-import { apiFetch } from "@/lib/api/api";
+import { apiFetch, ApiError } from "@/lib/api/api";
+import { validateForm, createPostSchema } from "@/lib/validation";
 import { uploadImage } from "@/lib/supabase";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
 import { Input } from "@/components/ui/Input";
@@ -37,8 +38,9 @@ export default function CreatePost() {
   const [coords, setCoords] = useState<Coords | null>(null);
   const [locLoading, setLocLoading] = useState(true);
   const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
-  const createMutation = useMutation({
+  const createMutation = useMutation<unknown, Error>({
     mutationFn: async () => {
       const photoUrl = await uploadImage(photoFile!, "food-photos");
       const start = new Date(form.pickupWindowStart).toISOString();
@@ -61,6 +63,9 @@ export default function CreatePost() {
       queryClient.invalidateQueries({ queryKey: ["posts", "mine"] });
       queryClient.invalidateQueries({ queryKey: ["posts", "feed"] });
       navigate("/my-posts");
+    },
+    onError: (err: Error) => {
+      if (err instanceof ApiError && err.details) setFieldErrors(err.details);
     },
   });
 
@@ -103,6 +108,16 @@ export default function CreatePost() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
+    setFieldErrors({});
+
+    const validation = validateForm(createPostSchema, {
+      title: form.title,
+      description: form.description || undefined,
+    });
+    if (!validation.success) {
+      setFieldErrors(validation.fieldErrors);
+      return;
+    }
 
     if (!coords) {
       setFormError("Location is required to post food. Please enable location access.");
@@ -184,6 +199,7 @@ export default function CreatePost() {
               placeholder="e.g. Rice and dal for 2"
               required
             />
+            {fieldErrors.title && <p className="text-xs text-red-400">{fieldErrors.title[0]}</p>}
           </Field>
 
           <Field label="Description" hint="optional">
@@ -194,6 +210,7 @@ export default function CreatePost() {
               placeholder="Details about the food, quantity, allergens..."
               rows={4}
             />
+            {fieldErrors.description && <p className="text-xs text-red-400">{fieldErrors.description[0]}</p>}
           </Field>
 
 <Field label="Pickup Window">
