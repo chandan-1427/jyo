@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch, BASE_URL } from "@/lib/api/api";
-import { Bell, LogOut, Loader2, Home, PlusSquare, Package, PackageOpen, CircleUserRound } from "lucide-react";
+import { Bell, Home, PlusSquare, Package, PackageOpen, CircleUserRound } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { Logo } from "../ui/Logo";
 
@@ -30,13 +30,12 @@ const mobileTabs = [
 const notificationsKey = ["notifications"] as const;
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMobileNotifs, setShowMobileNotifs] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
 
@@ -84,17 +83,6 @@ export default function Navbar() {
       source.close();
     };
   }, [user, queryClient]);
-
-  const handleLogout = async () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    try {
-      await logout();
-      navigate("/");
-    } catch {
-      setLoggingOut(false);
-    }
-  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -196,29 +184,10 @@ export default function Navbar() {
               </div>
             )}
           </div>
-
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-subtle hover:text-foreground transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-subtle"
-          >
-            {loggingOut ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Logging out…
-              </>
-            ) : (
-              <>
-                <LogOut className="w-3.5 h-3.5" />
-                Logout
-              </>
-            )}
-          </button>
         </div>
 
-        {/* Mobile: bell + logout (nav links live in the bottom tab bar) */}
-        <div className="sm:hidden relative flex items-center gap-1" ref={mobileRef}>
+        {/* Mobile: bell only — nav links live in the bottom tab bar, logout on /profile */}
+        <div className="sm:hidden relative flex items-center" ref={mobileRef}>
           <button
             onClick={() => {
               setShowMobileNotifs((prev) => {
@@ -234,18 +203,6 @@ export default function Navbar() {
               <span className="absolute top-1.5 right-1.5 bg-accent text-background text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center leading-none">
                 {unreadCount}
               </span>
-            )}
-          </button>
-
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="cursor-pointer flex items-center justify-center w-11 h-11 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loggingOut ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <LogOut className="w-5 h-5" />
             )}
           </button>
 
