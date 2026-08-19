@@ -96,6 +96,12 @@
     scrollbar-width: thin;
     scrollbar-color: var(--color-border-strong) var(--color-surface);
     scroll-behavior: smooth;
+
+    /* Always reserve the scrollbar's track, even on pages short enough not to
+       scroll. Without this the viewport width changes by ~10px the moment a
+       page becomes scrollable, and every centered container shifts sideways —
+       most visibly when navigating between a short page and a long one. */
+    scrollbar-gutter: stable;
   }
 
   /* These three were pure-white alpha (0.18/0.22/0.28). White at low alpha
