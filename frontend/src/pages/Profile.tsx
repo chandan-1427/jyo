@@ -9,6 +9,7 @@ import { uploadAvatar, removeAvatar } from "@/lib/supabase";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5MB — matches the backend's hard limit
 
@@ -341,6 +342,10 @@ export default function Profile() {
                 </a>
               ))}
             </div>
+          </div>
+
+          <div className="w-full border-t border-border pt-4">
+            <LogoutButton />
           </div>
         </div>
 
