@@ -6,6 +6,8 @@ import { apiFetch } from "@/lib/api/api";
 import { authMeKey, fetchAuthMe } from "@/lib/api/queries/auth";
 import { useAuth } from "@/context/AuthContext";
 import { uploadAvatar, removeAvatar } from "@/lib/supabase";
+import { profileSchema } from "@/lib/validation";
+import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -16,10 +18,12 @@ const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5MB — matches the backend's 
 function Field({
   label,
   hint,
+  error,
   children,
 }: {
   label: string;
   hint?: string;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -29,8 +33,25 @@ function Field({
         {hint && <span className="text-[12px] text-subtle">{hint}</span>}
       </div>
       {children}
+      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
+}
+
+type ProfileValues = { name: string; phone: string; locationText: string; description: string };
+
+function toFormValues(user: {
+  name?: string | null;
+  phone?: string | null;
+  locationText?: string | null;
+  description?: string | null;
+}): ProfileValues {
+  return {
+    name: user.name ?? "",
+    phone: user.phone ?? "",
+    locationText: user.locationText ?? "",
+    description: user.description ?? "",
+  };
 }
 
 function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -75,36 +96,35 @@ export default function Profile() {
     }
   };
 
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    locationText: "",
-    description: "",
-  });
-  const [formInitialized, setFormInitialized] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isDirty },
+  } = useZodForm(profileSchema, { name: "", phone: "", locationText: "", description: "" });
   const [success, setSuccess] = useState(false);
 
   // Seed the editable form once when the profile first loads — subsequent
-  // background revalidations shouldn't clobber in-progress edits. Adjusting
-  // state during render (React's documented pattern for this) rather than
-  // in an effect, since this only needs to happen for the render where
-  // `profile` first becomes available, not as a side effect after commit.
-  if (profile && !formInitialized) {
-    setForm({
-      name: profile.name ?? "",
-      phone: profile.phone ?? "",
-      locationText: profile.locationText ?? "",
-      description: profile.description ?? "",
-    });
-    setFormInitialized(true);
-  }
+  // background revalidations shouldn't clobber in-progress edits. reset()
+  // also makes these the "clean" values, which is what isDirty compares to.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!profile || seeded.current) return;
+    reset(toFormValues(profile));
+    seeded.current = true;
+  }, [profile, reset]);
 
   const saveMutation = useMutation({
-    mutationFn: (formData: typeof form) =>
+    mutationFn: (formData: ProfileValues) =>
       apiFetch("/users/me", { method: "PUT", body: JSON.stringify(formData) }),
     onSuccess: (data) => {
       queryClient.setQueryData(authMeKey, data.user);
+      reset(toFormValues(data.user));
       setSuccess(true);
+    },
+    onError: (err) => {
+      applyServerFieldErrors(err, setError, ["name", "phone", "locationText", "description"]);
     },
   });
 
@@ -177,25 +197,15 @@ export default function Profile() {
     return () => clearTimeout(timer);
   }, [saveMutation.error, saveMutation]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const onSubmit = handleSubmit((values) => {
     setSuccess(false);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccess(false);
-    saveMutation.mutate(form);
-  };
+    saveMutation.mutate(values);
+  });
 
   const saving = saveMutation.isPending;
-  const error = saveMutation.error?.message || "";
-  const isDirty =
-    !!profile &&
-    (form.name !== (profile.name ?? "") ||
-      form.phone !== (profile.phone ?? "") ||
-      form.locationText !== (profile.locationText ?? "") ||
-      form.description !== (profile.description ?? ""));
+  // Field-level server errors show under their fields; anything else up top.
+  const fieldLevel = Object.values(errors).some((e) => e?.type === "server");
+  const error = !fieldLevel ? saveMutation.error?.message || "" : "";
 
   if (loading) {
     return (
@@ -359,59 +369,53 @@ export default function Profile() {
             </div>
           )}
 
-          {success && (
+          {success && !isDirty && (
             <div className="flex items-start gap-2.5 rounded-lg border border-emerald-900/40 bg-emerald-950/30 px-3.5 py-3">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-px shrink-0" />
               <p className="text-sm text-emerald-400 leading-snug">Profile updated successfully.</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-xl px-5 py-5 flex flex-col gap-4">
+          <form onSubmit={onSubmit} noValidate className="bg-surface border border-border rounded-xl px-5 py-5 flex flex-col gap-4">
 
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Name">
+              <Field label="Name" error={errors.name?.message}>
                 <Input
-                  name="name"
                   type="text"
-                  value={form.name}
-                  onChange={handleChange}
                   autoComplete="name"
-                  required
+                  aria-invalid={errors.name ? true : undefined}
+                  {...register("name")}
                 />
               </Field>
 
-              <Field label="Phone">
+              <Field label="Phone" error={errors.phone?.message}>
                 <Input
-                  name="phone"
                   type="tel"
                   inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={form.phone}
-                  onChange={handleChange}
+                  maxLength={10}
                   onKeyDown={allowOnlyDigits}
                   autoComplete="tel"
-                  required
+                  aria-invalid={errors.phone ? true : undefined}
+                  {...register("phone")}
                 />
               </Field>
             </div>
 
-            <Field label="Area / Locality" hint="optional">
+            <Field label="Area / Locality" hint="optional" error={errors.locationText?.message}>
               <Input
-                name="locationText"
                 type="text"
-                value={form.locationText}
-                onChange={handleChange}
                 placeholder="e.g. Balaji Nagar, Tirupati"
+                aria-invalid={errors.locationText ? true : undefined}
+                {...register("locationText")}
               />
             </Field>
 
-            <Field label="About you" hint="optional">
+            <Field label="About you" hint="optional" error={errors.description?.message}>
               <Textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
                 placeholder="A short note about yourself — students, families, anyone is welcome"
                 rows={4}
+                aria-invalid={errors.description ? true : undefined}
+                {...register("description")}
               />
             </Field>
 

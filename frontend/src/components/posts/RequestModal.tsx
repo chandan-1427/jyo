@@ -4,6 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api/api";
 import { uploadImage } from "@/lib/supabase";
 import { getCurrentLocation } from "@/lib/location/location";
+import { requestSchema } from "@/lib/validation";
+import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { AlertCircle, Camera, X } from "lucide-react";
 import { Field } from "../ui/Field";
 import { Input } from "../ui/Input";
@@ -15,20 +17,25 @@ type Props = {
   onSuccess: () => void;
 };
 
+type RequestValues = { pickerName: string; etaMinutes: number; selfie: File };
+
+function FieldError({ message }: { message?: string }) {
+  return message ? <p className="text-xs text-red-400">{message}</p> : null;
+}
+
 export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [pickerName, setPickerName] = useState(user?.name ?? "");
-  const [etaMinutes, setEtaMinutes] = useState("");
-  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const { register, handleSubmit, setValue, setError, formState: { errors } } = useZodForm(requestSchema, {
+    pickerName: user?.name ?? "",
+  });
   const [selfiePreview, setSelfiePreview] = useState("");
-  const [formError, setFormError] = useState("");
 
   const requestMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ pickerName, etaMinutes, selfie }: RequestValues) => {
       const coords = await getCurrentLocation();
-      const selfieUrl = await uploadImage(selfieFile!, "selfies");
+      const selfieUrl = await uploadImage(selfie, "selfies");
 
       return apiFetch("/requests", {
         method: "POST",
@@ -36,7 +43,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
           postId,
           pickerName,
           selfieUrl,
-          etaMinutes: Number(etaMinutes),
+          etaMinutes,
           lat: coords.lat,
           lng: coords.lng,
         }),
@@ -46,29 +53,29 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
       queryClient.invalidateQueries({ queryKey: ["requests", "mine"] });
       onSuccess();
     },
+    onError: (err) => {
+      applyServerFieldErrors(err, setError, ["pickerName", "etaMinutes"]);
+    },
   });
 
   const loading = requestMutation.isPending;
-  const error = formError || requestMutation.error?.message || "";
+  // Field-level server errors show under their fields; anything else here.
+  const fieldLevel = Object.values(errors).some((e) => e?.type === "server");
+  const error = !fieldLevel ? requestMutation.error?.message ?? "" : "";
 
   const handleSelfie = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelfieFile(file);
+    setValue("selfie", file, { shouldValidate: true });
     setSelfiePreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError("");
-
-    if (!selfieFile) {
-      setFormError("Please upload a selfie so the poster can identify you");
-      return;
-    }
-
-    requestMutation.mutate();
+  const clearSelfie = () => {
+    setValue("selfie", undefined as unknown as File, { shouldValidate: true });
+    setSelfiePreview("");
   };
+
+  const onSubmit = handleSubmit((values) => requestMutation.mutate(values));
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
@@ -79,6 +86,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
           <h2 className="font-semibold text-foreground text-lg tracking-tight">Request Pickup</h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="cursor-pointer text-subtle hover:text-foreground transition-colors"
           >
             <X className="w-4.5 h-4.5" />
@@ -86,36 +94,37 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
         </div>
 
         {error && (
-          <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
+          <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
             <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
             <p className="text-sm text-red-400 leading-snug">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
 
           {/* Name */}
           <Field label="Your Name">
             <Input
               type="text"
-              value={pickerName}
-              onChange={(e) => setPickerName(e.target.value)}
               placeholder="Your full name"
-              required
+              aria-invalid={errors.pickerName ? true : undefined}
+              {...register("pickerName")}
             />
+            <FieldError message={errors.pickerName?.message} />
           </Field>
 
           {/* ETA */}
           <Field label="Estimated Time to Arrive (minutes)">
             <Input
               type="number"
-              min="5"
-              max="60"
-              value={etaMinutes}
-              onChange={(e) => setEtaMinutes(e.target.value)}
+              inputMode="numeric"
+              min={1}
+              max={180}
               placeholder="e.g. 15"
-              required
+              aria-invalid={errors.etaMinutes ? true : undefined}
+              {...register("etaMinutes", { valueAsNumber: true })}
             />
+            <FieldError message={errors.etaMinutes?.message} />
           </Field>
 
           {/* Selfie */}
@@ -133,7 +142,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
                 />
                 <button
                   type="button"
-                  onClick={() => { setSelfieFile(null); setSelfiePreview(""); }}
+                  onClick={clearSelfie}
                   className="cursor-pointer absolute top-2 right-2 bg-surface border border-border text-muted rounded-full px-2 py-0.5 text-xs shadow-sm hover:text-red-400 hover:border-red-900/40 transition-colors"
                 >
                   Remove
@@ -154,6 +163,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
                 />
               </label>
             )}
+            <FieldError message={errors.selfie?.message} />
           </Field>
 
           <LinkButton

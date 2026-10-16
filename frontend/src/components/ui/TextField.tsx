@@ -1,7 +1,7 @@
-import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import { useId, useState, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "className"> {
+interface TextFieldProps extends Omit<ComponentProps<"input">, "className"> {
   label: string;
   // Shown under the input in red, and marks the input invalid for screen readers.
   error?: string;
