@@ -167,4 +167,55 @@ describe("POST /auth/login", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("set-cookie")).toMatch(/^token=/);
   });
+
+  // Regression: accounts created before emails were lowercased can be stored
+  // with capitals, while logins now always arrive lowercased. An exact-match
+  // lookup locked those users out.
+  it("logs in an account whose email was stored with capitals", async () => {
+    const { payload, token } = await registerAndCaptureToken({ email: "legacy@example.com" });
+    await app.request(`/auth/verify-email?token=${token}`);
+    await db.update(users).set({ email: "Legacy@Example.com" }).where(eq(users.email, "legacy@example.com"));
+
+    const res = await postJson("/auth/login", { email: "legacy@example.com", password: payload.password });
+    expect(res.status).toBe(200);
+  });
+
+  it("treats the email as case-insensitive and ignores surrounding spaces", async () => {
+    const { payload, token } = await registerAndCaptureToken({ email: "casey@example.com" });
+    await app.request(`/auth/verify-email?token=${token}`);
+
+    const res = await postJson("/auth/login", { email: "  Casey@Example.COM ", password: payload.password });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("input validation", () => {
+  it("lowercases and trims the email on sign-up", async () => {
+    const res = await postJson("/auth/register", { ...validUser, email: "  Mixed@Example.COM " });
+    expect(res.status).toBe(201);
+    const [row] = await db.select({ email: users.email }).from(users);
+    expect(row.email).toBe("mixed@example.com");
+  });
+
+  it("does not allow a second account that differs only by letter case", async () => {
+    await postJson("/auth/register", validUser);
+    const res = await postJson("/auth/register", { ...validUser, email: validUser.email.toUpperCase() });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a phone number that is not exactly 10 digits", async () => {
+    for (const phone of ["abcdefghij", "98765", "+919876543210", "98765 43210"]) {
+      const res = await postJson("/auth/register", { ...validUser, phone });
+      expect(res.status, `phone ${phone}`).toBe(400);
+      const body = await res.json();
+      expect(body.details.phone).toEqual(["Enter a valid 10-digit phone number"]);
+    }
+  });
+
+  it("rejects a name that is only spaces around a single letter", async () => {
+    const res = await postJson("/auth/register", { ...validUser, name: " a " });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.details.name).toEqual(["Name must be at least 2 characters"]);
+  });
 });

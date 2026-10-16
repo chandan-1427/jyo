@@ -17,6 +17,13 @@ import { logger } from "../lib/logger.js";
 import { findUserByEmail } from "../lib/domain/finders.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { DEMO_SESSION_MS } from "../lib/domain/demo.js";
+import {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  resendVerificationSchema,
+} from "../lib/validation.js";
 
 export const authRoutes = new Hono();
 
@@ -42,31 +49,6 @@ const cookieOptions = {
   path: "/",
   maxAge: 60 * 60 * 24 * 7,
 };
-
-const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(100),
-  email: z.email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters").max(100),
-  phone: z.string().min(10, "Phone number too short").max(15),
-});
-
-const loginSchema = z.object({
-  email: z.email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-
-const forgotPasswordSchema = z.object({
-  email: z.email("Invalid email address"),
-});
-
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, "Reset token is required"),
-  password: z.string().min(8, "Password must be at least 8 characters").max(100),
-});
-
-const resendVerificationSchema = z.object({
-  email: z.email("Invalid email address"),
-});
 
 // --- Register ---
 authRoutes.post("/register", registerLimiter, async (c) => {

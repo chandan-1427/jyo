@@ -16,19 +16,11 @@ import { ConflictError } from "../lib/errors.js";
 import { isValidUuid, findPostById, findRequestById, findUserEmail } from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
+import { createRequestSchema } from "../lib/validation.js";
 
 export const requestRoutes = new Hono();
 
 requestRoutes.use("*", authMiddleware);
-
-const createRequestSchema = z.object({
-  postId: z.uuid("Invalid post ID"),
-  pickerName: z.string().min(2, "Name must be at least 2 characters").max(100),
-  selfieUrl: z.url("Invalid selfie URL").optional(),
-  etaMinutes: z.number().int().min(1).max(180, "ETA cannot exceed 3 hours"),
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
-});
 
 // --- Submit pickup request ---
 requestRoutes.post("/", createRequestLimiter, async (c) => {

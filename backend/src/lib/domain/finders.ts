@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { foodPosts, pickupRequests, users } from "../../db/schema.js";
 
@@ -22,7 +22,15 @@ export async function findUserEmail(userId: string): Promise<string | null> {
   return user?.email ?? null;
 }
 
+// Case-insensitive: emails are lowercased on the way in now, but accounts
+// created before the frontend started lowercasing them can still be stored
+// with capitals. An exact match locked those users out once logins began
+// arriving lowercased.
 export async function findUserByEmail(email: string) {
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(sql`lower(${users.email}) = lower(${email})`)
+    .limit(1);
   return user ?? null;
 }

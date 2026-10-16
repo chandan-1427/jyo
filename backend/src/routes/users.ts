@@ -7,15 +7,9 @@ import { authMiddleware } from "../middleware/auth.js";
 import { uploadFile, deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { uploadLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
+import { updateProfileSchema } from "../lib/validation.js";
 
 export const userRoutes = new Hono();
-
-const updateProfileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(100).optional(),
-  phone: z.string().min(10, "Phone number too short").max(15).optional(),
-  locationText: z.string().max(200).optional(),
-  description: z.string().max(500).optional(),
-});
 
 // Shared between the GET /me select and PUT /me's update().returning() —
 // both want the same public profile shape, just via a different query.
