@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Mail } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api/api";
-import { validateForm, forgotPasswordSchema } from "@/lib/validation";
+import { forgotPasswordSchema } from "@/lib/validation";
+import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
@@ -10,40 +11,34 @@ import { TextField } from "@/components/ui/TextField";
 import { TextLink, textLinkClass } from "@/components/ui/TextLink";
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState("");
+  const { register, handleSubmit, reset, setError, formState: { errors } } = useZodForm(forgotPasswordSchema, {
+    email: "",
+  });
+
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
+  const [error, setErrorMessage] = useState("");
 
   const forgotMutation = useMutation({
     mutationFn: (payload: { email: string }) =>
       apiFetch("/auth/forgot-password", { method: "POST", body: JSON.stringify(payload) }),
     onSuccess: (data) => setMessage(data.message),
     onError: (err: unknown) => {
-      if (err instanceof ApiError) setError(err.message);
+      if (!(err instanceof ApiError)) return;
+      if (!applyServerFieldErrors(err, setError, ["email"])) setErrorMessage(err.message);
     },
   });
 
   const loading = forgotMutation.isPending;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const onSubmit = handleSubmit((values) => {
+    setErrorMessage("");
     setMessage("");
-    setFieldErrors({});
-
-    const validation = validateForm(forgotPasswordSchema, { email });
-    if (!validation.success) {
-      setFieldErrors(validation.fieldErrors);
-      return;
-    }
-
-    forgotMutation.mutate(validation.data);
-  };
+    forgotMutation.mutate(values);
+  });
 
   const tryAgain = () => {
     setMessage("");
-    setEmail("");
+    reset({ email: "" });
     forgotMutation.reset();
   };
 
@@ -74,21 +69,18 @@ export default function ForgotPassword() {
     <AuthLayout
       title="Forgot your password?"
       description="Enter your email. We will send you a link to make a new password."
-      switchTo={{ label: "Log in", to: "/login" }}
       footer={<>Remember your password? <TextLink to="/login">Log in</TextLink></>}
     >
       {error && <Notice tone="error" className="mb-5">{error}</Notice>}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <TextField
           label="Email"
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           autoComplete="email"
-          required
-          error={fieldErrors.email?.[0]}
+          error={errors.email?.message}
+          {...register("email")}
         />
 
         <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">

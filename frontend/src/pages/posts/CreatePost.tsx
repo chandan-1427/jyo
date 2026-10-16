@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Camera, X, Clock, AlertCircle } from "lucide-react";
-import { apiFetch, ApiError } from "@/lib/api/api";
-import { validateForm, createPostSchema } from "@/lib/validation";
+import { apiFetch } from "@/lib/api/api";
+import { createPostSchema } from "@/lib/validation";
+import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { uploadImage } from "@/lib/supabase";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
 import { Input } from "@/components/ui/Input";
@@ -23,39 +24,50 @@ function nowLocal(): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+type PostValues = {
+  title: string;
+  description: string;
+  photo: File;
+  pickupWindowStart: string;
+  pickupWindowEnd: string;
+};
+
+function FieldError({ message }: { message?: string }) {
+  return message ? <p className="text-xs text-red-400">{message}</p> : null;
+}
+
 export default function CreatePost() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [form, setForm] = useState({
+  const { register, handleSubmit, setValue, watch, setError, formState: { errors } } = useZodForm(createPostSchema, {
     title: "",
     description: "",
     pickupWindowStart: nowLocal(),
     pickupWindowEnd: "",
   });
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const pickupWindowStart = watch("pickupWindowStart");
+  const pickupWindowEnd = watch("pickupWindowEnd");
+
   const [photoPreview, setPhotoPreview] = useState("");
   const [coords, setCoords] = useState<Coords | null>(null);
   const [locLoading, setLocLoading] = useState(true);
   const [formError, setFormError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
 
-  const createMutation = useMutation<unknown, Error>({
-    mutationFn: async () => {
-      const photoUrl = await uploadImage(photoFile!, "food-photos");
-      const start = new Date(form.pickupWindowStart).toISOString();
-      const end = new Date(form.pickupWindowEnd).toISOString();
+  const createMutation = useMutation<unknown, Error, PostValues>({
+    mutationFn: async (values) => {
+      const photoUrl = await uploadImage(values.photo, "food-photos");
 
       return apiFetch("/posts", {
         method: "POST",
         body: JSON.stringify({
-          title: form.title,
-          description: form.description,
+          title: values.title,
+          description: values.description,
           photoUrl,
           pickupLat: coords!.lat,
           pickupLng: coords!.lng,
-          pickupWindowStart: start,
-          pickupWindowEnd: end,
+          pickupWindowStart: new Date(values.pickupWindowStart).toISOString(),
+          pickupWindowEnd: new Date(values.pickupWindowEnd).toISOString(),
         }),
       });
     },
@@ -64,13 +76,15 @@ export default function CreatePost() {
       queryClient.invalidateQueries({ queryKey: ["posts", "feed"] });
       navigate("/my-posts");
     },
-    onError: (err: Error) => {
-      if (err instanceof ApiError && err.details) setFieldErrors(err.details);
+    onError: (err) => {
+      applyServerFieldErrors(err, setError, ["title", "description", "pickupWindowEnd"]);
     },
   });
 
   const loading = createMutation.isPending;
-  const error = formError || createMutation.error?.message || "";
+  // Field-level server errors show under their fields; anything else up top.
+  const fieldLevel = Object.values(errors).some((e) => e?.type === "server");
+  const error = formError || (!fieldLevel ? createMutation.error?.message ?? "" : "");
 
   useEffect(() => {
     getCurrentLocation()
@@ -79,68 +93,39 @@ export default function CreatePost() {
       .finally(() => setLocLoading(false));
   }, []);
 
-  const setField = (name: string, value: string) => {
-    setForm((prev) => {
-      const next = { ...prev, [name]: value };
-      if (name === "pickupWindowStart" && next.pickupWindowEnd && next.pickupWindowEnd <= value) {
-        next.pickupWindowEnd = "";
-      }
-      return next;
-    });
+  const setStart = (value: string) => {
+    setValue("pickupWindowStart", value, { shouldValidate: true });
+    // An end time that is no longer after the new start is cleared, as before.
+    if (pickupWindowEnd && pickupWindowEnd <= value) setValue("pickupWindowEnd", "");
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setField(e.target.name, e.target.value);
+  const setEnd = (value: string) => {
+    setValue("pickupWindowEnd", value, { shouldValidate: true });
   };
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPhotoFile(file);
+    setValue("photo", file, { shouldValidate: true });
     setPhotoPreview(URL.createObjectURL(file));
   };
 
   const clearPhoto = () => {
-    setPhotoFile(null);
+    setValue("photo", undefined as unknown as File, { shouldValidate: true });
     setPhotoPreview("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = handleSubmit((values) => {
     setFormError("");
-    setFieldErrors({});
-
-    const validation = validateForm(createPostSchema, {
-      title: form.title,
-      description: form.description || undefined,
-    });
-    if (!validation.success) {
-      setFieldErrors(validation.fieldErrors);
-      return;
-    }
-
     if (!coords) {
       setFormError("Location is required to post food. Please enable location access.");
       return;
     }
-    if (!photoFile) {
-      setFormError("Please add a photo of the food.");
-      return;
-    }
-
-    const start = new Date(form.pickupWindowStart);
-    const end = new Date(form.pickupWindowEnd);
-
-    if (end <= start) {
-      setFormError("Pickup end time must be after start time.");
-      return;
-    }
-
-    createMutation.mutate();
-  };
+    createMutation.mutate(values);
+  });
 
   const minStart = nowLocal();
-  const minEnd = form.pickupWindowStart || minStart;
+  const minEnd = pickupWindowStart || minStart;
 
   return (
     <div className="px-6 py-8 font-medium tracking-wide">
@@ -153,13 +138,13 @@ export default function CreatePost() {
 
       {/* Error */}
       {error && (
-        <div className="mb-6 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
+        <div role="alert" className="mb-6 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
           <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
           <p className="text-sm text-red-400 leading-snug">{error}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
+      <form onSubmit={onSubmit} noValidate className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
 
         {/* Left — photo */}
         <div className="lg:sticky lg:top-20">
@@ -170,6 +155,7 @@ export default function CreatePost() {
                 <button
                   type="button"
                   onClick={clearPhoto}
+                  aria-label="Remove photo"
                   className="cursor-pointer absolute top-2.5 right-2.5 bg-surface border border-border rounded-full p-1 text-muted hover:text-red-400 hover:border-red-900/40 transition-colors shadow-sm"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -184,6 +170,7 @@ export default function CreatePost() {
                 <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
               </label>
             )}
+            <FieldError message={errors.photo?.message} />
           </Field>
         </div>
 
@@ -192,51 +179,42 @@ export default function CreatePost() {
 
           <Field label="Food Title">
             <Input
-              name="title"
               type="text"
-              value={form.title}
-              onChange={handleChange}
               placeholder="e.g. Rice and dal for 2"
-              required
+              aria-invalid={errors.title ? true : undefined}
+              {...register("title")}
             />
-            {fieldErrors.title && <p className="text-xs text-red-400">{fieldErrors.title[0]}</p>}
+            <FieldError message={errors.title?.message} />
           </Field>
 
           <Field label="Description" hint="optional">
             <Textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
               placeholder="Details about the food, quantity, allergens..."
               rows={4}
+              aria-invalid={errors.description ? true : undefined}
+              {...register("description")}
             />
-            {fieldErrors.description && <p className="text-xs text-red-400">{fieldErrors.description[0]}</p>}
+            <FieldError message={errors.description?.message} />
           </Field>
 
-<Field label="Pickup Window">
-  <div className="grid grid-cols-2 gap-3">
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[12px] text-subtle flex items-center gap-1">
-        <Clock className="w-3 h-3" /> From
-      </span>
-      <DateTimePicker
-        value={form.pickupWindowStart}
-        onChange={(val) => setField("pickupWindowStart", val)}
-        min={minStart}
-      />
-    </div>
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[12px] text-subtle flex items-center gap-1">
-        <Clock className="w-3 h-3" /> To
-      </span>
-      <DateTimePicker
-        value={form.pickupWindowEnd}
-        onChange={(val) => setField("pickupWindowEnd", val)}
-        min={minEnd}
-      />
-    </div>
-  </div>
-</Field>
+          <Field label="Pickup Window">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[12px] text-subtle flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> From
+                </span>
+                <DateTimePicker value={pickupWindowStart} onChange={setStart} min={minStart} />
+                <FieldError message={errors.pickupWindowStart?.message} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[12px] text-subtle flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> To
+                </span>
+                <DateTimePicker value={pickupWindowEnd} onChange={setEnd} min={minEnd} />
+                <FieldError message={errors.pickupWindowEnd?.message} />
+              </div>
+            </div>
+          </Field>
 
           <LocationStatus loading={locLoading} coords={coords} />
 

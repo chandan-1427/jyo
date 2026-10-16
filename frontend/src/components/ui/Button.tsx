@@ -29,7 +29,7 @@ export type ButtonProps = AsButton | AsLink;
 // and press dim the button rather than brighten it, and the press scales from
 // the centre. Focus uses an outline, which appears at once.
 const BASE =
-  "group inline-flex origin-center select-none items-center justify-center gap-2 whitespace-nowrap font-medium tracking-[-0.01em] " +
+  "group inline-flex origin-center cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap font-medium tracking-[-0.01em] " +
   // `scale`, not `transform`: Tailwind v4's scale utilities set the standalone
   // CSS `scale` property, so a transition on `transform` alone would snap.
   "[transition-property:scale,opacity,color,border-radius] [transition-duration:150ms,150ms,150ms,300ms] " +
