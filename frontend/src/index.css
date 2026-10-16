@@ -56,6 +56,56 @@
      brand and warning were the same colour by accident. Progress states like
      `pending` are no longer coloured at all — see StatusBadge. */
   --color-warning: #E0724A;
+
+  /* ── v2 ─────────────────────────────────────────────────────────────────
+     The redesign's palette. Pages move onto it one at a time by calling
+     useV2Theme(); once every page has moved, these become the defaults and
+     the tokens above are deleted.
+
+     A cool green-black with one leaf-green accent, with no warm hues. Surfaces
+     are separated by fill steps rather than borders, so each step has to be
+     visibly different from the last. Contrast ratios are against `canvas`. */
+  --font-display: "Anek Telugu Variable", "Inter Variable", sans-serif;
+
+  --color-canvas:    #0C0E0D;
+  --color-raised:    #141716;
+  --color-lifted:    #1D2120;
+  --color-fg:        #E8EEEA; /* 16.3:1 */
+  --color-fg-muted:  #A3AFA9; /*  8.6:1, body copy */
+  --color-fg-subtle: #7E8B84; /*  5.4:1, metadata; 4.9:1 on raised */
+  --color-leaf:      #5CC791; /*  9.2:1, the one accent; canvas text on it is 9.2:1 too */
+  /* Primary button. Deeper than the leaf accent, same hue. Canvas text on the
+     fill is 6.5:1 (above the 4.5:1 minimum); much darker and it drops under. */
+  --color-cta:      #45A876;
+  --color-cta-deep: #2A6747; /* its ledge */
+
+  /* Top stops for the buttons' slight vertical gradient. Same hue as the fill
+     below, only lighter, so the blend can't drift in hue. */
+  --color-cta-top:    oklch(0.7 0.115 158);
+  --color-lifted-top: oklch(0.26 0.006 165);
+  --color-danger:    #EF7C8E; /*  7.4:1, destructive actions only */
+
+  --shadow-lift: 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 4px 12px rgb(0 0 0 / 0.35);
+
+  --animate-enter: enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-beacon: beacon 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(10px); }
+  }
+  @keyframes beacon {
+    0% { transform: scale(1); opacity: 0.55; }
+    80%, 100% { transform: scale(3.2); opacity: 0; }
+  }
+}
+
+/* Registered so the scrollbar thumb colour can be transitioned (plain colours
+   in scrollbar-color can't be). Browsers without @property simply show and
+   hide it. */
+@property --scrollbar-thumb {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 255, 255, 0.18);
 }
 
 @layer base {
@@ -93,27 +143,80 @@
        light, and that mismatch gets MORE visible as the base darkens. */
     color-scheme: dark;
 
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-strong) var(--color-surface);
-    scroll-behavior: smooth;
+    /* No `scroll-behavior: smooth` — Lenis (SmoothScroll.tsx) owns smoothing,
+       and the two fight over programmatic scrolls. */
 
     /* Always reserve the scrollbar's track, even on pages short enough not to
-       scroll. Without this the viewport width changes by ~10px the moment a
-       page becomes scrollable, and every centered container shifts sideways —
-       most visibly when navigating between a short page and a long one. */
+       scroll. Without this the viewport width changes the moment a page
+       becomes scrollable, and every centered container shifts sideways. */
     scrollbar-gutter: stable;
+
+    /* The track matches the page so only the thumb is visible. */
+    --scrollbar-track: var(--color-background);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.18);
+    transition: --scrollbar-thumb 150ms ease-out;
   }
 
-  /* These three were pure-white alpha (0.18/0.22/0.28). White at low alpha
-     over a warm base composites to a DESATURATED COOL grey, which read as a
-     seam down the edge of an otherwise warm page. Now in-family. */
-  ::-webkit-scrollbar { width: 10px; }
-  ::-webkit-scrollbar-track { background: var(--color-surface); }
+  /* Chrome, Edge and Safari draw the thin, arrowless thumb below. Chrome
+     ignores ::-webkit-scrollbar entirely once scrollbar-width or
+     scrollbar-color is set, so the standard properties are limited to
+     browsers without those selectors (Firefox). */
+  @supports not selector(::-webkit-scrollbar) {
+    html {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    }
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+  }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-border-strong);
-    border: 2px solid var(--color-surface);
+    background: var(--scrollbar-thumb);
+    border: 2px solid var(--scrollbar-track);
     border-radius: 999px;
   }
-  ::-webkit-scrollbar-thumb:hover { background: var(--color-subtle); }
-  ::-webkit-scrollbar-corner { background: var(--color-surface); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.34); }
+  ::-webkit-scrollbar-thumb:active { background: rgba(255, 255, 255, 0.5); }
+  ::-webkit-scrollbar-button { display: none; }
+
+  /* The thumb hides while idle and shows while scrolling or when the pointer
+     nears it (ScrollbarAutoHide.tsx). Without JS the attribute is never set,
+     so it stays visible. */
+  html[data-scrollbar="idle"] {
+    --scrollbar-thumb: transparent;
+    transition: --scrollbar-thumb 400ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html,
+    html[data-scrollbar="idle"] {
+      transition: none;
+    }
+  }
+
+  html[data-theme="v2"] {
+    background-color: var(--color-canvas);
+    --scrollbar-track: var(--color-canvas);
+  }
+  html[data-theme="v2"] body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    -webkit-font-smoothing: antialiased;
+  }
+  html[data-theme="v2"] :where(h1, h2, h3, p, li) {
+    color: inherit;
+    font-family: inherit;
+  }
+  html[data-theme="v2"] :where(h1, h2, h3) { text-wrap: balance; }
+  html[data-theme="v2"] :where(p) { text-wrap: pretty; }
+  html[data-theme="v2"] ::selection {
+    background: var(--color-leaf);
+    color: var(--color-canvas);
+  }
 }

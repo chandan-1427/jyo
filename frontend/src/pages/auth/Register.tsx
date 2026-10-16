@@ -1,27 +1,23 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
+import { Mail } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api/api";
-import { Mail, CheckCircle2 } from "lucide-react";
-import { LinkButton } from "@/components/ui/LinkButton";
-import { PasswordInput } from "@/components/ui/PasswordInput";
-import { Input } from "@/components/ui/Input";
-import { Logo } from "@/components/ui/Logo";
-import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
-import { Field } from "@/components/ui/Field";
-import { AUTH_BENEFITS } from "@/components/auth/authStyles";
-import { BackButton } from "@/components/auth/BackButton";
 import { validateForm, registerSchema } from "@/lib/validation";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { Button } from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Notice";
+import { TextField } from "@/components/ui/TextField";
+import { TextLink, textLinkClass } from "@/components/ui/TextLink";
 
 function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
   const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
   if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
 }
 
-export default function Register() {
-  const navigate = useNavigate();
+const EMPTY_FORM = { name: "", email: "", phone: "", password: "" };
 
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+export default function Register() {
+  const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState("");
   const [registered, setRegistered] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
@@ -58,174 +54,106 @@ export default function Register() {
     registerMutation.mutate(validation.data);
   };
 
+  const startOver = () => {
+    setRegistered(false);
+    setForm(EMPTY_FORM);
+    setError("");
+    registerMutation.reset();
+  };
+
+  if (registered) {
+    return (
+      <AuthLayout
+        icon={<Mail className="size-6" aria-hidden="true" />}
+        title="Check your email"
+        description={
+          <>
+            We sent a link to <span className="font-medium text-fg">{form.email}</span>. Open it to
+            verify your email, then log in.
+          </>
+        }
+        footer={
+          <>
+            Wrong email?{" "}
+            <button type="button" onClick={startOver} className={textLinkClass}>
+              Sign up again
+            </button>
+          </>
+        }
+      >
+        <Notice>No email? Check your spam folder.</Notice>
+        <Button to="/login" size="lg" fullWidth className="mt-5">
+          Go to log in
+        </Button>
+      </AuthLayout>
+    );
+  }
+
   return (
-    <div className="h-screen grid lg:grid-cols-2">
+    <AuthLayout
+      title="Create your account"
+      description="It's free to join."
+      switchTo={{ label: "Log in", to: "/login" }}
+      footer={<>Have an account? <TextLink to="/login">Log in</TextLink></>}
+    >
+      {error && <Notice tone="error" className="mb-5">{error}</Notice>}
 
-      <AuthSidePanel
-        headline="Good food shouldn't go to waste while someone nearby needs it."
-        subtext="Join Jyo and start sharing food with your community in Tirupati."
-        benefits={AUTH_BENEFITS}
-      />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <TextField
+          label="Full name"
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          placeholder="Your full name"
+          autoComplete="name"
+          required
+          error={fieldErrors.name?.[0]}
+        />
 
-      {/* Right — form */}
-      <div className="flex flex-col justify-center px-6 py-8 sm:px-12">
-        <div className="w-full max-w-[360px] mx-auto">
+        <TextField
+          label="Email"
+          name="email"
+          type="email"
+          value={form.email}
+          onChange={handleChange}
+          placeholder="you@example.com"
+          autoComplete="email"
+          required
+          error={fieldErrors.email?.[0]}
+        />
 
-          {/* Brand + back button + heading */}
-          <div className="relative mb-6">
-            {!registered && <BackButton />}
+        <TextField
+          label="Phone number"
+          name="phone"
+          type="tel"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={form.phone}
+          onChange={handleChange}
+          onKeyDown={allowOnlyDigits}
+          placeholder="10-digit mobile number"
+          autoComplete="tel"
+          required
+          error={fieldErrors.phone?.[0]}
+        />
 
-            <div className="lg:hidden mb-5">
-              <Logo />
-            </div>
+        <TextField
+          label="Password"
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={handleChange}
+          placeholder="Make a password"
+          autoComplete="new-password"
+          required
+          hint="At least 8 characters."
+          error={fieldErrors.password?.[0]}
+        />
 
-            {!registered && (
-              <>
-                <h1 className="text-[1.4rem] font-semibold text-foreground tracking-tight">
-                  Create your account
-                </h1>
-                <p className="mt-1 text-sm text-muted">
-                  Join Jyo and start sharing food with your community.
-                </p>
-              </>
-            )}
-          </div>
-
-          {registered ? (
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-accent/10">
-                <Mail className="w-7 h-7 text-accent" />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <h2 className="text-[1.3rem] font-semibold text-foreground tracking-tight">
-                  Check your inbox
-                </h2>
-                <p className="text-sm text-muted leading-relaxed">
-                  We've sent a verification link to{" "}
-                  <span className="font-medium text-foreground">{form.email}</span>.
-                  Please verify your email before logging in.
-                </p>
-              </div>
-
-              <div className="w-full rounded-lg border border-border bg-surface px-4 py-3 flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-accent mt-px shrink-0" />
-                <p className="text-[13px] text-subtle leading-snug text-left">
-                  Didn't receive the email? Check your spam folder or try registering again.
-                </p>
-              </div>
-
-              <LinkButton
-                as="button"
-                label="Go to login"
-                onClick={() => navigate("/login")}
-                className="w-full"
-              />
-
-              <p className="text-[13px] text-subtle">
-                Wrong email?{" "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRegistered(false);
-                    setForm({ name: "", email: "", phone: "", password: "" });
-                    setError("");
-                    registerMutation.reset();
-                  }}
-                  className="font-medium text-foreground hover:underline underline-offset-2"
-                >
-                  Register again
-                </button>
-              </p>
-            </div>
-          ) : (
-            <>
-              {error && (
-                <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-2.5">
-                  <span className="mt-px text-red-400 text-sm shrink-0">!</span>
-                  <p className="text-sm text-red-400 leading-snug">{error}</p>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-
-                <Field label="Full name">
-                  <Input
-                    name="name"
-                    type="text"
-                    value={form.name}
-                    onChange={handleChange}
-                    placeholder="Your full name"
-                    autoComplete="name"
-                    required
-                  />
-                  {fieldErrors.name && <p className="text-xs text-red-400">{fieldErrors.name[0]}</p>}
-                </Field>
-
-                <Field label="Email">
-                  <Input
-                    name="email"
-                    type="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    required
-                  />
-                  {fieldErrors.email && <p className="text-xs text-red-400">{fieldErrors.email[0]}</p>}
-                </Field>
-
-                <Field label="Phone number">
-                  <Input
-                    name="phone"
-                    type="tel"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={form.phone}
-                    onChange={handleChange}
-                    onKeyDown={allowOnlyDigits}
-                    placeholder="10-digit mobile number"
-                    autoComplete="tel"
-                    required
-                  />
-                  {fieldErrors.phone && <p className="text-xs text-red-400">{fieldErrors.phone[0]}</p>}
-                </Field>
-
-                <Field label="Password">
-                  <PasswordInput
-                    name="password"
-                    value={form.password}
-                    onChange={handleChange}
-                    placeholder="Create a password"
-                    autoComplete="new-password"
-                    required
-                  />
-                  {fieldErrors.password && <p className="text-xs text-red-400">{fieldErrors.password[0]}</p>}
-                </Field>
-
-                <LinkButton
-                  as="button"
-                  type="submit"
-                  label="Create account"
-                  loading={loading}
-                  loadingLabel="Creating account…"
-                  disabled={loading}
-                  className="w-full mt-1"
-                />
-
-              </form>
-
-              <p className="mt-5 text-[13px] text-subtle text-center">
-                Already have an account?{" "}
-                <Link to="/login" className="font-medium text-foreground hover:underline underline-offset-2">
-                  Log in
-                </Link>
-              </p>
-            </>
-          )}
-
-        </div>
-      </div>
-    </div>
+        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">
+          {loading ? "Creating account…" : "Create account"}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

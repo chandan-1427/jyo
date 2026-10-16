@@ -5,25 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary meta -->
-    <title>Jyo — Food Sharing in Tirupati</title>
-    <meta name="description" content="Jyo connects households with leftover food to students and neighbours in Tirupati. Free. No delivery. Pure community sharing." />
+    <title>Jyo</title>
+    <meta name="description" content="Have extra food? Give it to someone near you in Tirupati. Free. No payment. No delivery." />
     <meta name="keywords" content="food sharing tirupati, free food tirupati, jyo, community food, leftover food" />
     <meta name="author" content="Jyo" />
 
     <!-- Canonical URL -->
     <link rel="canonical" href="https://www.jyo.co.in/" />
 
-    <!-- Open Graph — controls how link looks when shared on WhatsApp, Twitter, LinkedIn -->
+    <!-- Open Graph: controls how link looks when shared on WhatsApp, Twitter, LinkedIn -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.jyo.co.in/" />
-    <meta property="og:title" content="Jyo — Food Sharing in Tirupati" />
-    <meta property="og:description" content="Share leftover food with students and neighbours in Tirupati. Free. No delivery. Pure community." />
+    <meta property="og:title" content="Jyo" />
+    <meta property="og:description" content="Have extra food? Give it to someone near you in Tirupati. Free. No payment. No delivery." />
     <meta property="og:image" content="https://www.jyo.co.in/og-image.png" />
 
     <!-- Twitter card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Jyo — Food Sharing in Tirupati" />
-    <meta name="twitter:description" content="Share leftover food with students and neighbours in Tirupati." />
+    <meta name="twitter:title" content="Jyo" />
+    <meta name="twitter:description" content="Have extra food? Give it to someone near you in Tirupati." />
     <meta name="twitter:image" content="https://www.jyo.co.in/og-image.png" />
 
     <!-- Add to Home Screen -->
@@ -37,6 +37,14 @@
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
+
+    <!-- Pages on the redesigned v2 palette (see src/lib/theme.ts). Set before
+         first paint so they don't flash the old background while the bundle
+         loads. Grows as pages move over; removed once all have. -->
+    <script>
+      if (["/", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email"].includes(location.pathname))
+        document.documentElement.dataset.theme = "v2";
+    </script>
   </head>
   <body>
     <div id="root"></div>
