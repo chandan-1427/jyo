@@ -82,7 +82,6 @@ export default function Register() {
     <AuthLayout
       title="Create your account"
       description="It's free to join."
-      switchTo={{ label: "Log in", to: "/login" }}
       footer={<>Have an account? <TextLink to="/login">Log in</TextLink></>}
     >
       {error && <Notice tone="error" className="mb-5">{error}</Notice>}

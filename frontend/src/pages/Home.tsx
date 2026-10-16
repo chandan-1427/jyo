@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useV2Theme } from "@/lib/theme";
-import { useHideOnScroll } from "@/lib/useHideOnScroll";
+import { SiteHeader } from "@/components/layout/SiteHeader";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
@@ -136,7 +136,6 @@ export default function Home() {
   useV2Theme();
   const { user, loading } = useAuth();
   const firstVisit = useFirstVisit();
-  const headerHidden = useHideOnScroll();
 
   if (loading) return null;
   if (user) return <Navigate to="/feed" replace />;
@@ -148,21 +147,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-canvas text-fg">
-      {/* Keyboard focus inside the header always brings it back. */}
-      <header
-        className={cn(
-          "sticky top-0 z-40 bg-canvas transition-transform duration-300 ease-out focus-within:translate-y-0 motion-reduce:transition-none",
-          headerHidden && "-translate-y-full"
-        )}
-      >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Logo className="font-display text-2xl text-fg [&>span]:text-leaf" />
-          <nav className="flex items-center gap-1 sm:gap-2">
-            <Button to="/login" variant="ghost" size="sm">Log in</Button>
-            <Button to="/register" size="sm">Sign up</Button>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main>
         {/* Hero */}

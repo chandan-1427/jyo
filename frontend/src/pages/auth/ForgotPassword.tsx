@@ -69,7 +69,6 @@ export default function ForgotPassword() {
     <AuthLayout
       title="Forgot your password?"
       description="Enter your email. We will send you a link to make a new password."
-      switchTo={{ label: "Log in", to: "/login" }}
       footer={<>Remember your password? <TextLink to="/login">Log in</TextLink></>}
     >
       {error && <Notice tone="error" className="mb-5">{error}</Notice>}

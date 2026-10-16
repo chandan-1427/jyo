@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { useV2Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/ui/Logo";
-import { Button } from "@/components/ui/Button";
+import { SiteHeader } from "@/components/layout/SiteHeader";
 
 type IconTone = "leaf" | "danger" | "muted";
 
@@ -18,9 +17,7 @@ interface AuthLayoutProps {
   // For result screens ("Check your email", "Email verified"): shown above the title.
   icon?: ReactNode;
   iconTone?: IconTone;
-  // Button in the top bar to the other auth page, e.g. "Sign up".
-  switchTo?: { label: string; to: string };
-  // Line under the form, usually the same switch as the top bar.
+  // Line under the form linking to the other auth page, e.g. "New to Jyo? Sign up".
   footer?: ReactNode;
   children?: ReactNode;
 }
@@ -30,19 +27,12 @@ interface AuthLayoutProps {
 // scrolling. It still scrolls rather than clipping when an error notice or a
 // very small screen needs more room. Phones start the column near the top so
 // the keyboard doesn't push the form off screen; larger screens centre it.
-export function AuthLayout({ title, description, icon, iconTone = "leaf", switchTo, footer, children }: AuthLayoutProps) {
+export function AuthLayout({ title, description, icon, iconTone = "leaf", footer, children }: AuthLayoutProps) {
   useV2Theme();
 
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-fg">
-      <header className="mx-auto flex h-14 w-full max-w-6xl shrink-0 items-center justify-between px-4 sm:px-6">
-        <Logo className="font-display text-2xl text-fg [&>span]:text-leaf" />
-        {switchTo && (
-          <Button to={switchTo.to} variant="ghost" size="sm">
-            {switchTo.label}
-          </Button>
-        )}
-      </header>
+      <SiteHeader />
 
       <main className="flex w-full flex-1 justify-center px-4 py-6 sm:items-center sm:px-6">
         <div className="w-full max-w-sm">

@@ -68,7 +68,6 @@ export default function Login() {
     <AuthLayout
       title="Log in"
       description="Welcome back. Log in to share or find food."
-      switchTo={{ label: "Sign up", to: "/register" }}
       footer={<>New to Jyo? <TextLink to="/register">Sign up</TextLink></>}
     >
       {error && <Notice tone="error" className="mb-5">{error}</Notice>}

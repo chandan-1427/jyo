@@ -46,7 +46,6 @@ export default function ResetPassword() {
         iconTone="danger"
         title="This link does not work"
         description="The link is wrong or too old. Ask for a new one."
-        switchTo={{ label: "Log in", to: "/login" }}
         footer={<>Remember your password? <TextLink to="/login">Log in</TextLink></>}
       >
         <Button to="/forgot-password" size="lg" fullWidth>
@@ -74,7 +73,6 @@ export default function ResetPassword() {
     <AuthLayout
       title="Make a new password"
       description="Choose a new password for your account."
-      switchTo={{ label: "Log in", to: "/login" }}
       footer={<>Remember your password? <TextLink to="/login">Log in</TextLink></>}
     >
       {error && <Notice tone="error" className="mb-5">{error}</Notice>}
