@@ -28,7 +28,7 @@
 
     <!-- Add to Home Screen -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#17140F" />
+    <meta name="theme-color" content="#0C0E0D" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Jyo" />
@@ -42,7 +42,7 @@
          first paint so they don't flash the old background while the bundle
          loads. Grows as pages move over; removed once all have. -->
     <script>
-      if (["/", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email"].includes(location.pathname))
+      if (["/", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/profile"].includes(location.pathname))
         document.documentElement.dataset.theme = "v2";
     </script>
   </head>
