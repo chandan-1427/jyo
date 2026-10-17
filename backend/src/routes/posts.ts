@@ -13,6 +13,7 @@ import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/domain/demo.js";
 import { createPostSchema } from "../lib/validation.js";
+import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 
 export const postRoutes = new Hono();
 
@@ -61,6 +62,8 @@ postRoutes.post("/", createPostLimiter, async (c) => {
   if (isDemo && demoExpiresAt) {
     seedRequestOnOwnPost(post.id, userId, demoExpiresAt)
       .catch((err) => logger.error({ err, postId: post.id }, "Failed to seed demo request on own post"));
+  } else {
+    broadcastFeedChange();
   }
 
   return c.json({ message: "Post created", post }, 201);
@@ -321,6 +324,8 @@ postRoutes.delete("/:id", async (c) => {
   await db
     .delete(foodPosts)
     .where(eq(foodPosts.id, postId));
+
+  if (!post.isDemo) broadcastFeedChange();
 
   if (post.photoUrl) {
     deleteFile(post.photoUrl, "food-photos")

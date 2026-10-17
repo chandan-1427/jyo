@@ -17,6 +17,7 @@ import { isValidUuid, findPostById, findRequestById, findUserEmail } from "../li
 import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
 import { createRequestSchema } from "../lib/validation.js";
+import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 
 export const requestRoutes = new Hono();
 
@@ -93,6 +94,9 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
 
   if (posterEmail && !isSyntheticEmail(posterEmail)) notifyPoster(posterEmail, "request_received");
 
+  // The post now shows as "Requested" in everyone's feed.
+  if (!post.isDemo) broadcastFeedChange();
+
   // The seeded demo post's "poster" is synthetic with no one to review the
   // request — auto-approve instantly instead of leaving the visitor
   // waiting on a review that will never come.
@@ -164,6 +168,8 @@ requestRoutes.put("/:id/approve", async (c) => {
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_approved notification"));
 
   if (pickerEmail && !isSyntheticEmail(pickerEmail)) notifyPicker(pickerEmail, "request_approved");
+  // The post leaves everyone's feed.
+  if (!request.isDemo) broadcastFeedChange();
   // duplicate `await notifyPicker(...)` call removed — was sending this
   // email twice on every approval
 
@@ -239,6 +245,8 @@ requestRoutes.put("/:id/reject", async (c) => {
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_rejected notification"));
 
   if (pickerEmail && !isSyntheticEmail(pickerEmail)) notifyPicker(pickerEmail, "request_rejected");
+  // The post is open again.
+  if (!request.isDemo) broadcastFeedChange();
   // duplicate call removed here too
 
   return c.json({ message: "Request rejected" });
@@ -313,6 +321,8 @@ requestRoutes.put("/:id/cancel", async (c) => {
   ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_cancelled notification"));
 
   if (posterEmail && !isSyntheticEmail(posterEmail)) notifyPoster(posterEmail, "request_cancelled");
+  // The post is open again.
+  if (!request.isDemo) broadcastFeedChange();
   // duplicate call removed here too
 
   return c.json({ message: "Request cancelled" });

@@ -32,6 +32,19 @@ export async function publish(userId: string, payload: unknown) {
   );
 }
 
+// Tells every open connection that the feed changed (a post was added,
+// requested, approved, reopened, deleted or expired). It carries no post
+// data: each browser refetches its own feed, so the 20km filter and the
+// location/name redaction in posts.ts still decide what it sees.
+export function broadcastFeedChange() {
+  for (const streams of streamsByUserId.values()) {
+    for (const stream of streams) {
+      // A client that disconnected mid-write is routine, not a bug.
+      stream.writeSSE({ event: "feed", data: "" }).catch(() => {});
+    }
+  }
+}
+
 // Called during graceful shutdown so open SSE connections don't block
 // server.close() from resolving (Node waits for in-flight connections to
 // end, and a long-lived stream never ends on its own).

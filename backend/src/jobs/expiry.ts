@@ -5,6 +5,7 @@ import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, lt, and, inArray } from "drizzle-orm";
 import { notifyPicker } from "../lib/mailer.js";
 import { createNotification } from "../lib/notifications/notify.js";
+import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 import { isSyntheticEmail } from "../lib/domain/demo.js";
 import { logger } from "../lib/logger.js";
 
@@ -27,10 +28,12 @@ export function startExpiryJob() {
             lt(foodPosts.pickupWindowEnd, now)
           )
         )
-        .returning({ id: foodPosts.id });
+        .returning({ id: foodPosts.id, isDemo: foodPosts.isDemo });
 
       if (expired.length > 0) {
         logger.info({ count: expired.length, postIds: expired.map((p) => p.id) }, "Marked posts as expired");
+
+        if (expired.some((p) => !p.isDemo)) broadcastFeedChange();
 
         // A post that expired while in pending_approval leaves its pending
         // pickup request stuck forever — reject it and tell the picker.
