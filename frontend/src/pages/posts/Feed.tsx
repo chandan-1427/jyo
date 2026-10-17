@@ -1,21 +1,64 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { MapPin, MapPinOff, Plus, RefreshCw, Sparkles, UtensilsCrossed } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
 import { isWithinTirupati } from "@/lib/location/geofence";
+import { useV2Theme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import type { FoodPost } from "@/types/api";
 import PostCard from "@/components/posts/PostCard";
 import OutOfRegionCard from "@/components/posts/OutOfRegionCard";
-import { MapPin, RefreshCw, Loader2, UtensilsCrossed, AlertCircle, Sparkles } from "lucide-react";
+import { FeedIllustration } from "@/components/posts/FeedIllustration";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Notice } from "@/components/ui/Notice";
+
+// Columns come from a minimum card width rather than breakpoints, so a card
+// is never squeezed narrow enough to cut off the pickup time.
+const GRID = "grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-5";
+
+// Same shape as a PostCard, so nothing jumps when the real posts arrive.
+function CardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl bg-raised shadow-card ring-1 ring-inset ring-fg/[0.06] motion-safe:animate-pulse">
+      <div className="aspect-[3/2] bg-lifted" />
+      <div className="p-4">
+        <div className="h-5 w-3/4 rounded bg-lifted" />
+        <div className="mt-2.5 h-4 w-full rounded bg-lifted" />
+        <div className="mt-6 flex items-center justify-between gap-3">
+          <div className="h-4 w-1/2 rounded bg-lifted" />
+          <div className="h-8 w-24 rounded-lg bg-lifted" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Header({ subtitle, actions }: { subtitle: ReactNode; actions?: ReactNode }) {
+  return (
+    <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 className="font-display text-3xl font-semibold sm:text-4xl">Food near you</h1>
+        <p className="mt-1.5 flex items-center gap-1.5 text-fg-muted">
+          <MapPin className="size-4 shrink-0" aria-hidden="true" />
+          {subtitle}
+        </p>
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </header>
+  );
+}
 
 export default function Feed() {
+  useV2Theme();
   const { user, startDemo } = useAuth();
   const [coords, setCoords] = useState<Coords | null>(null);
   const [locating, setLocating] = useState(true);
   const [locationError, setLocationError] = useState("");
   const [startingDemo, setStartingDemo] = useState(false);
+  const [demoError, setDemoError] = useState("");
 
   useEffect(() => {
     getCurrentLocation()
@@ -60,125 +103,105 @@ export default function Feed() {
 
   const handleStartDemo = async () => {
     setStartingDemo(true);
+    setDemoError("");
     try {
       await startDemo();
+    } catch (err) {
+      setDemoError(err instanceof Error ? err.message : "Couldn't start the demo. Please try again.");
     } finally {
       setStartingDemo(false);
     }
   };
+
+  const demoButton = !user?.isDemo && (
+    <Button
+      variant="secondary"
+      onClick={handleStartDemo}
+      loading={startingDemo}
+      iconLeft={<Sparkles className="size-4 text-leaf" aria-hidden="true" />}
+    >
+      {startingDemo ? "Starting…" : "Try the demo"}
+    </Button>
+  );
 
   // A disabled query (no coords yet, e.g. geolocation failed) reports
   // isPending: true forever in TanStack Query — gating on !!coords too
   // stops that from masking the locationError branch below forever.
   if (locating || (!!coords && postsLoading && !outOfRegion)) {
     return (
-      <div className="px-4 py-24 flex flex-col items-center gap-3 font-medium tracking-wide">
-        <Loader2 className="w-5 h-5 text-subtle animate-spin" />
-        <p className="text-sm text-subtle">
-          {locating ? "Detecting your location…" : "Loading nearby food…"}
-        </p>
+      <div className="relative isolate text-fg">
+        <FeedIllustration />
+        <Header subtitle={locating ? "Finding your location…" : "Looking for food near you…"} />
+        <div className={GRID} aria-hidden="true">
+          {Array.from({ length: 8 }, (_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
       </div>
     );
   }
 
-  // Fatal: no location, nothing to show at all
   if (locationError) {
     return (
-      <div className="px-4 py-24 flex flex-col items-center gap-4 font-medium tracking-wide">
-        <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3 max-w-sm w-full">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{locationError}</p>
-        </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="cursor-pointer text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted transition-colors"
+      <div className="relative isolate text-fg">
+        <FeedIllustration />
+        <Header subtitle="Location needed" />
+        <EmptyState
+          icon={<MapPinOff />}
+          title="We couldn't find your location"
+          actions={<Button onClick={() => window.location.reload()}>Try again</Button>}
         >
-          Try again
-        </button>
+          <p>{locationError}</p>
+          <p className="mt-2">Jyo shows food within 20 km of you, so it needs your location.</p>
+        </EmptyState>
       </div>
     );
   }
 
   if (outOfRegion) {
     return (
-      <div className="px-4 py-8 font-medium tracking-wide">
-        <div className="mb-6">
-          <div className="flex items-center gap-1.5 mb-1">
-            <MapPin className="w-3.5 h-3.5 text-subtle" />
-            <p className="text-sm text-subtle">Outside service area</p>
-          </div>
-          <h1 className="font-semibold text-2xl text-foreground tracking-tight">Nearby Food</h1>
-        </div>
+      <div className="relative isolate text-fg">
+        <FeedIllustration />
+        <Header subtitle="Outside the service area" />
         <OutOfRegionCard />
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-8 font-medium tracking-wide">
-
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <MapPin className="w-3.5 h-3.5 text-subtle" />
-            <p className="text-sm text-subtle">Within 20 km · Tirupati</p>
-          </div>
-          <h1 className="font-semibold text-2xl text-foreground tracking-tight">
-            Nearby Food
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-4 mt-1">
-          {!user?.isDemo && (
-            <button
-              onClick={handleStartDemo}
-              disabled={startingDemo}
-              className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-accent hover:text-foreground transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+    <div className="relative isolate text-fg">
+      <FeedIllustration />
+      <Header
+        subtitle={`${posts.length} ${posts.length === 1 ? "post" : "posts"} within 20 km`}
+        actions={
+          <>
+            <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
+              Post food
+            </Button>
+            {demoButton}
+            <Button
+              variant="secondary"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              aria-label="Refresh"
+              className="size-10 px-0"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              {startingDemo ? "Starting…" : "Explore as Demo"}
-            </button>
-          )}
+              <RefreshCw className={cn("size-4", refreshing && "motion-safe:animate-spin")} aria-hidden="true" />
+            </Button>
+          </>
+        }
+      />
 
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-subtle hover:text-foreground transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </button>
-        </div>
-      </div>
+      {/* A failed refresh keeps showing the posts already loaded. */}
+      {fetchError && <Notice tone="error" className="mb-6">{fetchError.message}</Notice>}
+      {demoError && <Notice tone="error" className="mb-6">{demoError}</Notice>}
 
-      {/* Soft error — a refresh failed, but we still show whatever posts we already have */}
-      {fetchError && (
-        <div className="mb-6 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{fetchError.message}</p>
-        </div>
-      )}
-
-      {/* Empty state */}
       {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-border rounded-xl bg-surface">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-background">
-            <UtensilsCrossed className="w-5 h-5 text-subtle" />
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <p className="text-sm font-medium text-muted">No food posts nearby right now</p>
-            <p className="text-sm text-subtle">Check back soon or post your own!</p>
-          </div>
-          <Link
-            to="/create"
-            className="mt-1 text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted transition-colors"
-          >
-            Post food
-          </Link>
-        </div>
+        <EmptyState icon={<UtensilsCrossed />} title="No food near you right now">
+          <p>New posts show up here on their own. You can also share food yourself.</p>
+        </EmptyState>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className={GRID}>
           {posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
