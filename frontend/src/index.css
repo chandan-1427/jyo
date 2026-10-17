@@ -51,6 +51,8 @@
   --color-danger:    #EF7C8E; /*  7.4:1, destructive actions only */
 
   --shadow-lift: 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 4px 12px rgb(0 0 0 / 0.35);
+  /* Resting cards: a tight contact shadow plus a soft one below. */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 24px -10px rgb(0 0 0 / 0.55);
 
   --animate-enter: enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-beacon: beacon 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;

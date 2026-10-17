@@ -402,7 +402,12 @@ export default function PostDetail() {
         <div className="flex flex-col gap-6 md:sticky md:top-20">
 
           {post.photoUrl ? (
-            <img src={post.photoUrl} alt={post.title} className="w-full h-72 object-cover rounded-xl" />
+            // The whole photo at its own shape, unlike the cropped feed card.
+            // Height is capped so a tall photo doesn't push the details off
+            // screen; it then sits centred in a frame as wide as the card below.
+            <div className="flex justify-center overflow-hidden rounded-xl bg-surface">
+              <img src={post.photoUrl} alt={post.title} className="block h-auto max-h-[60vh] w-auto max-w-full" />
+            </div>
           ) : (
             <div className="w-full h-72 bg-surface rounded-xl flex items-center justify-center">
               <UtensilsCrossed className="w-10 h-10 text-subtle" />
