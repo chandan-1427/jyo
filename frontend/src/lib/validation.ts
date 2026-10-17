@@ -81,3 +81,23 @@ export const createPostSchema = z
     message: "End time must be in the future",
     path: ["pickupWindowEnd"],
   });
+
+// ─── Edit post ───────────────────────────────────────────────────────────────
+// Same rules, but the photo is optional: leaving it keeps the current one.
+// The pickup spot isn't editable (the API doesn't accept it).
+export const editPostSchema = z
+  .object({
+    title: fields.title,
+    description: fields.description,
+    photo: z.instanceof(File).optional(),
+    pickupWindowStart: z.string().min(1, "Choose when pickup starts"),
+    pickupWindowEnd: z.string().min(1, "Choose when pickup ends"),
+  })
+  .refine((d) => !d.pickupWindowEnd || new Date(d.pickupWindowEnd) > new Date(d.pickupWindowStart), {
+    message: "End time must be after start time",
+    path: ["pickupWindowEnd"],
+  })
+  .refine((d) => !d.pickupWindowEnd || new Date(d.pickupWindowEnd) > new Date(), {
+    message: "End time must be in the future",
+    path: ["pickupWindowEnd"],
+  });
