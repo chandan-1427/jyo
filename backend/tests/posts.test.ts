@@ -108,6 +108,45 @@ describe("GET /posts (feed)", () => {
     expect(JSON.stringify(forViewer)).not.toContain("Lakshmi");
   });
 
+  it("orders open posts by pickup ending soonest, with requested posts last", async () => {
+    const poster = await createVerifiedUser(app, { email: "order-poster@example.com" });
+    const HOUR = 3_600_000;
+
+    // Created in an order that matches neither creation time nor end time.
+    const make = async (title: string, endsInHours: number) => {
+      const res = await authedRequest(app, "/posts", poster.cookie, {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          pickupLat: TIRUPATI.lat,
+          pickupLng: TIRUPATI.lng,
+          pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
+          pickupWindowEnd: new Date(Date.now() + endsInHours * HOUR).toISOString(),
+        }),
+      });
+      expect(res.status).toBe(201);
+      return (await res.json()).post as { id: string };
+    };
+    await make("Ends in 5h", 5);
+    const requested = await make("Ends in 1h but requested", 1);
+    await make("Ends in 2h", 2);
+    await make("Ends in 8h", 8);
+
+    const picker = await createVerifiedUser(app, { email: "order-picker@example.com" });
+    await createRequestFor(picker.cookie, requested.id);
+
+    const viewer = await createVerifiedUser(app, { email: "order-viewer@example.com" });
+    const titles = async () => {
+      const res = await authedRequest(app, `/posts?lat=${TIRUPATI.lat}&lng=${TIRUPATI.lng}`, viewer.cookie);
+      return (await res.json()).posts.map((p: { title: string }) => p.title);
+    };
+
+    const expected = ["Ends in 2h", "Ends in 5h", "Ends in 8h", "Ends in 1h but requested"];
+    expect(await titles()).toEqual(expected);
+    // Same order on every refresh, so cards don't move between live updates.
+    expect(await titles()).toEqual(expected);
+  });
+
   it("requires lat/lng query params", async () => {
     const viewer = await createVerifiedUser(app, { email: "no-coords@example.com" });
     const res = await authedRequest(app, "/posts", viewer.cookie);

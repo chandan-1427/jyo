@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
-import { eq, or, and, gte, desc } from "drizzle-orm";
+import { eq, or, and, gte, asc, desc, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
 import { uploadFile, deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
@@ -118,6 +118,17 @@ postRoutes.get("/", async (c) => {
           ? or(eq(foodPosts.isDemo, false), eq(foodPosts.seededForUserId, userId))
           : eq(foodPosts.isDemo, false)
       )
+    )
+    // Posts someone can still request come first, and within each group the
+    // one whose pickup ends soonest leads: that's the food closest to being
+    // wasted. createdAt and id make the order total, so it's identical on
+    // every fetch; without an ORDER BY, Postgres may return rows in a new
+    // order after any update, and cards would jump around on each live refresh.
+    .orderBy(
+      sql`case when ${foodPosts.status} = 'open' then 0 else 1 end`,
+      asc(foodPosts.pickupWindowEnd),
+      asc(foodPosts.createdAt),
+      asc(foodPosts.id)
     );
 
   // Filter by 20 km radius and strip exact location from response
