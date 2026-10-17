@@ -57,7 +57,7 @@ export default function Register() {
         title="Check your email"
         description={
           <>
-            We sent a link to <span className="font-medium text-fg">{sentTo}</span>. Open it to
+            We sent a link to <span className="break-all font-medium text-fg">{sentTo}</span>. Open it to
             verify your email, then log in.
           </>
         }

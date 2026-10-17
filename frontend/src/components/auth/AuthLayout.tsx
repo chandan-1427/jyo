@@ -22,11 +22,8 @@ interface AuthLayoutProps {
   children?: ReactNode;
 }
 
-// Shared shell for every auth page: one narrow column, sized so the tallest
-// page (sign up, four fields) fits a 1366x768 laptop screen without
-// scrolling. It still scrolls rather than clipping when an error notice or a
-// very small screen needs more room. Phones start the column near the top so
-// the keyboard doesn't push the form off screen; larger screens centre it.
+// Shared shell for every auth page, sized so the tallest page (sign up) fits
+// a 1366x768 screen without scrolling.
 export function AuthLayout({ title, description, icon, iconTone = "leaf", footer, children }: AuthLayoutProps) {
   useV2Theme();
 
@@ -34,7 +31,7 @@ export function AuthLayout({ title, description, icon, iconTone = "leaf", footer
     <div className="flex min-h-dvh flex-col bg-canvas text-fg">
       <SiteHeader />
 
-      <main className="flex w-full flex-1 justify-center px-4 py-6 sm:items-center sm:px-6">
+      <main className="flex w-full flex-1 items-center justify-center px-4 py-6 sm:px-6">
         <div className="w-full max-w-sm">
           {icon && (
             <div className={cn("mb-5 grid size-11 place-items-center rounded-2xl bg-raised", ICON_TONES[iconTone])}>
