@@ -102,25 +102,23 @@ export default function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-fg/[0.06] bg-canvas">
-        <div className="flex h-14 items-center justify-between gap-6 px-4 sm:px-6 lg:px-10">
-          <div className="flex items-center gap-8">
-            <Logo to="/feed" className="font-display text-2xl text-fg [&>span]:text-leaf" />
+        <div className="flex h-14 items-center justify-between gap-6 px-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:px-6 lg:px-10">
+          <Logo to="/feed" className="justify-self-start font-display text-2xl text-fg [&>span]:text-leaf" />
 
-            <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  aria-current={current(link.path)}
-                  className="rounded-md px-3 py-1.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg aria-[current=page]:text-fg focus-visible:outline-2 focus-visible:outline-leaf"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+          <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                aria-current={current(link.path)}
+                className="rounded-md px-3 py-1.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg aria-[current=page]:text-fg focus-visible:outline-2 focus-visible:outline-leaf"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-self-end">
             {/* Notifications */}
             <div className="relative" ref={menuRef}>
               <button
@@ -193,7 +191,7 @@ export default function Navbar() {
               to="/profile"
               aria-current={current("/profile")}
               aria-label="Your profile"
-              className="hidden rounded-full ring-offset-2 ring-offset-canvas aria-[current=page]:ring-2 aria-[current=page]:ring-fg/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf sm:block"
+              className="hidden rounded-full ring-2 ring-fg/0 ring-offset-2 ring-offset-canvas transition-shadow duration-200 ease-out hover:ring-fg/20 aria-[current=page]:ring-fg/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf sm:block"
             >
               <Avatar name={user?.name} src={user?.avatarUrl} className="size-9 text-sm" />
             </Link>
