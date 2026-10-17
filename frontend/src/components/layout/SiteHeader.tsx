@@ -4,14 +4,11 @@ import { useHideOnScroll } from "@/lib/useHideOnScroll";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 
-// The logged-out top bar, shared by the home and auth pages so it sits in
-// exactly the same place on each: same height, same logo position, same two
-// buttons. The button for the page you're on stays put and is marked as
-// current, rather than disappearing and shifting the other one.
+// The logged-out top bar for the home and auth pages. It never links to the
+// page you are already on.
 export function SiteHeader() {
   const hidden = useHideOnScroll();
   const { pathname } = useLocation();
-  const current = (path: string) => (pathname === path ? "page" : undefined);
 
   return (
     // Hides while scrolling down, returns on scroll up; keyboard focus
@@ -25,18 +22,16 @@ export function SiteHeader() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo className="font-display text-2xl text-fg [&>span]:text-leaf" />
         <nav aria-label="Account" className="flex items-center gap-1 sm:gap-2">
-          <Button
-            to="/login"
-            variant="ghost"
-            size="sm"
-            aria-current={current("/login")}
-            className="aria-[current=page]:bg-raised aria-[current=page]:text-fg"
-          >
-            Log in
-          </Button>
-          <Button to="/register" size="sm" aria-current={current("/register")}>
-            Sign up
-          </Button>
+          {pathname !== "/login" && (
+            <Button to="/login" variant={pathname === "/register" ? "secondary" : "ghost"} size="sm">
+              Log in
+            </Button>
+          )}
+          {pathname !== "/register" && (
+            <Button to="/register" variant={pathname === "/login" ? "secondary" : "primary"} size="sm">
+              Sign up
+            </Button>
+          )}
         </nav>
       </div>
     </header>

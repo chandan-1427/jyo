@@ -125,9 +125,15 @@ function Lead({ lead, rest }: { lead: string; rest: string }) {
 
 function CallsToAction({ className }: { className?: string }) {
   return (
-    <div className={cn("flex flex-col gap-3 sm:flex-row", className)}>
-      <Button to="/register" size="lg">I have food to share</Button>
-      <Button to="/register" size="lg" variant="secondary">I'm looking for food</Button>
+    <div className={cn("grid grid-cols-2 gap-3 sm:flex sm:flex-row", className)}>
+      <Button to="/register" size="lg">
+        <span className="sm:hidden">Share food</span>
+        <span className="hidden sm:inline">I have food to share</span>
+      </Button>
+      <Button to="/register" size="lg" variant="secondary">
+        <span className="sm:hidden">Find food</span>
+        <span className="hidden sm:inline">I'm looking for food</span>
+      </Button>
     </div>
   );
 }

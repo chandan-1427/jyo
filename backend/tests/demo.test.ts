@@ -209,8 +209,12 @@ describe("seedRequestOnOwnPost", () => {
     expect(requests[0].status).toBe("pending");
     expect(requests[0].isDemo).toBe(true);
 
-    const notifs = await db.select().from(notifications).where(eq(notifications.userId, poster.userId));
-    expect(notifs.some((n) => n.type === "request_received")).toBe(true);
+    // The notification is fire-and-forget, so it can land just after the
+    // function returns; checking only once made this test flaky on CI.
+    await vi.waitFor(async () => {
+      const notifs = await db.select().from(notifications).where(eq(notifications.userId, poster.userId));
+      expect(notifs.some((n) => n.type === "request_received")).toBe(true);
+    });
   });
 });
 
