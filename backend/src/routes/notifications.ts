@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { db } from "../db/index.js";
 import { notifications } from "../db/schema.js";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { subscribe, unsubscribe } from "../lib/notifications/notificationStream.js";
 
@@ -41,7 +41,7 @@ notificationRoutes.get("/stream", (c) => {
 
 // Get all notifications for current user
 notificationRoutes.get("/", async (c) => {
-  const { userId } = c.get("user");
+  const { userId, isDemo } = c.get("user");
 
   const items = await db
     .select({
@@ -52,7 +52,8 @@ notificationRoutes.get("/", async (c) => {
       postId: notifications.postId,
     })
     .from(notifications)
-    .where(eq(notifications.userId, userId))
+    // Outside demo mode, notifications from a demo stay hidden.
+    .where(and(eq(notifications.userId, userId), isDemo ? undefined : eq(notifications.isDemo, false)))
     .orderBy(desc(notifications.createdAt))
     .limit(20);
 

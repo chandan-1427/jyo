@@ -109,11 +109,11 @@ postRoutes.get("/", async (c) => {
         ),
         gte(foodPosts.pickupWindowEnd, now),
         // Demo posts are seeded for one specific visitor's session — never
-        // show them to anyone else's real feed.
-        or(
-          eq(foodPosts.isDemo, false),
-          eq(foodPosts.seededForUserId, userId)
-        )
+        // show them to anyone else's feed, nor to that visitor once they've
+        // left demo mode (the rows outlive the session until cleanup).
+        isDemo
+          ? or(eq(foodPosts.isDemo, false), eq(foodPosts.seededForUserId, userId))
+          : eq(foodPosts.isDemo, false)
       )
     );
 
@@ -128,12 +128,13 @@ postRoutes.get("/", async (c) => {
 });
 
 postRoutes.get("/mine", async (c) => {
-  const { userId } = c.get("user");
+  const { userId, isDemo } = c.get("user");
 
   const posts = await db
     .select()
     .from(foodPosts)
-    .where(eq(foodPosts.posterId, userId))
+    // Outside demo mode, posts made during a demo stay hidden.
+    .where(and(eq(foodPosts.posterId, userId), isDemo ? undefined : eq(foodPosts.isDemo, false)))
     .orderBy(desc(foodPosts.createdAt));
 
   return c.json({ posts });
