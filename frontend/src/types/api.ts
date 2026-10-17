@@ -1,7 +1,8 @@
 export type FoodPost = {
   id: string;
   posterId: string;
-  posterName: string;
+  // Only sent to the poster and, once approved, the picker.
+  posterName?: string | null;
   title: string;
   description: string | null;
   photoUrl: string | null;

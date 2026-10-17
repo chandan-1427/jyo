@@ -82,12 +82,13 @@ postRoutes.get("/", async (c) => {
 
   const now = new Date();
 
-  // Fetch all active posts within their pickup window
+  // Fetch all active posts within their pickup window. The poster's name is
+  // left out: paired with a rough area it tells a stranger who lives nearby
+  // (e.g. that a woman is posting from there). See the /:id handler.
   const posts = await db
     .select({
       id: foodPosts.id,
       posterId: foodPosts.posterId,
-      posterName: users.name,
       title: foodPosts.title,
       description: foodPosts.description,
       photoUrl: foodPosts.photoUrl,
@@ -100,7 +101,6 @@ postRoutes.get("/", async (c) => {
       createdAt: foodPosts.createdAt,
     })
     .from(foodPosts)
-    .innerJoin(users, eq(foodPosts.posterId, users.id))
     .where(
       and(
         or(
@@ -197,9 +197,11 @@ postRoutes.get("/:id", async (c) => {
 
   const showLocation = (isPoster || isApprovedPicker) && post.status === "closed";
 
+  // The poster's name follows the same rule as the location: only the poster
+  // and the picker they approved get it, so the picker knows who to meet.
   const safePost = showLocation
     ? { ...post, posterName }
-    : { ...post, posterName, pickupLat: null, pickupLng: null };
+    : { ...post, posterName: isPoster ? posterName : null, pickupLat: null, pickupLng: null };
 
   return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest });
 });

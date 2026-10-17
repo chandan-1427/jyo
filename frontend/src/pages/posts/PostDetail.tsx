@@ -427,10 +427,12 @@ export default function PostDetail() {
             <div className="border-t border-border" />
 
             <div className="flex flex-col gap-2.5 text-sm text-muted">
-              <div className="flex items-center gap-2">
-                <span className="text-subtle">Posted by</span>
-                <span className="font-medium text-foreground">{post.posterName}</span>
-              </div>
+              {post.posterName && (
+                <div className="flex items-center gap-2">
+                  <span className="text-subtle">Posted by</span>
+                  <span className="font-medium text-foreground">{post.posterName}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-subtle shrink-0" />
                 <span>Pickup window: {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
