@@ -82,6 +82,71 @@ describe("POST /auth/demo/start and /stop", () => {
     expect(dbUser.isDemo).toBe(false);
     expect(dbUser.demoExpiresAt).toBeNull();
   });
+
+  // Regression: demo rows outlive the session until the cleanup cron, and
+  // the lists only filtered on ownership, so exiting early left demo posts,
+  // requests and notifications showing in the user's normal feed and lists.
+  it("hides demo content from every list once the user exits, but keeps real content", async () => {
+    const neighbour = await createVerifiedUser(app, { email: "neighbour@example.com" });
+    const realPost = await authedRequest(app, "/posts", neighbour.cookie, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Real leftover rice",
+        pickupLat: TIRUPATI.lat,
+        pickupLng: TIRUPATI.lng,
+        pickupWindowStart: new Date().toISOString(),
+        pickupWindowEnd: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
+    });
+    expect(realPost.status).toBe(201);
+
+    const visitor = await makeDemoUser("exit-lists@example.com");
+    const feedUrl = `/posts?lat=${TIRUPATI.lat}&lng=${TIRUPATI.lng}`;
+
+    // In demo: request the seeded post (a demo request), then load the feed
+    // again so a fresh open seeded post is provisioned.
+    await authedRequest(app, feedUrl, visitor.cookie);
+    const [seeded] = await db.select().from(foodPosts).where(eq(foodPosts.seededForUserId, visitor.userId));
+    const requested = await authedRequest(app, "/requests", visitor.cookie, {
+      method: "POST",
+      body: JSON.stringify({ postId: seeded.id, pickerName: "Demo Visitor", etaMinutes: 15, lat: TIRUPATI.lat, lng: TIRUPATI.lng }),
+    });
+    expect(requested.status).toBe(201);
+    await authedRequest(app, feedUrl, visitor.cookie);
+
+    // A demo post of their own, which gets a synthetic request and a notification.
+    const ownDemoPost = await authedRequest(app, "/posts", visitor.cookie, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "My demo post",
+        pickupLat: TIRUPATI.lat,
+        pickupLng: TIRUPATI.lng,
+        pickupWindowStart: new Date().toISOString(),
+        pickupWindowEnd: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
+    });
+    expect(ownDemoPost.status).toBe(201);
+    await vi.waitFor(async () => {
+      const rows = await db.select().from(notifications).where(eq(notifications.userId, visitor.userId));
+      expect(rows.some((n) => n.isDemo)).toBe(true);
+    });
+
+    const stopRes = await authedRequest(app, "/auth/demo/stop", visitor.cookie, { method: "POST" });
+    const realCookie = stopRes.headers.get("set-cookie")!.split(";")[0];
+
+    const feed = await (await authedRequest(app, feedUrl, realCookie)).json();
+    expect(feed.posts.some((p: { isDemo?: boolean }) => p.isDemo)).toBe(false);
+    expect(feed.posts.some((p: { title: string }) => p.title === "Real leftover rice")).toBe(true);
+
+    const mine = await (await authedRequest(app, "/posts/mine", realCookie)).json();
+    expect(mine.posts.some((p: { isDemo: boolean }) => p.isDemo)).toBe(false);
+
+    const myRequests = await (await authedRequest(app, "/requests/mine", realCookie)).json();
+    expect(myRequests.requests.some((r: { isDemo: boolean }) => r.isDemo)).toBe(false);
+
+    const notifs = await (await authedRequest(app, "/notifications", realCookie)).json();
+    expect(notifs.notifications).toHaveLength(0);
+  });
 });
 
 describe("provisionSeededPost", () => {

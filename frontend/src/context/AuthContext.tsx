@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Anyone can opt into a sandboxed demo session — see docs/demo-mode-plan.md.
   // Both re-seed the auth query directly (same pattern as login()) so the
   // Navbar/DemoIndicator reflect the switch immediately, no extra round trip.
-  // Posts/requests queries are keyed independently of auth state, so without
+  // Posts/requests/notifications queries are keyed independently of auth state, so without
   // an explicit invalidation here they'd keep serving their pre-toggle
   // result until their own refetch interval happened to fire — the feed
   // wouldn't show demo content, or would keep showing it, for up to 15s.
@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
     queryClient.invalidateQueries({ queryKey: ["posts"] });
     queryClient.invalidateQueries({ queryKey: ["requests"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
   const stopDemo = async () => {
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
     queryClient.invalidateQueries({ queryKey: ["posts"] });
     queryClient.invalidateQueries({ queryKey: ["requests"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
   return (

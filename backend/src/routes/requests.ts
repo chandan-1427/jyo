@@ -319,7 +319,7 @@ requestRoutes.put("/:id/cancel", async (c) => {
 });
 
 requestRoutes.get("/mine", async (c) => {
-  const { userId } = c.get("user");
+  const { userId, isDemo } = c.get("user");
 
   const requests = await db
     .select({
@@ -334,7 +334,8 @@ requestRoutes.get("/mine", async (c) => {
     })
     .from(pickupRequests)
     .innerJoin(foodPosts, eq(pickupRequests.postId, foodPosts.id))
-    .where(eq(pickupRequests.pickerId, userId))
+    // Outside demo mode, requests made during a demo stay hidden.
+    .where(and(eq(pickupRequests.pickerId, userId), isDemo ? undefined : eq(pickupRequests.isDemo, false)))
     .orderBy(desc(pickupRequests.createdAt));
 
   return c.json({ requests });
