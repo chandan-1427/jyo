@@ -86,6 +86,19 @@ export default function Navbar() {
       queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) => [newNotif, ...prev]);
     });
 
+    // A post was added or changed somewhere. Only refetches if the feed is
+    // on screen; otherwise it's just marked stale for the next visit.
+    const refreshFeed = () => queryClient.invalidateQueries({ queryKey: ["posts", "feed"] });
+    source.addEventListener("feed", refreshFeed);
+
+    // EventSource reconnects on its own after a drop; catch up on anything
+    // missed while disconnected (skipping the very first connect).
+    let connectedBefore = false;
+    source.addEventListener("open", () => {
+      if (connectedBefore) refreshFeed();
+      connectedBefore = true;
+    });
+
     return () => {
       source.close();
     };

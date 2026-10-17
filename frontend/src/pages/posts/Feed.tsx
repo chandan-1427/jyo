@@ -36,17 +36,27 @@ export default function Feed() {
     data,
     error: fetchError,
     isPending: postsLoading,
-    isFetching: refreshing,
     refetch,
   } = useQuery<{ posts: FoodPost[] }>({
     queryKey: ["posts", "feed", coords?.lat, coords?.lng],
     queryFn: () => apiFetch(`/posts?lat=${coords!.lat}&lng=${coords!.lng}`),
     enabled: !!coords && !outOfRegion,
-    refetchInterval: 15_000,
+    // The server pushes a "feed" event whenever a post changes (see
+    // Navbar.tsx), so this is only a backstop for a connection that died
+    // without the browser noticing.
+    refetchInterval: 5 * 60_000,
   });
   const posts = data?.posts ?? [];
 
-  const handleRefresh = () => refetch();
+  // Tracked separately from the query's isFetching, which is also true for
+  // pushed and background refetches; the button should only spin when the
+  // person asked for a refresh.
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const handleStartDemo = async () => {
     setStartingDemo(true);
