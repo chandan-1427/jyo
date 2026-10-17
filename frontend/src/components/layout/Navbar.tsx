@@ -5,7 +5,9 @@ import { useAuth } from "@/context/AuthContext";
 import { apiFetch, BASE_URL } from "@/lib/api/api";
 import { Bell, Home, PlusSquare, Package, PackageOpen, CircleUserRound } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { Logo } from "../ui/Logo";
+import { Avatar } from "../ui/Avatar";
 
 type Notification = {
   id: string;
@@ -15,17 +17,14 @@ type Notification = {
   postId: string | null;
 };
 
-const navLinks = [
+const NAV_LINKS = [
   { label: "Feed", path: "/feed", icon: Home },
-  { label: "Post Food", path: "/create", icon: PlusSquare },
-  { label: "My Posts", path: "/my-posts", icon: Package },
-  { label: "My Requests", path: "/my-requests", icon: PackageOpen },
+  { label: "Post food", path: "/create", icon: PlusSquare },
+  { label: "My posts", path: "/my-posts", icon: Package },
+  { label: "My requests", path: "/my-requests", icon: PackageOpen },
 ];
 
-const mobileTabs = [
-  ...navLinks,
-  { label: "Profile", path: "/profile", icon: CircleUserRound },
-];
+const MOBILE_TABS = [...NAV_LINKS, { label: "Profile", path: "/profile", icon: CircleUserRound }];
 
 const notificationsKey = ["notifications"] as const;
 
@@ -34,10 +33,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [showNotifs, setShowNotifs] = useState(false);
-  const [showMobileNotifs, setShowMobileNotifs] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
-  const mobileRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const { data: notifications = [] } = useQuery({
     queryKey: notificationsKey,
@@ -54,18 +51,28 @@ export default function Navbar() {
     );
   };
 
+  const toggleNotifications = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && unreadCount > 0) handleMarkAllRead();
+  };
+
+  // Close on a click outside the bell and its panel, or on Escape.
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setShowNotifs(false);
-      }
-      if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) {
-        setShowMobileNotifs(false);
-      }
+    if (!open) return;
+    const onPointer = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!user) return;
@@ -85,161 +92,135 @@ export default function Navbar() {
   }, [user, queryClient]);
 
   const isActive = (path: string) => location.pathname === path;
+  const current = (path: string) => (isActive(path) ? "page" : undefined);
 
-  // A plain function returning JSX, not a nested component — declaring a
-  // component inside another component's body redefines it (and resets
-  // its identity/state) on every render.
-  const renderNotificationsList = () =>
-    notifications.length === 0 ? (
-      <p className="text-sm text-subtle text-center py-6">No notifications yet</p>
-    ) : (
-      <div className="divide-y divide-border">
-        {notifications.map((n) => {
-          const clickable = Boolean(n.postId);
-          return (
-            <div
-              key={n.id}
-              onClick={() => {
-                if (clickable) {
-                  setShowNotifs(false);
-                  setShowMobileNotifs(false);
-                  navigate(`/posts/${n.postId}`);
-                }
-              }}
-              className={`px-4 py-3 text-sm transition-colors ${
-                clickable ? "cursor-pointer hover:bg-background" : ""
-              } ${n.read ? "text-subtle bg-surface" : "text-foreground bg-accent/5"}`}
-            >
-              <p className="leading-snug">{n.message}</p>
-              <p className="text-xs text-subtle mt-0.5">
-                {formatDateTime(n.createdAt)}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-    );
+  const openNotification = (postId: string) => {
+    setOpen(false);
+    navigate(`/posts/${postId}`);
+  };
 
   return (
-    <nav className="bg-background sticky top-0 z-50 font-medium">
-      <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+    <>
+      <header className="sticky top-0 z-40 border-b border-fg/[0.06] bg-canvas">
+        <div className="flex h-14 items-center justify-between gap-6 px-4 sm:px-6 lg:px-10">
+          <div className="flex items-center gap-8">
+            <Logo to="/feed" className="font-display text-2xl text-fg [&>span]:text-leaf" />
 
-        <Logo to="/feed" />
+            <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
+              {NAV_LINKS.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  aria-current={current(link.path)}
+                  className="rounded-md px-3 py-1.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg aria-[current=page]:text-fg focus-visible:outline-2 focus-visible:outline-leaf"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
 
-        {/* Desktop nav links */}
-        <div className="hidden sm:flex items-center gap-6">
-          {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`text-sm font-medium transition-colors duration-150 ${
-                isActive(link.path)
-                  ? "text-foreground"
-                  : "text-subtle hover:text-muted"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
+          <div className="flex items-center gap-2">
+            {/* Notifications */}
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={toggleNotifications}
+                aria-expanded={open}
+                aria-haspopup="true"
+                aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+                className="relative grid size-11 cursor-pointer place-items-center rounded-lg text-fg-muted transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-leaf sm:size-9"
+              >
+                <Bell className="size-5 sm:size-[18px]" aria-hidden="true" />
+                {/* A dot, not a count; the exact number is in the label for
+                    screen readers and in the list itself. */}
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute top-2.5 right-2.5 size-2 rounded-full bg-leaf ring-2 ring-canvas sm:top-1.5 sm:right-1.5"
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
 
-        {/* Desktop right side */}
-        <div className="hidden sm:flex items-center gap-4">
-          <Link
-            to="/profile"
-            className={`text-sm font-medium transition-colors duration-150 ${
-              isActive("/profile")
-                ? "text-foreground"
-                : "text-subtle hover:text-muted"
-            }`}
-          >
-            {user?.name}
-          </Link>
-
-          {/* Desktop notification bell + dropdown */}
-          <div className="relative" ref={notifRef}>
-            <button
-              onClick={() => {
-                setShowNotifs(!showNotifs);
-                if (!showNotifs && unreadCount > 0) handleMarkAllRead();
-              }}
-              className="cursor-pointer relative flex items-center justify-center w-8 h-8 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150"
-            >
-              <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-accent text-background text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                  {unreadCount}
-                </span>
+              {open && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-raised shadow-lift ring-1 ring-inset ring-fg/[0.06]">
+                  <p className="px-4 pt-4 pb-2 text-sm font-semibold text-fg">Notifications</p>
+                  {notifications.length === 0 ? (
+                    <p className="px-4 pt-2 pb-6 text-sm text-fg-subtle">No notifications yet.</p>
+                  ) : (
+                    <ul className="max-h-80 overflow-y-auto pb-2">
+                      {notifications.map((n) => {
+                        const body = (
+                          <>
+                            <span
+                              className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", n.read ? "bg-transparent" : "bg-leaf")}
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0">
+                              <span className={cn("block text-sm leading-snug", n.read ? "text-fg-muted" : "text-fg")}>
+                                {n.message}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-fg-subtle tabular-nums">
+                                {formatDateTime(n.createdAt)}
+                              </span>
+                            </span>
+                          </>
+                        );
+                        return (
+                          <li key={n.id}>
+                            {n.postId ? (
+                              <button
+                                type="button"
+                                onClick={() => openNotification(n.postId!)}
+                                className="flex w-full cursor-pointer gap-3 px-4 py-2.5 text-left transition-colors hover:bg-lifted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
+                              >
+                                {body}
+                              </button>
+                            ) : (
+                              <div className="flex gap-3 px-4 py-2.5">{body}</div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
               )}
-            </button>
+            </div>
 
-            {showNotifs && (
-              <div className="absolute right-0 top-10 w-80 bg-surface rounded-xl border border-border shadow-lg z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-border">
-                  <p className="text-[13px] font-semibold text-foreground">Notifications</p>
-                </div>
-                <div className="max-h-72 overflow-y-auto">
-                  {renderNotificationsList()}
-                </div>
-              </div>
-            )}
+            {/* Profile (desktop; phones reach it from the tab bar) */}
+            <Link
+              to="/profile"
+              aria-current={current("/profile")}
+              aria-label="Your profile"
+              className="hidden rounded-full ring-offset-2 ring-offset-canvas aria-[current=page]:ring-2 aria-[current=page]:ring-fg/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf sm:block"
+            >
+              <Avatar name={user?.name} src={user?.avatarUrl} className="size-9 text-sm" />
+            </Link>
           </div>
         </div>
+      </header>
 
-        {/* Mobile: bell only — nav links live in the bottom tab bar, logout on /profile */}
-        <div className="sm:hidden relative flex items-center" ref={mobileRef}>
-          <button
-            onClick={() => {
-              setShowMobileNotifs((prev) => {
-                const next = !prev;
-                if (next && unreadCount > 0) handleMarkAllRead();
-                return next;
-              });
-            }}
-            className="cursor-pointer relative flex items-center justify-center w-11 h-11 rounded-lg text-subtle hover:text-foreground hover:bg-surface transition-colors duration-150"
-          >
-            <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 bg-accent text-background text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
-          {/* Mobile notifications panel */}
-          {showMobileNotifs && (
-            <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface rounded-xl border border-border shadow-lg z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b border-border">
-                <p className="text-[13px] font-semibold text-foreground">Notifications</p>
-              </div>
-              <div className="max-h-72 overflow-y-auto">
-                {renderNotificationsList()}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile bottom tab bar */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background border-t border-border pb-[env(safe-area-inset-bottom)]">
-        <div className="flex items-center justify-around h-14">
-          {mobileTabs.map(({ label, path, icon: Icon }) => {
-            const active = isActive(path);
-            return (
+      {/* Mobile tab bar */}
+      <nav
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-fg/[0.06] bg-canvas pb-[env(safe-area-inset-bottom)] sm:hidden"
+      >
+        <ul className="flex h-16">
+          {MOBILE_TABS.map(({ label, path, icon: Icon }) => (
+            <li key={path} className="flex-1">
               <Link
-                key={path}
                 to={path}
-                aria-label={label}
-                className={`flex items-center justify-center flex-1 h-full transition-colors duration-150 ${
-                  active ? "text-foreground" : "text-subtle"
-                }`}
+                aria-current={current(path)}
+                className="flex h-full flex-col items-center justify-center gap-1 text-fg-subtle transition-colors aria-[current=page]:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
               >
-                <Icon className="w-6 h-6" strokeWidth={active ? 2.25 : 1.75} />
+                <Icon className="size-5" strokeWidth={isActive(path) ? 2.25 : 1.75} aria-hidden="true" />
+                <span className="text-[11px] font-medium leading-none">{label}</span>
               </Link>
-            );
-          })}
-        </div>
-      </div>
-    </nav>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </>
   );
 }
