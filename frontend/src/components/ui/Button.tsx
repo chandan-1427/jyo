@@ -3,7 +3,7 @@ import { Link, type LinkProps } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 interface CommonProps {
@@ -60,8 +60,12 @@ const SIZES: Record<Size, string> = {
 const VARIANTS: Record<Variant, string> = {
   primary: cn(DEPTH, "bg-linear-to-b from-cta-top to-cta text-canvas [--ledge:var(--color-cta-deep)]"),
   secondary: cn(DEPTH, "bg-linear-to-b from-lifted-top to-lifted text-fg [--ledge:var(--color-raised)]"),
+  // Outlined, no fill or ledge: for the quieter half of a pair (Cancel).
+  outline: "text-fg ring-1 ring-inset ring-fg/15 hover:bg-fg/5 hover:opacity-100",
   ghost: "text-fg-muted hover:bg-raised hover:text-fg hover:opacity-100",
-  danger: cn(DEPTH, "bg-danger/15 text-danger [--ledge:rgb(239_124_142/0.3)]"),
+  // Outlined in red rather than filled: destructive actions (Log out) should
+  // be findable without being the loudest thing on screen.
+  danger: "text-danger ring-1 ring-inset ring-danger/50 hover:bg-danger/10 hover:opacity-100",
 };
 
 export function Button({

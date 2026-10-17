@@ -4,63 +4,28 @@
   --font-geist: "Geist Variable", sans-serif;
   --font-inter: "Inter Variable", sans-serif;
 
-  /* Warm-dark palette. Every value below is contrast-verified against its
-     intended backdrop — see the ratio noted on each line. Token NAMES are
-     unchanged on purpose: `muted` (51 uses) and `subtle` (111 uses) are
-     revalued in place, so nothing downstream needs renaming.
-
-     The base is a warm espresso rather than a cool near-black because this
-     page sells food shared from someone's kitchen. Cool near-black reads as
-     a developer tool; warm dark also lets food photography — the only real
-     colour in the product — sit in-family instead of fighting the chrome. */
-
-  --color-background: #17140F; /* base canvas */
-  --color-surface:    #2E271E; /* raised. 1.25:1 vs base, so a card fill is
-                                  actually VISIBLE. The old #202020 was 1.07:1
-                                  against its base — borders did all the work
-                                  and a 40%-opacity surface rendered as
-                                  nothing at all. */
-  --color-border:     #42382B; /* 1.60:1 vs base, 1.29:1 vs surface — legible
-                                  as an edge in BOTH contexts, which the old
-                                  #2A2A28 was not once placed on a card. */
-
-  --color-foreground: #F4F0E8; /* 16.2:1 — headings, emphasis */
-  --color-muted:      #CFC7BA; /* 11.0:1 base / 8.8:1 surface — body copy.
-                                  Passes AAA on both, so the global
-                                  `p, li { color: muted }` rule below is now
-                                  safe rather than merely tolerable. */
-  --color-subtle:     #A79E90; /* 6.9:1 base / 5.6:1 surface — metadata only,
-                                  and never below 14px. */
-
-  --color-accent:     #F5A524; /* 9.0:1. Used at most twice per screen. An
-                                  accent spent four weak times is noise; spent
-                                  once it carries the page's warmth. */
-
-  /* Hover/focus border — the one genuinely unnamed semantic slot in this
-     system, currently leaking stock `neutral-600` (#525252) at 18 sites.
-     That grey is pure COOL and reads visibly blue against a warm base.
-
-     Luminance is matched deliberately — 2.31:1 vs neutral-600's 2.35:1 — so
-     the sweep is a drop-in with identical perceived weight, no retuning.
-
-     Named `border-strong` rather than `hover-border` so the generated utility
-     reads `hover:border-border-strong`, not `hover:border-hover-border`. */
-  --color-border-strong: #5C4F3D;
-
-  /* Genuine caution only. Terracotta, 21° of hue from the accent — which is
-     the MAXIMUM separation achievable while staying warm and passing AA
-     (5.8:1 base / 4.7:1 surface). 21° is not enough on its own, so every use
-     pairs this with an icon; colour is never the sole signal.
-
-     This exists because the old accent WAS `amber-400` (#FBBF24) exactly:
-     brand and warning were the same colour by accident. Progress states like
-     `pending` are no longer coloured at all — see StatusBadge. */
-  --color-warning: #E0724A;
+  /* ── Legacy colour names ────────────────────────────────────────────────
+     The pages not yet redesigned (feed, posts, requests) still use these
+     names. They now point at the v2 palette below, so every page is on the
+     same colours while each one waits for its full redesign. Delete a name
+     once nothing uses it. */
+  --color-background:    var(--color-canvas);
+  --color-surface:       var(--color-raised);
+  --color-border:        #262B29; /* visible edge on canvas and on raised */
+  --color-border-strong: #3A403D; /* hover/focus edge */
+  --color-foreground:    var(--color-fg);
+  --color-muted:         var(--color-fg-muted);
+  --color-subtle:        var(--color-fg-subtle);
+  --color-accent:        var(--color-leaf);
+  /* Caution notices. Was terracotta orange; the v2 palette has no warm
+     hues, so caution shares the soft red. Every use pairs it with an icon. */
+  --color-warning:       var(--color-danger);
 
   /* ── v2 ─────────────────────────────────────────────────────────────────
-     The redesign's palette. Pages move onto it one at a time by calling
-     useV2Theme(); once every page has moved, these become the defaults and
-     the tokens above are deleted.
+     The redesign's palette, used app-wide (the legacy names above point
+     here). Redesigned pages also call useV2Theme(), which switches on the v2
+     base typography rules further down; the rest keep the old ones until
+     they're redesigned.
 
      A cool green-black with one leaf-green accent, with no warm hues. Surfaces
      are separated by fill steps rather than borders, so each step has to be
