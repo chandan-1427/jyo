@@ -82,6 +82,32 @@ describe("GET /posts (feed)", () => {
     expect(body.posts[0].pickupLng).toBeUndefined();
   });
 
+  it("doesn't reveal the poster's name in the feed or to anyone but the approved picker", async () => {
+    const poster = await createVerifiedUser(app, { name: "Lakshmi", email: "name-poster@example.com" });
+    const post = await createPostAt(poster.cookie, TIRUPATI);
+
+    const viewer = await createVerifiedUser(app, { email: "name-viewer@example.com" });
+    const feed = await (await authedRequest(app, `/posts?lat=${TIRUPATI.lat}&lng=${TIRUPATI.lng}`, viewer.cookie)).json();
+    expect(feed.posts[0]).not.toHaveProperty("posterName");
+    expect(JSON.stringify(feed)).not.toContain("Lakshmi");
+
+    const picker = await createVerifiedUser(app, { email: "name-picker@example.com" });
+    const request = await createRequestFor(picker.cookie, post.id);
+
+    const beforeApproval = await (await authedRequest(app, `/posts/${post.id}`, picker.cookie)).json();
+    expect(beforeApproval.post.posterName).toBeNull();
+
+    const approve = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" });
+    expect(approve.status).toBe(200);
+
+    const forPicker = await (await authedRequest(app, `/posts/${post.id}`, picker.cookie)).json();
+    expect(forPicker.post.posterName).toBe("Lakshmi");
+
+    const forViewer = await (await authedRequest(app, `/posts/${post.id}`, viewer.cookie)).json();
+    expect(forViewer.post.posterName).toBeNull();
+    expect(JSON.stringify(forViewer)).not.toContain("Lakshmi");
+  });
+
   it("requires lat/lng query params", async () => {
     const viewer = await createVerifiedUser(app, { email: "no-coords@example.com" });
     const res = await authedRequest(app, "/posts", viewer.cookie);

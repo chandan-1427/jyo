@@ -47,8 +47,7 @@ export default function PostCard({ post }: Props) {
           </p>
         )}
 
-        <div className="flex items-center justify-between text-xs text-subtle pt-0.5">
-          <span>by {post.posterName}</span>
+        <div className="flex items-center text-xs text-subtle pt-0.5">
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3 shrink-0" />
             {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}
