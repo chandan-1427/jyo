@@ -154,6 +154,88 @@ describe("GET /posts (feed)", () => {
   });
 });
 
+describe("PUT /posts/:id (edit)", () => {
+  const HOUR = 3_600_000;
+  const edit = (cookie: string, postId: string, changes: Record<string, unknown> = {}) =>
+    authedRequest(app, `/posts/${postId}`, cookie, {
+      method: "PUT",
+      body: JSON.stringify({
+        title: "Rice, dal and curd for 3",
+        description: "Made this afternoon",
+        pickupWindowStart: new Date(Date.now() + HOUR).toISOString(),
+        pickupWindowEnd: new Date(Date.now() + 3 * HOUR).toISOString(),
+        ...changes,
+      }),
+    });
+
+  it("lets the poster change an open post, keeping the photo and spot", async () => {
+    const poster = await createVerifiedUser(app, { email: "edit-open@example.com" });
+    const created = await authedRequest(app, "/posts", poster.cookie, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Rice and dal for 2",
+        photoUrl: "https://example.com/food.jpg",
+        pickupLat: TIRUPATI.lat,
+        pickupLng: TIRUPATI.lng,
+        pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
+        pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+      }),
+    });
+    const { post } = await created.json();
+
+    const res = await edit(poster.cookie, post.id);
+    expect(res.status).toBe(200);
+    const { post: updated } = await res.json();
+    expect(updated.title).toBe("Rice, dal and curd for 3");
+    expect(updated.description).toBe("Made this afternoon");
+    expect(updated.photoUrl).toBe("https://example.com/food.jpg");
+    expect(updated.pickupLat).toBe(TIRUPATI.lat);
+  });
+
+  it("is locked once someone asks for the post, and unlocks if they're declined", async () => {
+    const poster = await createVerifiedUser(app, { email: "edit-locked@example.com" });
+    const picker = await createVerifiedUser(app, { email: "edit-locked-picker@example.com" });
+    const post = await createPostAt(poster.cookie, TIRUPATI);
+    const request = await createRequestFor(picker.cookie, post.id);
+
+    const whilePending = await edit(poster.cookie, post.id);
+    expect(whilePending.status).toBe(400);
+    expect((await whilePending.json()).error).toMatch(/already asked/);
+
+    await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "PUT" });
+    expect((await edit(poster.cookie, post.id)).status).toBe(200);
+  });
+
+  it("is locked after the poster approves a request", async () => {
+    const poster = await createVerifiedUser(app, { email: "edit-approved@example.com" });
+    const picker = await createVerifiedUser(app, { email: "edit-approved-picker@example.com" });
+    const post = await createPostAt(poster.cookie, TIRUPATI);
+    const request = await createRequestFor(picker.cookie, post.id);
+    await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" });
+
+    expect((await edit(poster.cookie, post.id)).status).toBe(400);
+  });
+
+  it("rejects editing someone else's post", async () => {
+    const poster = await createVerifiedUser(app, { email: "edit-owner@example.com" });
+    const other = await createVerifiedUser(app, { email: "edit-other@example.com" });
+    const post = await createPostAt(poster.cookie, TIRUPATI);
+
+    expect((await edit(other.cookie, post.id)).status).toBe(403);
+  });
+
+  it("applies the same pickup time rules as creating a post", async () => {
+    const poster = await createVerifiedUser(app, { email: "edit-times@example.com" });
+    const post = await createPostAt(poster.cookie, TIRUPATI);
+
+    const res = await edit(poster.cookie, post.id, {
+      pickupWindowStart: new Date(Date.now() + 3 * HOUR).toISOString(),
+      pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("DELETE /posts/:id", () => {
   it("allows deleting an open post", async () => {
     const poster = await createVerifiedUser(app, { email: "delete-open@example.com" });

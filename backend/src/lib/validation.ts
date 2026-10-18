@@ -75,22 +75,32 @@ export const createRequestSchema = z.object({
   lng: z.number().min(-180).max(180),
 });
 
-// ─── Create post ─────────────────────────────────────────────────────────────
+// ─── Create / edit post ──────────────────────────────────────────────────────
+const postFields = {
+  title: fields.title,
+  description: fields.description.optional(),
+  photoUrl: z.url("Invalid photo URL").optional(),
+  pickupWindowStart: z.iso.datetime("Invalid start time"),
+  pickupWindowEnd: z.iso.datetime("Invalid end time"),
+};
+
+type PickupWindow = { pickupWindowStart: string; pickupWindowEnd: string };
+
+const endAfterStart = (data: PickupWindow) => new Date(data.pickupWindowEnd) > new Date(data.pickupWindowStart);
+const endInFuture = (data: PickupWindow) => new Date(data.pickupWindowEnd) > new Date();
+
 export const createPostSchema = z
   .object({
-    title: fields.title,
-    description: fields.description.optional(),
-    photoUrl: z.url("Invalid photo URL").optional(),
+    ...postFields,
     pickupLat: z.number().min(-90).max(90),
     pickupLng: z.number().min(-180).max(180),
-    pickupWindowStart: z.iso.datetime("Invalid start time"),
-    pickupWindowEnd: z.iso.datetime("Invalid end time"),
   })
-  .refine((data) => new Date(data.pickupWindowEnd) > new Date(data.pickupWindowStart), {
-    message: "End time must be after start time",
-    path: ["pickupWindowEnd"],
-  })
-  .refine((data) => new Date(data.pickupWindowEnd) > new Date(), {
-    message: "End time must be in the future",
-    path: ["pickupWindowEnd"],
-  });
+  .refine(endAfterStart, { message: "End time must be after start time", path: ["pickupWindowEnd"] })
+  .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] });
+
+// The pickup spot can't be edited: it was checked against the service area
+// when the post was made. Omitting photoUrl or description keeps the current one.
+export const updatePostSchema = z
+  .object(postFields)
+  .refine(endAfterStart, { message: "End time must be after start time", path: ["pickupWindowEnd"] })
+  .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] });

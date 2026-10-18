@@ -165,3 +165,40 @@ describe("invalid IDs", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("delete racing a new request", () => {
+  // Before the delete locked the post, a request could claim it between the
+  // delete's status check and its writes, and the delete then wiped out the
+  // new pending request along with the post. Now exactly one side wins and
+  // nothing is left half-done. Repeated, since the interleaving varies.
+  it("either deletes the post or keeps it with the request, never a mix", async () => {
+    for (let i = 0; i < 5; i++) {
+      const poster = await createVerifiedUser(app, { email: `race-poster-${i}-${Math.random()}@example.com` });
+      const picker = await createVerifiedUser(app, { email: `race-picker-${i}-${Math.random()}@example.com` });
+      const post = await createPost(poster.cookie);
+
+      const [deleteRes, requestRes] = await Promise.all([
+        authedRequest(app, `/posts/${post.id}`, poster.cookie, { method: "DELETE" }),
+        authedRequest(app, "/requests", picker.cookie, {
+          method: "POST",
+          body: JSON.stringify({ postId: post.id, pickerName: "Picker", etaMinutes: 15, lat: 13.63, lng: 79.42 }),
+        }),
+      ]);
+
+      const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
+      const requests = await db.select().from(pickupRequests).where(eq(pickupRequests.postId, post.id));
+
+      if (deleteRes.status === 200) {
+        // 400 if it read the post before it was gone, 404 if after.
+        expect([400, 404]).toContain(requestRes.status);
+        expect(finalPost).toBeUndefined();
+        expect(requests).toHaveLength(0);
+      } else {
+        expect(deleteRes.status).toBe(400);
+        expect(requestRes.status).toBe(201);
+        expect(finalPost.status).toBe("pending_approval");
+        expect(requests).toHaveLength(1);
+      }
+    }
+  });
+});

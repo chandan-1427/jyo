@@ -71,6 +71,9 @@ describe("frontend and backend validation stay in sync", () => {
     ["create post", frontend.createPostSchema, backend.createPostSchema, [
       ["title", "title", "title"], ["description", "description", "description"],
     ]],
+    ["edit post", frontend.editPostSchema, backend.updatePostSchema, [
+      ["title", "title", "title"], ["description", "description", "description"],
+    ]],
   ];
 
   for (const [form, front, back, pairs] of FORMS) {

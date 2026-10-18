@@ -12,7 +12,8 @@ import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/domain/demo.js";
-import { createPostSchema } from "../lib/validation.js";
+import { createPostSchema, updatePostSchema } from "../lib/validation.js";
+import { ConflictError } from "../lib/errors.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 
 export const postRoutes = new Hono();
@@ -285,6 +286,73 @@ postRoutes.put("/:id/complete", async (c) => {
   return c.json({ message: "Post marked as completed" });
 });
 
+// Once someone has asked for a post, it's what they asked for: the poster
+// can no longer change it or take it away. Editing is only possible while
+// the post is open; deleting also while it's expired (nothing is pending).
+const LOCKED_MESSAGE = "Someone has already asked for this food, so it can't be changed or deleted.";
+
+// --- Edit post ---
+postRoutes.put("/:id", async (c) => {
+  const { userId } = c.get("user");
+  const postId = c.req.param("id");
+
+  if (!isValidUuid(postId)) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  const body = await c.req.json();
+  const result = updatePostSchema.safeParse(body);
+
+  if (!result.success) {
+    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
+  }
+
+  const post = await findPostById(postId);
+
+  if (!post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  if (post.posterId !== userId) {
+    return c.json({ error: "Unauthorized" }, 403);
+  }
+
+  if (post.status !== "open") {
+    return c.json({ error: post.status === "expired" ? "This post has ended. Post the food again instead." : LOCKED_MESSAGE }, 400);
+  }
+
+  const { title, description, photoUrl, pickupWindowStart, pickupWindowEnd } = result.data;
+
+  // Same guard as approve/reject/cancel: conditional on the post still being
+  // open, so a request that claims it between the check above and this
+  // write wins, and the edit doesn't change food someone just asked for.
+  const [updated] = await db
+    .update(foodPosts)
+    .set({
+      title,
+      description: description ?? post.description,
+      photoUrl: photoUrl ?? post.photoUrl,
+      pickupWindowStart: new Date(pickupWindowStart),
+      pickupWindowEnd: new Date(pickupWindowEnd),
+    })
+    .where(and(eq(foodPosts.id, postId), eq(foodPosts.status, "open")))
+    .returning();
+
+  if (!updated) {
+    return c.json({ error: LOCKED_MESSAGE }, 400);
+  }
+
+  // A replaced photo is no longer referenced anywhere.
+  if (post.photoUrl && updated.photoUrl !== post.photoUrl) {
+    deleteFile(post.photoUrl, "food-photos")
+      .catch((err) => logger.error({ err, postId }, "Failed to delete replaced post photo"));
+  }
+
+  if (!post.isDemo) broadcastFeedChange();
+
+  return c.json({ message: "Post updated", post: updated });
+});
+
 // --- Delete post ---
 postRoutes.delete("/:id", async (c) => {
   const { userId } = c.get("user");
@@ -304,37 +372,44 @@ postRoutes.delete("/:id", async (c) => {
     return c.json({ error: "Unauthorized" }, 403);
   }
 
-  if (post.status === "closed" || post.status === "completed") {
-    return c.json(
-      { error: "Cannot delete a post that has already been approved. The picker is on their way." },
-      400
-    );
+  if (post.status !== "open" && post.status !== "expired") {
+    return c.json({ error: LOCKED_MESSAGE }, 400);
   }
 
-  if (post.status === "pending_approval") {
-    return c.json(
-      { error: "Cannot delete a post with a pending pickup request. Approve or reject it first." },
-      400
-    );
-  }
-
-  // Only rejected/cancelled requests can exist on a post that's still
-  // "open" — their selfies, along with this post's photo, are about to
-  // become unreachable once these rows are gone, so clean up storage too.
+  // The post row is locked (FOR UPDATE) and its status re-checked inside the
+  // transaction. Without that, a request could claim the post between the
+  // check above and the deletes below, and the delete would silently wipe
+  // out that new pending request along with the post. A request racing this
+  // waits on the lock, then finds the post gone and gets a clean
+  // "no longer available".
   const relatedRequests = await db
-    .select({ selfieUrl: pickupRequests.selfieUrl })
-    .from(pickupRequests)
-    .where(eq(pickupRequests.postId, postId));
+    .transaction(async (tx) => {
+      const [locked] = await tx
+        .select({ status: foodPosts.status })
+        .from(foodPosts)
+        .where(eq(foodPosts.id, postId))
+        .for("update");
 
-  // Delete all related pickup requests first — required by foreign key constraint
-  await db
-    .delete(pickupRequests)
-    .where(eq(pickupRequests.postId, postId));
+      if (!locked || (locked.status !== "open" && locked.status !== "expired")) throw new ConflictError();
 
-  // Now safe to delete the post
-  await db
-    .delete(foodPosts)
-    .where(eq(foodPosts.id, postId));
+      // Only rejected/cancelled requests can exist here. Their rows have to
+      // go first (foreign key), and their selfies are cleaned up below.
+      const removed = await tx
+        .delete(pickupRequests)
+        .where(eq(pickupRequests.postId, postId))
+        .returning({ selfieUrl: pickupRequests.selfieUrl });
+
+      await tx.delete(foodPosts).where(eq(foodPosts.id, postId));
+      return removed;
+    })
+    .catch((err) => {
+      if (err instanceof ConflictError) return null;
+      throw err;
+    });
+
+  if (!relatedRequests) {
+    return c.json({ error: LOCKED_MESSAGE }, 400);
+  }
 
   if (!post.isDemo) broadcastFeedChange();
 
