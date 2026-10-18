@@ -21,9 +21,12 @@ const ICON = "pointer-events-none absolute left-4 flex text-fg-subtle [&>svg]:si
 // 16px is focused. The focus ring is a box-shadow that is not transitioned,
 // so it appears at once. The fill is `raised` on the page; a container that is
 // itself `raised` sets --field-bg so its fields stay visible against it.
+// Number inputs drop the browser's up/down arrows: the values here (like
+// minutes) are typed, and the tiny arrows only cluttered the field.
 const CONTROL =
   "w-full rounded-xl bg-[var(--field-bg,var(--color-raised))] px-4 text-base text-fg outline-none ring-1 ring-inset ring-fg/[0.08] " +
-  "placeholder:text-fg-subtle focus:ring-2 focus:ring-leaf aria-invalid:ring-danger/70 aria-invalid:focus:ring-danger";
+  "placeholder:text-fg-subtle focus:ring-2 focus:ring-leaf aria-invalid:ring-danger/70 aria-invalid:focus:ring-danger " +
+  "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 // Ids that wire the label to the control and the control to its message.
 function useFieldIds(id: string | undefined, hasMessage: boolean) {
@@ -33,8 +36,9 @@ function useFieldIds(id: string | undefined, hasMessage: boolean) {
   return { controlId, messageId, describedBy: hasMessage ? messageId : undefined };
 }
 
-// Label row, the control, and the hint/error line under it.
-function FieldFrame({
+// Label row, the control, and the hint/error line under it. Exported for
+// fields with their own control, such as DateTimeField.
+export function FieldFrame({
   label,
   labelAside,
   controlId,
@@ -114,12 +118,22 @@ export function TextField({
 
 type TextAreaFieldProps = FieldProps & Omit<ComponentProps<"textarea">, "className">;
 
+// The frame (fill, edge, focus and error rings) is drawn by a wrapper, with
+// the textarea sitting 2px inside it. A textarea paints its scrollbar over
+// its own edge, so when the ring was on the textarea, a long text's
+// scrollbar covered the right-hand side of it. The height stays at `rows`
+// lines and longer text scrolls inside, so typing never moves anything below.
+const TEXTAREA_FRAME =
+  "relative rounded-xl bg-[var(--field-bg,var(--color-raised))] p-0.5 ring-1 ring-inset ring-fg/[0.08] " +
+  "focus-within:ring-2 focus-within:ring-leaf " +
+  "has-[[aria-invalid=true]]:ring-danger/70 has-[[aria-invalid=true]]:focus-within:ring-danger";
+
 export function TextAreaField({ label, error, hint, labelAside, icon, className, id, rows = 4, ...textarea }: TextAreaFieldProps) {
   const ids = useFieldIds(id, Boolean(error ?? hint));
 
   return (
     <FieldFrame {...{ label, error, hint, labelAside, className }} controlId={ids.controlId} messageId={ids.messageId}>
-      <div className="relative">
+      <div className={TEXTAREA_FRAME}>
         {/* Pinned to the first line of text rather than centred. */}
         {icon && <span className={cn(ICON, "top-3.5")} aria-hidden="true">{icon}</span>}
         <textarea
@@ -127,7 +141,11 @@ export function TextAreaField({ label, error, hint, labelAside, icon, className,
           rows={rows}
           aria-invalid={error ? true : undefined}
           aria-describedby={ids.describedBy}
-          className={cn(CONTROL, "block resize-none py-3 leading-relaxed", icon && "pl-11")}
+          // Padding is 2px less than an input's, making up for the frame's.
+          className={cn(
+            "block w-full resize-none rounded-[10px] bg-transparent px-3.5 py-2.5 text-base leading-relaxed text-fg outline-none placeholder:text-fg-subtle",
+            icon && "pl-[42px]"
+          )}
           {...textarea}
         />
       </div>

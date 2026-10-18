@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger";
+export type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "dangerSolid";
 export type Size = "sm" | "md" | "lg";
 
 // The press and the fade run at 150ms ease-out so a click feels immediate;
@@ -46,6 +46,12 @@ const VARIANTS: Record<Variant, string> = {
   // Outlined in red rather than filled: destructive actions (Log out) should
   // be findable without being the loudest thing on screen.
   danger: "text-danger ring-1 ring-inset ring-danger/50 hover:bg-danger/10 hover:opacity-100",
+  // Solid red with the same ledge as primary and secondary, for removing
+  // something the person made (Delete post).
+  dangerSolid: cn(
+    DEPTH,
+    "bg-linear-to-b from-danger-solid-top to-danger-solid text-white [--ledge:var(--color-danger-solid-deep)]"
+  ),
 };
 
 // The button look for an element that isn't itself interactive, such as the
