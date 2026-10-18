@@ -24,3 +24,20 @@ export type PickupRequest = {
   isDemo?: boolean;
   createdAt: string;
 };
+// One of your own requests, as GET /requests/mine returns it: the request,
+// plus enough of its post to show it as a card. Never where the post is.
+export type MyRequest = {
+  id: string;
+  postId: string;
+  postTitle: string;
+  postDescription: string | null;
+  postPhotoUrl: string | null;
+  postStatus: FoodPost["status"];
+  pickupWindowStart: string;
+  pickupWindowEnd: string;
+  pickerName: string;
+  etaMinutes: number;
+  status: PickupRequest["status"];
+  isDemo?: boolean;
+  createdAt: string;
+};

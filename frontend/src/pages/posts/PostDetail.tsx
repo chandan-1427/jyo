@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft, Check, CheckCircle2, Clock, ExternalLink, MapPin, Maximize2, Navigation, Pencil, Plus, Search, Timer, Trash2,
+  ArrowLeft, Check, CheckCircle2, Clock, ExternalLink, MapPin, Maximize2, Navigation, Pencil, Plus, Timer, Trash2,
   UserRound, UtensilsCrossed, X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
@@ -14,6 +14,7 @@ import { EditPostDialog } from "@/components/posts/EditPostDialog";
 import { DeletePostDialog } from "@/components/posts/DeletePostDialog";
 import { Button } from "@/components/ui/Button";
 import { buttonClasses } from "@/components/ui/buttonStyles";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog } from "@/components/ui/Dialog";
 import { ImageViewer } from "@/components/ui/ImageViewer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -24,6 +25,8 @@ type PostDetailData = {
   isPoster: boolean;
   isApprovedPicker: boolean;
   pendingRequest: PickupRequest | null;
+  // The viewer's own latest request on this post, if they've made one.
+  myRequest: { id: string; status: PickupRequest["status"]; etaMinutes: number } | null;
 };
 
 type Post = PostDetailData["post"];
@@ -61,7 +64,7 @@ function Fact({ icon, label, children }: { icon: ReactNode; label: string; child
 
 function FindFoodButton() {
   return (
-    <Button to="/feed" variant="secondary" fullWidth iconLeft={<Search className="size-4" aria-hidden="true" />}>
+    <Button to="/feed" variant="secondary" fullWidth iconLeft={<MapPin className="size-4" aria-hidden="true" />}>
       Find other food
     </Button>
   );
@@ -83,10 +86,52 @@ function MapsButton({ lat, lng }: { lat: number; lng: number }) {
   );
 }
 
-function VisitorPanel({ status, onRequest }: { status: FoodPost["status"]; onRequest: () => void }) {
+function VisitorPanel({
+  post,
+  myRequest,
+  onRequest,
+}: {
+  post: Post;
+  myRequest: PostDetailData["myRequest"];
+  onRequest: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [cancelling, setCancelling] = useState(false);
+  const { status } = post;
+
+  // Their own request is still waiting: say so (not "someone has already
+  // asked"), and let them take it back.
+  if (myRequest?.status === "pending" && status === "pending_approval") {
+    return (
+      <Panel>
+        <Notice>You asked for this. Waiting for their answer; you'll get a notification either way.</Notice>
+        <Button variant="outline" fullWidth onClick={() => setCancelling(true)} iconLeft={<X className="size-4" aria-hidden="true" />}>
+          Cancel request
+        </Button>
+        {cancelling && (
+          <ConfirmDialog
+            title="Cancel your request?"
+            description="They won't see your request any more, and others can ask for it. You can ask again while it's still open."
+            confirmLabel="Cancel request"
+            busyLabel="Cancelling…"
+            tone="danger"
+            onConfirm={async () => {
+              await apiFetch(`/requests/${myRequest.id}/cancel`, { method: "PUT" });
+              queryClient.invalidateQueries({ queryKey: ["posts", post.id] });
+              queryClient.invalidateQueries({ queryKey: ["requests", "mine"] });
+            }}
+            onClose={() => setCancelling(false)}
+          />
+        )}
+      </Panel>
+    );
+  }
+
   if (status === "open") {
     return (
       <Panel>
+        {/* Asking again after a "no" is allowed, but they should know. */}
+        {myRequest?.status === "rejected" && <Notice>They declined your last request for this.</Notice>}
         <Button size="lg" fullWidth onClick={onRequest}>
           Request pickup
         </Button>
@@ -461,7 +506,7 @@ export default function PostDetail() {
           ) : isApprovedPicker ? (
             <PickerPanel post={post} />
           ) : (
-            <VisitorPanel status={post.status} onRequest={() => setRequesting(true)} />
+            <VisitorPanel post={post} myRequest={data.myRequest} onRequest={() => setRequesting(true)} />
           )}
         </div>
       </div>

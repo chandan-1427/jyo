@@ -215,6 +215,20 @@ postRoutes.get("/:id", async (c) => {
     pendingRequest = req ?? null;
   }
 
+  // The viewer's own latest request on this post, so the page can say "your
+  // request is waiting" (and offer to cancel it) instead of treating them
+  // like any other visitor who finds the post already asked for.
+  let myRequest = null;
+  if (!isPoster) {
+    const [mine] = await db
+      .select({ id: pickupRequests.id, status: pickupRequests.status, etaMinutes: pickupRequests.etaMinutes })
+      .from(pickupRequests)
+      .where(and(eq(pickupRequests.postId, postId), eq(pickupRequests.pickerId, userId)))
+      .orderBy(desc(pickupRequests.createdAt))
+      .limit(1);
+    myRequest = mine ?? null;
+  }
+
   const showLocation = (isPoster || isApprovedPicker) && post.status === "closed";
 
   // The poster's name follows the same rule as the location: only the poster
@@ -223,7 +237,7 @@ postRoutes.get("/:id", async (c) => {
     ? { ...post, posterName }
     : { ...post, posterName: isPoster ? posterName : null, pickupLat: null, pickupLng: null };
 
-  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest });
+  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest, myRequest });
 });
 
 postRoutes.post(
