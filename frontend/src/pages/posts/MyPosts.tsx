@@ -1,177 +1,293 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Loader2, UtensilsCrossed, Trash2, AlertCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, RotateCw, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
-import type { FoodPost } from "@/types/api";
 import { formatDate } from "@/lib/format";
-import { LinkButton } from "@/components/ui/LinkButton";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DemoBadge } from "@/components/ui/DemoBadge";
+import { useV2Theme } from "@/lib/theme";
+import { useSearch } from "@/lib/useSearch";
+import { cn } from "@/lib/utils";
+import type { FoodPost } from "@/types/api";
+import PostCard from "@/components/posts/PostCard";
+import { TiffinIllustration } from "@/components/posts/TiffinIllustration";
+import { EmptyPlateIllustration } from "@/components/posts/EmptyPlateIllustration";
+import { DeletePostDialog } from "@/components/posts/DeletePostDialog";
+import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
+import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ListSection } from "@/components/ui/ListSection";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { SearchField } from "@/components/ui/TextField";
+
+type Status = FoodPost["status"];
+type Filter = "all" | "active" | "collected" | "ended";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "collected", label: "Collected" },
+  { value: "ended", label: "Ended" },
+];
+
+// Shown when a filter has nothing in it (without a search narrowing it).
+const NOTHING_IN: Record<Exclude<Filter, "all">, string> = {
+  active: "No active posts right now",
+  collected: "Nothing collected yet",
+  ended: "No posts have ended without a pickup",
+};
+
+// What an active post's state means to the person who posted it, and what
+// its button leads to. Only a waiting request needs them, so only that one
+// is marked for attention.
+const ACTIVE: Partial<Record<Status, { text: string; cta: string; attention?: boolean }>> = {
+  pending_approval: { text: "Someone asked for this", cta: "Review", attention: true },
+  closed: { text: "Approved, waiting for pickup", cta: "Manage" },
+  open: { text: "No requests yet", cta: "View" },
+};
+
+// Active posts are ordered by what needs doing: an answer first, then a
+// pickup to confirm, then the ones still waiting, each soonest-ending first.
+const ACTIVE_ORDER: Status[] = ["pending_approval", "closed", "open"];
+
+function byUrgency(a: FoodPost, b: FoodPost) {
+  return (
+    ACTIVE_ORDER.indexOf(a.status) - ACTIVE_ORDER.indexOf(b.status) ||
+    new Date(a.pickupWindowEnd).getTime() - new Date(b.pickupWindowEnd).getTime()
+  );
+}
+
+const postFoodButton = (
+  <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
+    Post food
+  </Button>
+);
 
 export default function MyPosts() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  useV2Theme();
+  const [filter, setFilter] = useState<Filter>("all");
+  // The picked posts waiting on the delete confirmation.
+  const [confirming, setConfirming] = useState<string[] | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
 
-  const { data, isLoading, error } = useQuery<{ posts: FoodPost[] }>({
+  const { data, isPending, error, refetch } = useQuery<{ posts: FoodPost[] }>({
     queryKey: ["posts", "mine"],
     queryFn: () => apiFetch("/posts/mine"),
   });
   const posts = data?.posts ?? [];
+  const waiting = posts.filter((p) => p.status === "pending_approval").length;
+  const activeCount = posts.filter((p) => ACTIVE_ORDER.includes(p.status)).length;
+  const collectedCount = posts.filter((p) => p.status === "completed").length;
+  const endedCount = posts.filter((p) => p.status === "expired").length;
 
-  const deleteMutation = useMutation({
-    mutationFn: (postId: string) => apiFetch(`/posts/${postId}`, { method: "DELETE" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts", "mine"] }),
-  });
+  // Only what matches the search (everything when it's empty).
+  const search = useSearch(posts, (p) => `${p.title} ${p.description ?? ""}`);
+  const shown = search.results;
 
-  const handleDelete = (postId: string) => {
-    setConfirmId(null);
-    deleteMutation.mutate(postId);
+  // Collected and ended keep the server's order: newest first.
+  const active = shown.filter((p) => ACTIVE_ORDER.includes(p.status)).sort(byUrgency);
+  const collected = shown.filter((p) => p.status === "completed");
+  const ended = shown.filter((p) => p.status === "expired");
+  const inFilter = { all: [...active, ...collected, ...ended], active, collected, ended }[filter];
+
+  // Only ids still showing count, so a post that's gone (deleted, reopened
+  // elsewhere, or filtered out by the search) is never deleted unseen.
+  const selected = ended.filter((p) => picked.has(p.id)).map((p) => p.id);
+  const allSelected = ended.length > 0 && selected.length === ended.length;
+
+  const stopSelecting = () => {
+    setSelecting(false);
+    setPicked(new Set());
+  };
+  // Picking turns select mode on; un-picking the last one turns it back off,
+  // so the heading returns to its plain "Select" button.
+  const setPicks = (next: Set<string>) => {
+    if (next.size === 0) stopSelecting();
+    else {
+      setPicked(next);
+      setSelecting(true);
+    }
+  };
+  const toggle = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setPicks(next);
+  };
+  const changeFilter = (next: Filter) => {
+    stopSelecting();
+    setFilter(next);
   };
 
-  if (isLoading) {
-    return (
-      <div className="px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
-        <Loader2 className="w-5 h-5 text-subtle animate-spin" />
-        <p className="text-sm text-subtle">Loading your posts…</p>
-      </div>
-    );
-  }
+  const subtitle = isPending
+    ? "Loading your posts…"
+    : waiting > 0
+      ? `${waiting} ${waiting === 1 ? "request needs" : "requests need"} your answer`
+      : // Only the groups that exist: "3 active, 1 ended", not "0 collected".
+        [
+          activeCount && `${activeCount} active`,
+          collectedCount && `${collectedCount} collected`,
+          endedCount && `${endedCount} ended`,
+        ]
+          .filter(Boolean)
+          .join(", ");
 
-  if (error) {
-    return (
-      <div className="px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
-        <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3 max-w-sm w-full">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{error.message}</p>
-        </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="cursor-pointer text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted transition-colors"
+  // How each card describes itself. In "All" there are no section titles, so
+  // past posts say what they are; under their own section, that would repeat
+  // the title, so they say when they were posted instead.
+  const statusOf = (post: FoodPost) => {
+    if (ACTIVE[post.status]) return ACTIVE[post.status]!;
+    if (filter === "all") return { text: post.status === "completed" ? "Collected" : "Ended without a pickup" };
+    return { text: `Posted ${formatDate(post.createdAt)}` };
+  };
+
+  const card = (post: FoodPost) => (
+    <PostCard
+      key={post.id}
+      post={post}
+      status={statusOf(post)}
+      cta={ACTIVE[post.status]?.cta}
+      // Ended posts can be picked for deleting, on the Ended filter: ticking a
+      // card's box (shown on hover) starts selecting, with it picked.
+      selection={
+        filter === "ended"
+          ? { active: selecting, selected: picked.has(post.id), onToggle: () => toggle(post.id) }
+          : undefined
+      }
+    />
+  );
+
+  const swapIn = "col-start-1 row-start-1 flex items-center gap-2 transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none";
+  const endedActions = (
+    <div className="grid justify-items-end">
+      <div inert={!selecting} className={cn(swapIn, selecting ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-3 opacity-0")}>
+        <Checkbox
+          label="Select all"
+          checked={allSelected}
+          indeterminate={selected.length > 0 && !allSelected}
+          onChange={() => setPicks(allSelected ? new Set() : new Set(ended.map((p) => p.id)))}
+          className="mr-2"
+        />
+        <Button size="sm" variant="ghost" onClick={stopSelecting}>
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          variant="dangerSolid"
+          disabled={selected.length === 0}
+          onClick={() => setConfirming(selected)}
+          iconLeft={<Trash2 className="size-4" aria-hidden="true" />}
+          // Wide enough for "Delete (99)" with same-width digits, so the count
+          // changing (or appearing) doesn't shift the buttons beside it.
+          className="w-32 tabular-nums"
         >
-          Try again
-        </button>
+          Delete{selected.length > 0 && ` (${selected.length})`}
+        </Button>
       </div>
-    );
-  }
+      {/* The other way in, besides ticking a card's hover checkbox. */}
+      <div inert={selecting} className={cn(swapIn, selecting ? "pointer-events-none -translate-x-3 opacity-0" : "translate-x-0 opacity-100")}>
+        <Button size="sm" variant="secondary" onClick={() => setSelecting(true)}>
+          Select
+        </Button>
+      </div>
+    </div>
+  );
+
+  const nothingHere =
+    inFilter.length === 0 &&
+    (search.searching ? (
+      <EmptyState
+        art={<EmptyPlateIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
+        title={`Nothing matches "${search.query.trim()}"`}
+        actions={
+          <Button variant="secondary" onClick={() => search.setQuery("")}>
+            Clear search
+          </Button>
+        }
+      >
+        <p>Search looks in your posts' titles and descriptions.</p>
+      </EmptyState>
+    ) : (
+      filter !== "all" && (
+        <EmptyState
+          art={<EmptyPlateIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
+          title={NOTHING_IN[filter]}
+          actions={
+            <Button variant="secondary" onClick={() => changeFilter("all")}>
+              Show all posts
+            </Button>
+          }
+        />
+      )
+    ));
 
   return (
-    <div className="px-6 py-8 font-medium tracking-wide">
+    <div className="text-fg">
+      <PageHeader
+        title="My posts"
+        subtitle={subtitle}
+        actions={
+          posts.length > 0 && (
+            <>
+              {/* Full width on phones, where the actions sit under the title. */}
+              <SearchField
+                label="Search your posts"
+                placeholder="Search your posts"
+                value={search.query}
+                onChange={search.setQuery}
+                className="w-full sm:w-72"
+              />
+              <SegmentedControl label="Show" options={FILTERS} value={filter} onChange={changeFilter} className="w-full sm:w-auto" />
+              {postFoodButton}
+            </>
+          )
+        }
+      />
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <p className="text-sm text-subtle mb-1">Your activity</p>
-          <h1 className="font-semibold text-2xl text-foreground tracking-tight">My Posts</h1>
-        </div>
-        <LinkButton
-          as="button"
-          label="Post Food"
-          onClick={() => navigate("/create")}
-          icon={<Plus className="w-3.5 h-3.5" />}
-          className="px-4 py-2"
-        />
-      </div>
-
-      {/* Empty state */}
-      {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 border border-border rounded-xl bg-surface">
-          <UtensilsCrossed className="w-7 h-7 text-subtle" />
-          <div className="text-center">
-            <p className="text-sm font-medium text-muted">No posts yet</p>
-            <p className="text-sm text-subtle mt-0.5">Share food with your community.</p>
-          </div>
-          <button
-            onClick={() => navigate("/create")}
-            className="cursor-pointer text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted transition-colors mt-1"
-          >
-            Post your first one
-          </button>
-        </div>
+      {isPending ? (
+        <PostGridSkeleton count={4} />
+      ) : error ? (
+        <EmptyState
+          icon={<RotateCw />}
+          title="We couldn't load your posts"
+          actions={<Button onClick={() => refetch()}>Try again</Button>}
+        >
+          <p>{error.message}</p>
+        </EmptyState>
+      ) : posts.length === 0 ? (
+        <EmptyState
+          art={<TiffinIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
+          title="You haven't shared any food yet"
+          actions={postFoodButton}
+        >
+          <p>Cooked too much? Post it here and someone nearby can pick it up.</p>
+        </EmptyState>
+      ) : nothingHere ? (
+        nothingHere
+      ) : filter === "all" ? (
+        // Everything in one grid, in the same order the sections use.
+        <PostGrid>{inFilter.map(card)}</PostGrid>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {posts.map((post) => {
-            const isDeletable = post.status !== "closed" && post.status !== "completed";
-            const isConfirming = confirmId === post.id;
-            const isDeleting = deleteMutation.isPending && deleteMutation.variables === post.id;
+        <ListSection
+          title={{ active: "Active", collected: "Collected", ended: "Ended without a pickup" }[filter]}
+          actions={filter === "ended" && endedActions}
+        >
+          <PostGrid>{inFilter.map(card)}</PostGrid>
+        </ListSection>
+      )}
 
-            return (
-              <div
-                key={post.id}
-                className="bg-surface border border-border rounded-xl overflow-hidden hover:border-border-strong transition-colors duration-150 flex flex-col group"
-              >
-                {/* Thumbnail */}
-                <div
-                  className="cursor-pointer"
-                  onClick={() => !isConfirming && navigate(`/posts/${post.id}`)}
-                >
-                  {post.photoUrl ? (
-                    <img
-                      src={post.photoUrl}
-                      alt={post.title}
-                      className="w-full h-36 object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-36 bg-background flex items-center justify-center">
-                      <UtensilsCrossed className="w-7 h-7 text-subtle" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="p-4 flex flex-col gap-2.5 flex-1">
-                  <div
-                    className="cursor-pointer flex items-start justify-between gap-2"
-                    onClick={() => !isConfirming && navigate(`/posts/${post.id}`)}
-                  >
-                    <h2 className="font-semibold text-foreground text-sm leading-snug tracking-tight truncate">
-                      {post.title}
-                    </h2>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {post.isDemo && <DemoBadge />}
-                      <StatusBadge status={post.status} />
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-subtle">{formatDate(post.createdAt)}</p>
-
-                  {/* Delete / Confirm */}
-                  {isDeletable && (
-                    <div className="mt-auto pt-2.5 border-t border-border flex items-center justify-end">
-                      {isConfirming ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleDelete(post.id)}
-                            disabled={isDeleting}
-                            className="cursor-pointer text-xs font-medium text-red-400 hover:text-red-300 transition-colors disabled:opacity-40"
-                          >
-                            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Delete"}
-                          </button>
-                          <span className="text-border">|</span>
-                          <button
-                            onClick={() => setConfirmId(null)}
-                            className="cursor-pointer text-xs font-medium text-subtle hover:text-foreground transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmId(post.id)}
-                          className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-subtle hover:text-red-400 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {confirming && (
+        <DeletePostDialog
+          postIds={confirming}
+          description={
+            confirming.length > 1
+              ? "They're removed from your posts for good. This can't be undone."
+              : "It's removed from your posts for good. This can't be undone."
+          }
+          onClose={() => setConfirming(null)}
+          onDeleted={stopSelecting}
+        />
       )}
     </div>
   );

@@ -42,7 +42,7 @@
          first paint so they don't flash the old background while the bundle
          loads. Grows as pages move over; removed once all have. -->
     <script>
-      if (["/", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/profile", "/feed"].includes(location.pathname) || location.pathname.startsWith("/posts/"))
+      if (["/", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/profile", "/feed", "/my-posts"].includes(location.pathname) || location.pathname.startsWith("/posts/"))
         document.documentElement.dataset.theme = "v2";
     </script>
   </head>

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, MapPinOff, Plus, RefreshCw, Sparkles, UtensilsCrossed } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
@@ -11,45 +11,11 @@ import type { FoodPost } from "@/types/api";
 import PostCard from "@/components/posts/PostCard";
 import OutOfRegionCard from "@/components/posts/OutOfRegionCard";
 import { FeedIllustration } from "@/components/posts/FeedIllustration";
+import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
-
-// Columns come from a minimum card width rather than breakpoints, so a card
-// is never squeezed narrow enough to cut off the pickup time.
-const GRID = "grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-5";
-
-// Same shape as a PostCard, so nothing jumps when the real posts arrive.
-function CardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl bg-raised shadow-card ring-1 ring-inset ring-fg/[0.06] motion-safe:animate-pulse">
-      <div className="aspect-[3/2] bg-lifted" />
-      <div className="p-4">
-        <div className="h-5 w-3/4 rounded bg-lifted" />
-        <div className="mt-2.5 h-4 w-full rounded bg-lifted" />
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <div className="h-4 w-1/2 rounded bg-lifted" />
-          <div className="h-8 w-24 rounded-lg bg-lifted" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Header({ subtitle, actions }: { subtitle: ReactNode; actions?: ReactNode }) {
-  return (
-    <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="font-display text-3xl font-semibold sm:text-4xl">Food near you</h1>
-        <p className="mt-1.5 flex items-center gap-1.5 text-fg-muted">
-          <MapPin className="size-4 shrink-0" aria-hidden="true" />
-          {subtitle}
-        </p>
-      </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </header>
-  );
-}
 
 export default function Feed() {
   useV2Theme();
@@ -131,12 +97,8 @@ export default function Feed() {
     return (
       <div className="relative isolate text-fg">
         <FeedIllustration />
-        <Header subtitle={locating ? "Finding your location…" : "Looking for food near you…"} />
-        <div className={GRID} aria-hidden="true">
-          {Array.from({ length: 8 }, (_, i) => (
-            <CardSkeleton key={i} />
-          ))}
-        </div>
+        <PageHeader title="Food near you" icon={<MapPin />} subtitle={locating ? "Finding your location…" : "Looking for food near you…"} />
+        <PostGridSkeleton />
       </div>
     );
   }
@@ -145,7 +107,7 @@ export default function Feed() {
     return (
       <div className="relative isolate text-fg">
         <FeedIllustration />
-        <Header subtitle="Location needed" />
+        <PageHeader title="Food near you" icon={<MapPin />} subtitle="Location needed" />
         <EmptyState
           icon={<MapPinOff />}
           title="We couldn't find your location"
@@ -162,7 +124,7 @@ export default function Feed() {
     return (
       <div className="relative isolate text-fg">
         <FeedIllustration />
-        <Header subtitle="Outside the service area" />
+        <PageHeader title="Food near you" icon={<MapPin />} subtitle="Outside the service area" />
         <OutOfRegionCard />
       </div>
     );
@@ -171,7 +133,7 @@ export default function Feed() {
   return (
     <div className="relative isolate text-fg">
       <FeedIllustration />
-      <Header
+      <PageHeader title="Food near you" icon={<MapPin />}
         subtitle={`${posts.length} ${posts.length === 1 ? "post" : "posts"} within 20 km`}
         actions={
           <>
@@ -201,11 +163,11 @@ export default function Feed() {
           <p>New posts show up here on their own. You can also share food yourself.</p>
         </EmptyState>
       ) : (
-        <div className={GRID}>
+        <PostGrid>
           {posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
-        </div>
+        </PostGrid>
       )}
     </div>
   );

@@ -11,6 +11,7 @@ import { useV2Theme } from "@/lib/theme";
 import type { FoodPost, PickupRequest } from "@/types/api";
 import RequestModal from "@/components/posts/RequestModal";
 import { EditPostDialog } from "@/components/posts/EditPostDialog";
+import { DeletePostDialog } from "@/components/posts/DeletePostDialog";
 import { Button } from "@/components/ui/Button";
 import { buttonClasses } from "@/components/ui/buttonStyles";
 import { Dialog } from "@/components/ui/Dialog";
@@ -141,6 +142,7 @@ function PickerPanel({ post }: { post: Post }) {
 
 function PosterPanel({ post, pendingRequest }: { post: Post; pendingRequest: PickupRequest | null }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [viewingSelfie, setViewingSelfie] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -172,7 +174,14 @@ function PosterPanel({ post, pendingRequest }: { post: Post; pendingRequest: Pic
   const manageDialogs = (
     <>
       {editing && <EditPostDialog post={post} onClose={() => setEditing(false)} />}
-      {deleting && <DeletePostDialog postId={post.id} onClose={() => setDeleting(false)} />}
+      {deleting && (
+        <DeletePostDialog
+          postIds={[post.id]}
+          onClose={() => setDeleting(false)}
+          // Replace, so Back doesn't return to a post that no longer exists.
+          onDeleted={() => navigate("/my-posts", { replace: true })}
+        />
+      )}
     </>
   );
   const deleteButton = (
@@ -323,39 +332,6 @@ function PosterPanel({ post, pendingRequest }: { post: Post; pendingRequest: Pic
   );
 }
 
-function DeletePostDialog({ postId, onClose }: { postId: string; onClose: () => void }) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const remove = useMutation({
-    mutationFn: () => apiFetch(`/posts/${postId}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ["posts", postId] });
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      // Replace, so Back doesn't return to a post that no longer exists.
-      navigate("/my-posts", { replace: true });
-    },
-  });
-
-  return (
-    <Dialog title="Delete this post?" onClose={onClose}>
-      <p className="leading-relaxed text-fg-muted">It comes off the feed straight away. This can't be undone.</p>
-      {remove.error && <Notice tone="error" className="mt-4">{remove.error.message}</Notice>}
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        <Button variant="outline" onClick={onClose} disabled={remove.isPending}>
-          Keep it
-        </Button>
-        <Button
-          variant="dangerSolid"
-          onClick={() => remove.mutate()}
-          loading={remove.isPending}
-          iconLeft={<Trash2 className="size-4" aria-hidden="true" />}
-        >
-          {remove.isPending ? "Deleting…" : "Delete"}
-        </Button>
-      </div>
-    </Dialog>
-  );
-}
 
 // Who can see the exact pickup spot right now, from this viewer's side. It's
 // only ever shared between the poster and the approved picker while the
