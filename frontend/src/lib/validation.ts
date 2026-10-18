@@ -63,6 +63,13 @@ export const requestSchema = z.object({
 });
 
 // ─── Create post ─────────────────────────────────────────────────────────────
+// Leftover food doesn't keep, so a pickup can't be set more than a week out.
+// The API applies the same limit; the date picker stops there too.
+export const MAX_PICKUP_DAYS_AHEAD = 7;
+const endWithinLimit = (d: { pickupWindowEnd: string }) =>
+  !d.pickupWindowEnd || new Date(d.pickupWindowEnd).getTime() <= Date.now() + MAX_PICKUP_DAYS_AHEAD * 86_400_000;
+const WITHIN_LIMIT = { message: `Pickup has to end within ${MAX_PICKUP_DAYS_AHEAD} days`, path: ["pickupWindowEnd"] };
+
 // The pickup times are the form's local "YYYY-MM-DDTHH:mm" strings; the page
 // converts them to ISO before sending. `photo` is uploaded first, like `selfie`.
 export const createPostSchema = z
@@ -80,7 +87,8 @@ export const createPostSchema = z
   .refine((d) => !d.pickupWindowEnd || new Date(d.pickupWindowEnd) > new Date(), {
     message: "End time must be in the future",
     path: ["pickupWindowEnd"],
-  });
+  })
+  .refine(endWithinLimit, WITHIN_LIMIT);
 
 // ─── Edit post ───────────────────────────────────────────────────────────────
 // Same rules, but the photo is optional: leaving it keeps the current one.
@@ -100,4 +108,5 @@ export const editPostSchema = z
   .refine((d) => !d.pickupWindowEnd || new Date(d.pickupWindowEnd) > new Date(), {
     message: "End time must be in the future",
     path: ["pickupWindowEnd"],
-  });
+  })
+  .refine(endWithinLimit, WITHIN_LIMIT);
