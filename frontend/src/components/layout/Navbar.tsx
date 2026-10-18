@@ -88,6 +88,8 @@ export default function Navbar() {
       // ...), so if that post's page is open it updates in place. This also
       // covers demo posts, which send no "feed" event.
       if (newNotif.postId) queryClient.invalidateQueries({ queryKey: ["posts", newNotif.postId] });
+      // Approved, declined and expired are all about your requests too.
+      queryClient.invalidateQueries({ queryKey: ["requests", "mine"] });
     });
 
     // A post was added or changed somewhere. Refetches whichever post lists

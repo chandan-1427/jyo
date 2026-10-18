@@ -341,6 +341,14 @@ requestRoutes.get("/mine", async (c) => {
       id: pickupRequests.id,
       postId: pickupRequests.postId,
       postTitle: foodPosts.title,
+      // Enough of the post to show it as a card, and to tell what happened
+      // to it (e.g. collected, or ended before an answer). Nothing about
+      // where it is: that stays on the post page, for the approved picker.
+      postDescription: foodPosts.description,
+      postPhotoUrl: foodPosts.photoUrl,
+      postStatus: foodPosts.status,
+      pickupWindowStart: foodPosts.pickupWindowStart,
+      pickupWindowEnd: foodPosts.pickupWindowEnd,
       pickerName: pickupRequests.pickerName,
       etaMinutes: pickupRequests.etaMinutes,
       status: pickupRequests.status,

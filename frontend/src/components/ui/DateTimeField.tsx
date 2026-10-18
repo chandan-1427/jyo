@@ -1,9 +1,7 @@
-import {
-  useCallback, useEffect, useId, useLayoutEffect, useRef, useState,
-  type KeyboardEvent, type ReactNode,
-} from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Calendar, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import { cn, preventDoubleClickSelection } from "@/lib/utils";
+import { useAnchoredPopover } from "@/lib/useAnchoredPopover";
 import { FieldFrame } from "./TextField";
 import { Button } from "./Button";
 
@@ -12,10 +10,6 @@ import { Button } from "./Button";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MINUTE_STEP = 5;
-// Space kept between the panel and the field, and between the panel and the
-// edges of the screen.
-const GAP = 6;
-const EDGE = 8;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -57,61 +51,6 @@ function monthGrid(month: Date): Date[] {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const start = addDays(first, -first.getDay());
   return Array.from({ length: 42 }, (_, i) => addDays(start, i));
-}
-
-// Places the panel under the field, or above it when there's more room
-// there, then nudges it sideways and vertically so it stays fully on screen.
-// Runs again on any scroll (including inside a dialog) or resize while open.
-function useAnchoredPosition(
-  anchorRef: React.RefObject<HTMLElement | null>,
-  panelRef: React.RefObject<HTMLElement | null>,
-  open: boolean
-) {
-  const [placement, setPlacement] = useState<"below" | "above">("below");
-
-  const place = useCallback(() => {
-    const anchor = anchorRef.current?.getBoundingClientRect();
-    const panel = panelRef.current;
-    if (!anchor || !panel) return;
-
-    const viewport = window.visualViewport;
-    const vw = viewport?.width ?? window.innerWidth;
-    const vh = viewport?.height ?? window.innerHeight;
-    const { offsetWidth: w, offsetHeight: h } = panel;
-
-    const spaceBelow = vh - anchor.bottom - GAP - EDGE;
-    const spaceAbove = anchor.top - GAP - EDGE;
-    const below = spaceBelow >= h || spaceBelow >= spaceAbove;
-
-    const top = Math.min(Math.max(below ? anchor.bottom + GAP : anchor.top - GAP - h, EDGE), vh - h - EDGE);
-    const left = Math.min(Math.max(anchor.left, EDGE), vw - w - EDGE);
-
-    panel.style.top = `${top}px`;
-    panel.style.left = `${left}px`;
-    setPlacement(below ? "below" : "above");
-  }, [anchorRef, panelRef]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    place();
-    let frame = 0;
-    const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(place);
-    };
-    // Capture, so scrolling any ancestor (a dialog's own scroll) counts.
-    window.addEventListener("scroll", schedule, true);
-    window.addEventListener("resize", schedule);
-    window.visualViewport?.addEventListener("resize", schedule);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule, true);
-      window.removeEventListener("resize", schedule);
-      window.visualViewport?.removeEventListener("resize", schedule);
-    };
-  }, [open, place]);
-
-  return placement;
 }
 
 // A number that steps up and down with buttons or the arrow keys.
@@ -174,7 +113,7 @@ interface DateTimeFieldProps {
 // A date-and-time field in the app's own style. The panel opens in the
 // browser's top layer (the Popover API), so no scrolling container or dialog
 // can clip it, and it closes on Escape or a click outside. It positions
-// itself against the field and keeps itself on screen (useAnchoredPosition).
+// itself against the field and keeps itself on screen (useAnchoredPopover).
 export function DateTimeField({ label, value, onChange, onBlur, min, max, error, hint, labelAside, className }: DateTimeFieldProps) {
   const id = useId();
   const panelId = `${id}-panel`;
@@ -182,46 +121,23 @@ export function DateTimeField({ label, value, onChange, onBlur, min, max, error,
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
 
   const selected = parse(value);
   const minDay = parse(min ?? "");
   const [month, setMonth] = useState(() => startOfDay(selected ?? minDay ?? new Date()));
   const [focusDay, setFocusDay] = useState(() => startOfDay(selected ?? minDay ?? new Date()));
 
-  const placement = useAnchoredPosition(triggerRef, panelRef, open);
-
-  // The browser opens and closes the panel (the trigger is its
-  // popovertarget, and light dismiss closes it); this keeps React in step.
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    // Before it's shown, start it just under the field, so its first frame
-    // isn't wherever it last was; the layout effect then fits it to screen.
-    const onBeforeToggle = (e: Event) => {
-      const anchor = triggerRef.current?.getBoundingClientRect();
-      if ((e as ToggleEvent).newState !== "open" || !anchor) return;
-      panel.style.top = `${anchor.bottom + GAP}px`;
-      panel.style.left = `${Math.max(anchor.left, EDGE)}px`;
-    };
-    const onToggle = (e: Event) => {
-      const isOpen = (e as ToggleEvent).newState === "open";
-      setOpen(isOpen);
-      if (isOpen) {
-        const start = startOfDay(parse(value) ?? parse(min ?? "") ?? new Date());
-        setMonth(start);
-        setFocusDay(start);
-      } else {
-        onBlur?.();
-      }
-    };
-    panel.addEventListener("beforetoggle", onBeforeToggle);
-    panel.addEventListener("toggle", onToggle);
-    return () => {
-      panel.removeEventListener("beforetoggle", onBeforeToggle);
-      panel.removeEventListener("toggle", onToggle);
-    };
-  }, [value, min, onBlur]);
+  // Opening shows the chosen day's month (or the earliest allowed one);
+  // closing marks the field touched.
+  const { open, placement } = useAnchoredPopover(triggerRef, panelRef, (isOpen) => {
+    if (isOpen) {
+      const start = startOfDay(parse(value) ?? parse(min ?? "") ?? new Date());
+      setMonth(start);
+      setFocusDay(start);
+    } else {
+      onBlur?.();
+    }
+  });
 
   // Keyboard focus follows the focused day, including into a new month.
   useEffect(() => {
@@ -325,7 +241,7 @@ export function DateTimeField({ label, value, onChange, onBlur, min, max, error,
         popover="auto"
         role="dialog"
         aria-label={label}
-        // Positioned by useAnchoredPosition; the UA's centring is undone.
+        // Positioned by useAnchoredPopover; the UA's centring is undone.
         className={cn(
           "fixed m-0 w-[20rem] max-w-[calc(100vw-1rem)] rounded-2xl bg-raised p-4 text-fg shadow-lift ring-1 ring-inset ring-fg/[0.08] [--field-bg:var(--color-canvas)]",
           "transition-[opacity,scale] duration-150 ease-out motion-reduce:transition-none starting:scale-95 starting:opacity-0",
