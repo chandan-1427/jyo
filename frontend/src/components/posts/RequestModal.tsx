@@ -1,15 +1,16 @@
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Camera, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api/api";
 import { uploadImage } from "@/lib/supabase";
 import { getCurrentLocation } from "@/lib/location/location";
 import { requestSchema } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
-import { AlertCircle, Camera, X } from "lucide-react";
-import { Field } from "../ui/Field";
-import { Input } from "../ui/Input";
-import { LinkButton } from "../ui/LinkButton";
+import { Dialog } from "../ui/Dialog";
+import { TextField } from "../ui/TextField";
+import { Button } from "../ui/Button";
+import { Notice } from "../ui/Notice";
+import { PhotoField } from "../ui/PhotoField";
 
 type Props = {
   postId: string;
@@ -19,10 +20,6 @@ type Props = {
 
 type RequestValues = { pickerName: string; etaMinutes: number; selfie: File };
 
-function FieldError({ message }: { message?: string }) {
-  return message ? <p className="text-xs text-red-400">{message}</p> : null;
-}
-
 export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -30,8 +27,6 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   const { register, handleSubmit, setValue, setError, formState: { errors } } = useZodForm(requestSchema, {
     pickerName: user?.name ?? "",
   });
-  const [selfiePreview, setSelfiePreview] = useState("");
-
   const requestMutation = useMutation({
     mutationFn: async ({ pickerName, etaMinutes, selfie }: RequestValues) => {
       const coords = await getCurrentLocation();
@@ -39,14 +34,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
 
       return apiFetch("/requests", {
         method: "POST",
-        body: JSON.stringify({
-          postId,
-          pickerName,
-          selfieUrl,
-          etaMinutes,
-          lat: coords.lat,
-          lng: coords.lng,
-        }),
+        body: JSON.stringify({ postId, pickerName, selfieUrl, etaMinutes, lat: coords.lat, lng: coords.lng }),
       });
     },
     onSuccess: () => {
@@ -63,121 +51,59 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   const fieldLevel = Object.values(errors).some((e) => e?.type === "server");
   const error = !fieldLevel ? requestMutation.error?.message ?? "" : "";
 
-  const handleSelfie = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setValue("selfie", file, { shouldValidate: true });
-    setSelfiePreview(URL.createObjectURL(file));
-  };
-
-  const clearSelfie = () => {
-    setValue("selfie", undefined as unknown as File, { shouldValidate: true });
-    setSelfiePreview("");
-  };
-
   const onSubmit = handleSubmit((values) => requestMutation.mutate(values));
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
-      <div className="bg-surface border border-border rounded-2xl w-full max-w-sm p-6 shadow-lg">
+    <Dialog title="Request pickup" onClose={onClose}>
+      <p className="-mt-2 mb-6 leading-relaxed text-fg-muted">
+        The person sharing sees this before deciding. If they approve, you'll see the exact pickup spot.
+      </p>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="font-semibold text-foreground text-lg tracking-tight">Request Pickup</h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="cursor-pointer text-subtle hover:text-foreground transition-colors"
-          >
-            <X className="w-4.5 h-4.5" />
-          </button>
-        </div>
+      {error && <Notice tone="error" className="mb-5">{error}</Notice>}
 
-        {error && (
-          <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
-            <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-            <p className="text-sm text-red-400 leading-snug">{error}</p>
-          </div>
-        )}
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+        <TextField
+          label="Your name"
+          autoComplete="name"
+          error={errors.pickerName?.message}
+          {...register("pickerName")}
+        />
 
-        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+        <TextField
+          label="How soon could you reach a spot in Tirupati?"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={180}
+          placeholder="15"
+          hint="In minutes, up to 180. A rough guess is fine: it's within 20 km of you, and you'll see the exact spot once you're approved."
+          error={errors.etaMinutes?.message}
+          {...register("etaMinutes", { valueAsNumber: true })}
+        />
 
-          {/* Name */}
-          <Field label="Your Name">
-            <Input
-              type="text"
-              placeholder="Your full name"
-              aria-invalid={errors.pickerName ? true : undefined}
-              {...register("pickerName")}
-            />
-            <FieldError message={errors.pickerName?.message} />
-          </Field>
+        {/* Opens the front camera on phones. */}
+        <PhotoField
+          label="A selfie"
+          emptyText="Take a selfie"
+          chosenText="Retake selfie"
+          hint="So they can recognise you at pickup."
+          icon={<Camera aria-hidden="true" />}
+          capture="user"
+          error={errors.selfie?.message}
+          onSelect={(file) => setValue("selfie", file, { shouldValidate: true })}
+        />
 
-          {/* ETA */}
-          <Field label="Estimated Time to Arrive (minutes)">
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={180}
-              placeholder="e.g. 15"
-              aria-invalid={errors.etaMinutes ? true : undefined}
-              {...register("etaMinutes", { valueAsNumber: true })}
-            />
-            <FieldError message={errors.etaMinutes?.message} />
-          </Field>
-
-          {/* Selfie */}
-          <Field label="Selfie Photo">
-            <p className="text-xs text-subtle -mt-1">
-              So the poster can identify you at pickup
-            </p>
-
-            {selfiePreview ? (
-              <div className="relative mt-1">
-                <img
-                  src={selfiePreview}
-                  alt="Selfie preview"
-                  className="w-full h-40 object-cover rounded-xl"
-                />
-                <button
-                  type="button"
-                  onClick={clearSelfie}
-                  className="cursor-pointer absolute top-2 right-2 bg-surface border border-border text-muted rounded-full px-2 py-0.5 text-xs shadow-sm hover:text-red-400 hover:border-red-900/40 transition-colors"
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <label className="mt-1 border border-dashed border-border rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-border-strong hover:bg-background transition-colors group">
-                <Camera className="w-5 h-5 text-subtle group-hover:text-muted transition-colors mb-1.5" />
-                <span className="text-xs text-subtle group-hover:text-muted transition-colors">
-                  Tap to upload selfie
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  onChange={handleSelfie}
-                  className="hidden"
-                />
-              </label>
-            )}
-            <FieldError message={errors.selfie?.message} />
-          </Field>
-
-          <LinkButton
-            as="button"
-            type="submit"
-            label="Request Pickup"
-            loading={loading}
-            loadingLabel="Submitting…"
-            disabled={loading}
-            className="mt-2 w-full"
-          />
-
-        </form>
-      </div>
-    </div>
+        <Button
+          type="submit"
+          size="lg"
+          fullWidth
+          loading={loading}
+          iconLeft={<Send className="size-4" aria-hidden="true" />}
+          className="mt-1"
+        >
+          {loading ? "Sending…" : "Send request"}
+        </Button>
+      </form>
+    </Dialog>
   );
 }

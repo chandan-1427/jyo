@@ -84,11 +84,16 @@ export default function Navbar() {
     source.addEventListener("notification", (e: MessageEvent<string>) => {
       const newNotif = JSON.parse(e.data) as Notification;
       queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) => [newNotif, ...prev]);
+      // Every notification is about a post (a request came in, was approved,
+      // ...), so if that post's page is open it updates in place. This also
+      // covers demo posts, which send no "feed" event.
+      if (newNotif.postId) queryClient.invalidateQueries({ queryKey: ["posts", newNotif.postId] });
     });
 
-    // A post was added or changed somewhere. Only refetches if the feed is
-    // on screen; otherwise it's just marked stale for the next visit.
-    const refreshFeed = () => queryClient.invalidateQueries({ queryKey: ["posts", "feed"] });
+    // A post was added or changed somewhere. Refetches whichever post lists
+    // or post page is on screen (the feed, My posts, an open post); anything
+    // else is just marked stale for the next visit.
+    const refreshFeed = () => queryClient.invalidateQueries({ queryKey: ["posts"] });
     source.addEventListener("feed", refreshFeed);
 
     // EventSource reconnects on its own after a drop; catch up on anything

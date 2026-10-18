@@ -1,17 +1,22 @@
-import { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useState, type ReactNode } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft, MapPin, Clock, Loader2, AlertCircle, X,
-  CheckCircle2, UtensilsCrossed, ExternalLink, TimerOff, Ban,
+  ArrowLeft, Check, CheckCircle2, Clock, ExternalLink, MapPin, Maximize2, Navigation, Pencil, Plus, Search, Timer, Trash2,
+  UserRound, UtensilsCrossed, X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
+import { formatPickupWindow } from "@/lib/format";
+import { useV2Theme } from "@/lib/theme";
 import type { FoodPost, PickupRequest } from "@/types/api";
 import RequestModal from "@/components/posts/RequestModal";
-import { formatPickupWindow } from "@/lib/format";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DemoBadge } from "@/components/ui/DemoBadge";
-import { LinkButton } from "@/components/ui/LinkButton";
+import { EditPostDialog } from "@/components/posts/EditPostDialog";
+import { Button } from "@/components/ui/Button";
+import { buttonClasses } from "@/components/ui/buttonStyles";
+import { Dialog } from "@/components/ui/Dialog";
+import { ImageViewer } from "@/components/ui/ImageViewer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Notice } from "@/components/ui/Notice";
 
 type PostDetailData = {
   post: FoodPost & { pickupLat: number | null; pickupLng: number | null };
@@ -20,463 +25,479 @@ type PostDetailData = {
   pendingRequest: PickupRequest | null;
 };
 
-function MapsLink({ lat, lng }: { lat: number; lng: number }) {
+type Post = PostDetailData["post"];
+
+// "Open" is the normal state, so it gets no tag; the rest change what you can do.
+const STATUS_TAG: Partial<Record<FoodPost["status"], string>> = {
+  pending_approval: "Requested",
+  closed: "Claimed",
+  completed: "Collected",
+  expired: "Ended",
+};
+
+const TAG = "rounded-md bg-lifted px-2 py-1 text-xs font-medium";
+
+function Panel({ children }: { children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-4 rounded-2xl bg-raised p-5 shadow-card ring-1 ring-inset ring-fg/[0.06]">
+      {children}
+    </section>
+  );
+}
+
+// One fact about the post: an icon, a quiet label, and the value under it.
+function Fact({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <span className="mt-0.5 text-fg-subtle [&>svg]:size-[18px]" aria-hidden="true">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-sm text-fg-subtle">{label}</p>
+        <p className="mt-0.5 text-fg">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+function FindFoodButton() {
+  return (
+    <Button to="/feed" variant="secondary" fullWidth iconLeft={<Search className="size-4" aria-hidden="true" />}>
+      Find other food
+    </Button>
+  );
+}
+
+function MapsButton({ lat, lng }: { lat: number; lng: number }) {
   return (
     <a
       href={`https://www.google.com/maps?q=${lat},${lng}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="w-fit inline-flex items-center gap-2 border border-border text-muted hover:border-border-strong hover:text-foreground bg-surface px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150"
+      className={buttonClasses({ size: "lg", fullWidth: true })}
     >
-      <MapPin className="w-4 h-4" />
+      <Navigation className="size-4" aria-hidden="true" />
       Open in Google Maps
-      <ExternalLink className="w-3.5 h-3.5 text-subtle" />
+      <ExternalLink className="size-3.5 opacity-70" aria-hidden="true" />
+      <span className="sr-only">(opens in a new tab)</span>
     </a>
   );
 }
 
-function InfoBanner({
-  variant,
-  icon: Icon,
-  children,
-}: {
-  variant: "success" | "warning" | "muted" | "danger";
-  icon: React.ElementType;
-  children: React.ReactNode;
-}) {
-  const styles = {
-    success: "bg-emerald-950/30 border-emerald-900/40 text-emerald-400",
-    // Terracotta, not amber — amber was the old accent value verbatim. Safe to
-    // rely on a mere 21° hue shift here only because Callout always renders an
-    // Icon alongside, so colour is never the sole carrier of meaning.
-    warning: "bg-warning/10 border-warning/30 text-warning",
-    muted:   "bg-surface border-border text-subtle",
-    danger:  "bg-red-950/30 border-red-900/40 text-red-400",
-  };
-  return (
-    <div className={`flex items-start gap-2.5 border rounded-lg px-4 py-3 text-sm ${styles[variant]}`}>
-      <Icon className="w-4 h-4 mt-px shrink-0" />
-      <p className="leading-snug">{children}</p>
-    </div>
-  );
-}
-
-function NextSteps() {
-  return (
-    <div className="flex gap-3">
-      <Link
-        to="/feed"
-        className="flex-1 text-center cursor-pointer border border-border text-muted hover:border-border-strong hover:bg-surface rounded-lg py-2.5 text-sm font-medium transition-colors duration-150"
-      >
-        Browse Feed
-      </Link>
-      <LinkButton as="link" to="/create" label="Post Food" className="flex-1" />
-    </div>
-  );
-}
-
-function ApprovedPickerView({ status }: { status: FoodPost["status"] }) {
-  if (status === "completed") {
-    return (
-      <>
-        <InfoBanner variant="success" icon={CheckCircle2}>
-          You collected this food. Thanks for helping reduce waste!
-        </InfoBanner>
-        <NextSteps />
-      </>
-    );
-  }
-
-  if (status === "expired") {
-    return (
-      <>
-        <InfoBanner variant="danger" icon={TimerOff}>
-          The pickup window expired before this was marked collected.
-        </InfoBanner>
-        <NextSteps />
-      </>
-    );
-  }
-
-  return (
-    <InfoBanner variant="success" icon={CheckCircle2}>
-      Your request was approved. Head to the location to collect the food.
-    </InfoBanner>
-  );
-}
-
-function PosterView({
-  post, pendingRequest, actionLoading, actionError, onApprove, onReject, onComplete,
-}: {
-  post: PostDetailData["post"];
-  pendingRequest: PickupRequest | null;
-  actionLoading: boolean;
-  actionError: string;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-  onComplete: () => void;
-}) {
-  // Hook lifted to the top level, unconditional — fixes a Rules-of-Hooks
-  // violation that previously called useState() inside an `if` block.
-  const [lightbox, setLightbox] = useState(false);
-
-  return (
-    <div className="flex flex-col gap-4">
-      {/* actionError now renders regardless of which status branch is
-          active below — previously only visible during pending_approval,
-          silently swallowing errors from the "complete" action. */}
-      {actionError && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{actionError}</p>
-        </div>
-      )}
-
-      {post.status === "open" && (
-        <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-2">
-          <Clock className="w-5 h-5 text-subtle" />
-          <p className="text-sm text-subtle">No one has requested this food yet.</p>
-        </div>
-      )}
-
-      {post.status === "pending_approval" && pendingRequest && (
-        <div className="flex flex-col gap-4">
-          <p className="text-[13px] font-medium text-muted">
-            Someone wants to pick this up
-          </p>
-
-          {/* Requester card */}
-          <div className="bg-surface border border-border rounded-xl p-4 flex gap-4 items-start">
-            {pendingRequest.selfieUrl ? (
-              <img
-                src={pendingRequest.selfieUrl}
-                alt="Picker selfie"
-                className="w-16 h-16 rounded-lg object-cover shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setLightbox(true)}
-                title="Click to view"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-lg bg-background flex items-center justify-center shrink-0">
-                <UtensilsCrossed className="w-5 h-5 text-subtle" />
-              </div>
-            )}
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium text-foreground">{pendingRequest.pickerName}</p>
-              <p className="text-sm text-subtle flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" />
-                Estimated arrival: {pendingRequest.etaMinutes} min
-              </p>
-              {pendingRequest.selfieUrl && (
-                <button
-                  type="button"
-                  onClick={() => setLightbox(true)}
-                  className="cursor-pointer text-xs text-subtle hover:text-foreground underline underline-offset-2 transition-colors text-left mt-0.5"
-                >
-                  View photo
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Lightbox */}
-          {lightbox && (
-            <div
-              className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
-              onClick={() => setLightbox(false)}
-            >
-              <div className="relative max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-                <img
-                  src={pendingRequest.selfieUrl!}
-                  alt="Picker selfie"
-                  className="w-full rounded-xl object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => setLightbox(false)}
-                  className="cursor-pointer absolute top-2.5 right-2.5 bg-surface border border-border rounded-full p-1.5 text-muted hover:text-foreground transition-colors shadow-sm"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <LinkButton
-              as="button"
-              label="Approve"
-              loading={actionLoading}
-              loadingLabel="Approving…"
-              disabled={actionLoading}
-              onClick={() => onApprove(pendingRequest.id)}
-              className="flex-1"
-            />
-            <button
-              onClick={() => onReject(pendingRequest.id)}
-              disabled={actionLoading}
-              className="flex-1 cursor-pointer border border-border text-muted hover:border-border-strong hover:bg-surface rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {actionLoading ? "Rejecting…" : "Reject"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {post.status === "closed" && (
-        <div className="flex flex-col gap-3">
-          <InfoBanner variant="warning" icon={Clock}>
-            Pickup approved. Waiting for the picker to arrive.
-          </InfoBanner>
-          <button
-            onClick={onComplete}
-            disabled={actionLoading}
-            className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-          >
-            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
-            {actionLoading ? "Updating…" : "Food has been collected — Click here to stop sharing location"}
-          </button>
-        </div>
-      )}
-
-      {post.status === "completed" && (
-        <>
-          <InfoBanner variant="success" icon={CheckCircle2}>
-            Food successfully shared. Location is no longer visible.
-          </InfoBanner>
-          <NextSteps />
-        </>
-      )}
-
-      {post.status === "expired" && (
-        <>
-          <InfoBanner variant="danger" icon={TimerOff}>
-            This post has expired. Create a new post if the food is still available.
-          </InfoBanner>
-          <NextSteps />
-        </>
-      )}
-    </div>
-  );
-}
-
-function VisitorView({ status, onRequest }: { status: FoodPost["status"]; onRequest: () => void }) {
+function VisitorPanel({ status, onRequest }: { status: FoodPost["status"]; onRequest: () => void }) {
   if (status === "open") {
     return (
-      <div className="bg-surface border border-border rounded-xl px-5 py-6 flex flex-col items-center text-center gap-3">
-        <div className="w-11 h-11 rounded-full bg-accent/10 flex items-center justify-center">
-          <UtensilsCrossed className="w-5 h-5 text-accent" />
+      <Panel>
+        <Button size="lg" fullWidth onClick={onRequest}>
+          Request pickup
+        </Button>
+        <p className="text-sm leading-relaxed text-fg-muted">
+          You'll send your name, a selfie and how soon you can get there. Once the person sharing approves,
+          you'll see the exact pickup spot.
+        </p>
+      </Panel>
+    );
+  }
+
+  const message =
+    status === "pending_approval"
+      ? "Someone has already asked for this. If the person sharing declines, it will open up again."
+      : status === "expired"
+        ? "The pickup time for this has ended."
+        : "Someone else is picking this up.";
+
+  return (
+    <Panel>
+      <Notice>{message}</Notice>
+      <FindFoodButton />
+    </Panel>
+  );
+}
+
+function PickerPanel({ post }: { post: Post }) {
+  if (post.status === "completed") {
+    return (
+      <Panel>
+        <Notice tone="success">You picked this up. Thanks for making sure it didn't go to waste.</Notice>
+        <FindFoodButton />
+      </Panel>
+    );
+  }
+
+  if (post.status === "expired") {
+    return (
+      <Panel>
+        <Notice>The pickup time ended before this was marked as collected.</Notice>
+        <FindFoodButton />
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel>
+      <Notice tone="success">Your request was approved. Head over during the pickup time.</Notice>
+      {post.pickupLat != null && post.pickupLng != null && <MapsButton lat={post.pickupLat} lng={post.pickupLng} />}
+    </Panel>
+  );
+}
+
+function PosterPanel({ post, pendingRequest }: { post: Post; pendingRequest: PickupRequest | null }) {
+  const queryClient = useQueryClient();
+  const [viewingSelfie, setViewingSelfie] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["posts", post.id] });
+    queryClient.invalidateQueries({ queryKey: ["posts", "mine"] });
+  };
+  const approve = useMutation({
+    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/approve`, { method: "PUT" }),
+    onSuccess: refresh,
+  });
+  const decline = useMutation({
+    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/reject`, { method: "PUT" }),
+    onSuccess: refresh,
+  });
+  const complete = useMutation({
+    mutationFn: () => apiFetch(`/posts/${post.id}/complete`, { method: "PUT" }),
+    onSuccess: refresh,
+  });
+
+  const busy = approve.isPending || decline.isPending || complete.isPending;
+  const error = approve.error?.message || decline.error?.message || complete.error?.message;
+  // Shown right above the buttons that caused it.
+  const errorNotice = error && <Notice tone="error">{error}</Notice>;
+
+  // Editing and deleting are only offered while nobody has asked for the
+  // post (the API enforces the same); an expired post can still be deleted.
+  const manageDialogs = (
+    <>
+      {editing && <EditPostDialog post={post} onClose={() => setEditing(false)} />}
+      {deleting && <DeletePostDialog postId={post.id} onClose={() => setDeleting(false)} />}
+    </>
+  );
+  const deleteButton = (
+    <Button variant="dangerSolid" onClick={() => setDeleting(true)} iconLeft={<Trash2 className="size-4" aria-hidden="true" />}>
+      Delete
+    </Button>
+  );
+
+  if (post.status === "open") {
+    return (
+      <Panel>
+        <Notice>No one has asked for this yet. You'll get a notification when someone does.</Notice>
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="secondary" onClick={() => setEditing(true)} iconLeft={<Pencil className="size-4" aria-hidden="true" />}>
+            Edit
+          </Button>
+          {deleteButton}
         </div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">Interested in this food?</p>
-          <p className="text-sm text-subtle mt-0.5">
-            Send a request and the poster will review it before you head over.
-          </p>
+        <p className="text-sm text-fg-subtle">You can edit or delete this until someone asks for it.</p>
+        {manageDialogs}
+      </Panel>
+    );
+  }
+
+  if (post.status === "pending_approval" && pendingRequest) {
+    return (
+      <Panel>
+        <h2 className="font-display text-lg font-semibold">Someone wants to pick this up</h2>
+
+        <div className="flex items-center gap-4">
+          {pendingRequest.selfieUrl ? (
+            // The expand badge is always shown, not just on hover, so it reads
+            // as "tap to enlarge" on phones too.
+            <button
+              type="button"
+              onClick={() => setViewingSelfie(true)}
+              aria-label={`View ${pendingRequest.pickerName}'s photo`}
+              className="group relative size-20 shrink-0 cursor-zoom-in overflow-hidden rounded-xl bg-lifted ring-1 ring-inset ring-fg/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+            >
+              <img
+                src={pendingRequest.selfieUrl}
+                alt=""
+                className="size-full object-cover"
+              />
+              <span className="absolute right-1 bottom-1 grid size-6 place-items-center rounded-md bg-canvas/80 text-fg backdrop-blur-sm transition-colors group-hover:bg-canvas">
+                <Maximize2 className="size-3.5" aria-hidden="true" />
+              </span>
+            </button>
+          ) : (
+            <span className="grid size-20 shrink-0 place-items-center rounded-xl bg-lifted text-fg-subtle">
+              <UserRound className="size-6" aria-hidden="true" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="truncate font-medium">{pendingRequest.pickerName}</p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-fg-muted">
+              <Timer className="size-4 shrink-0" aria-hidden="true" />
+              Can get there in about {pendingRequest.etaMinutes} min
+            </p>
+          </div>
         </div>
-        <LinkButton
-          as="button"
-          label="I'll pick it up"
-          onClick={onRequest}
-          className="w-full mt-1"
-        />
-      </div>
+
+        <p className="text-sm leading-relaxed text-fg-muted">
+          Approving shares your exact pickup spot with them. Declining opens the post to others again. While
+          they wait for your answer, the post can't be edited or deleted.
+        </p>
+
+        {errorNotice}
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => approve.mutate(pendingRequest.id)}
+            loading={approve.isPending}
+            disabled={busy}
+            iconLeft={<Check className="size-4" aria-hidden="true" />}
+          >
+            {approve.isPending ? "Approving…" : "Approve"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => decline.mutate(pendingRequest.id)}
+            loading={decline.isPending}
+            disabled={busy}
+            iconLeft={<X className="size-4" aria-hidden="true" />}
+          >
+            {decline.isPending ? "Declining…" : "Decline"}
+          </Button>
+        </div>
+
+        {viewingSelfie && pendingRequest.selfieUrl && (
+          <Dialog title={pendingRequest.pickerName} onClose={() => setViewingSelfie(false)}>
+            {/* Portrait, since selfies usually are; on the page colour so the
+                frame stands out from the dialog's own surface. */}
+            <ImageViewer
+              src={pendingRequest.selfieUrl}
+              alt={`Selfie of ${pendingRequest.pickerName}`}
+              className="aspect-[3/4] max-h-[70vh] bg-canvas"
+            />
+          </Dialog>
+        )}
+      </Panel>
     );
   }
 
-  if (status === "pending_approval") {
+  if (post.status === "closed") {
     return (
-      <div className="flex flex-col gap-4">
-        <InfoBanner variant="warning" icon={Clock}>
-          Someone has already requested this food. Check back if it becomes available again.
-        </InfoBanner>
-        <NextSteps />
-      </div>
+      <Panel>
+        <p className="leading-relaxed text-fg-muted">
+          You approved a pickup. Once the food has been collected, mark it here. That also hides your pickup spot
+          again.
+        </p>
+        {errorNotice}
+        <Button
+          size="lg"
+          fullWidth
+          onClick={() => complete.mutate()}
+          loading={complete.isPending}
+          iconLeft={<CheckCircle2 className="size-4" aria-hidden="true" />}
+        >
+          {complete.isPending ? "Saving…" : "Mark as collected"}
+        </Button>
+      </Panel>
     );
   }
 
-  if (status === "closed") {
-    return (
-      <div className="flex flex-col gap-4">
-        <InfoBanner variant="muted" icon={Ban}>This food has already been claimed.</InfoBanner>
-        <NextSteps />
-      </div>
-    );
-  }
+  const ended = post.status === "expired";
+  return (
+    <Panel>
+      <Notice tone={ended ? "info" : "success"}>
+        {ended
+          ? "The pickup time ended before anyone collected this. If you still have the food, post it again."
+          : "Collected. Thanks for sharing. Your pickup spot is hidden again."}
+      </Notice>
+      {ended ? (
+        <div className="grid grid-cols-2 gap-3">
+          <Button to="/create" variant="secondary" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
+            Post food
+          </Button>
+          {deleteButton}
+        </div>
+      ) : (
+        <Button to="/create" variant="secondary" fullWidth iconLeft={<Plus className="size-4" aria-hidden="true" />}>
+          Post food
+        </Button>
+      )}
+      {manageDialogs}
+    </Panel>
+  );
+}
 
-  if (status === "expired") {
-    return (
-      <div className="flex flex-col gap-4">
-        <InfoBanner variant="danger" icon={TimerOff}>This post has expired.</InfoBanner>
-        <NextSteps />
-      </div>
-    );
-  }
+function DeletePostDialog({ postId, onClose }: { postId: string; onClose: () => void }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const remove = useMutation({
+    mutationFn: () => apiFetch(`/posts/${postId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["posts", postId] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      // Replace, so Back doesn't return to a post that no longer exists.
+      navigate("/my-posts", { replace: true });
+    },
+  });
 
-  return null;
+  return (
+    <Dialog title="Delete this post?" onClose={onClose}>
+      <p className="leading-relaxed text-fg-muted">It comes off the feed straight away. This can't be undone.</p>
+      {remove.error && <Notice tone="error" className="mt-4">{remove.error.message}</Notice>}
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <Button variant="outline" onClick={onClose} disabled={remove.isPending}>
+          Keep it
+        </Button>
+        <Button
+          variant="dangerSolid"
+          onClick={() => remove.mutate()}
+          loading={remove.isPending}
+          iconLeft={<Trash2 className="size-4" aria-hidden="true" />}
+        >
+          {remove.isPending ? "Deleting…" : "Delete"}
+        </Button>
+      </div>
+    </Dialog>
+  );
+}
+
+// Who can see the exact pickup spot right now, from this viewer's side. It's
+// only ever shared between the poster and the approved picker while the
+// pickup is on (see posts.ts); null where there's nothing useful to say.
+function pickupSpotText(status: FoodPost["status"], isPoster: boolean, isApprovedPicker: boolean) {
+  const waiting = status === "open" || status === "pending_approval";
+  if (isPoster) {
+    if (waiting) return "Shared only with the person you approve";
+    if (status === "closed") return "Shared with the person you approved";
+    if (status === "completed") return "Hidden again";
+    return null;
+  }
+  if (isApprovedPicker) return status === "closed" ? "Shared with you" : null;
+  return waiting ? "Shown once your request is approved" : null;
+}
+
+// Same layout as the loaded page, so nothing jumps when it arrives.
+function DetailSkeleton() {
+  return (
+    <div className="grid gap-8 motion-safe:animate-pulse md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-12" aria-hidden="true">
+      <div className="aspect-[4/3] rounded-2xl bg-raised" />
+      <div className="flex flex-col gap-4">
+        <div className="h-9 w-3/4 rounded-lg bg-raised" />
+        <div className="h-4 w-full rounded bg-raised" />
+        <div className="h-4 w-2/3 rounded bg-raised" />
+        <div className="mt-4 h-36 rounded-2xl bg-raised" />
+      </div>
+    </div>
+  );
 }
 
 export default function PostDetail() {
+  useV2Theme();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [requesting, setRequesting] = useState(false);
 
-  const [showModal, setShowModal] = useState(false);
-
-  const { data, isPending: loading, error } = useQuery<PostDetailData>({
+  const { data, isPending, error } = useQuery<PostDetailData>({
     queryKey: ["posts", id],
     queryFn: () => apiFetch(`/posts/${id}`),
     enabled: !!id,
   });
 
-  const invalidatePost = () => {
-    queryClient.invalidateQueries({ queryKey: ["posts", id] });
-    queryClient.invalidateQueries({ queryKey: ["posts", "mine"] });
-  };
+  // A post opened from a shared link has no page behind it in the app, and
+  // going back would leave Jyo altogether; the feed is the sensible parent.
+  const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/feed"));
 
-  const approveMutation = useMutation({
-    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/approve`, { method: "PUT" }),
-    onSuccess: invalidatePost,
-  });
+  const back = (
+    <button
+      type="button"
+      onClick={goBack}
+      className="mb-6 inline-flex cursor-pointer items-center gap-1.5 rounded-md text-sm font-medium text-fg-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+    >
+      <ArrowLeft className="size-4" aria-hidden="true" />
+      Back
+    </button>
+  );
 
-  const rejectMutation = useMutation({
-    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/reject`, { method: "PUT" }),
-    onSuccess: invalidatePost,
-  });
-
-  const completeMutation = useMutation({
-    mutationFn: () => apiFetch(`/posts/${id}/complete`, { method: "PUT" }),
-    onSuccess: invalidatePost,
-  });
-
-  const actionLoading = approveMutation.isPending || rejectMutation.isPending || completeMutation.isPending;
-  const actionError =
-    approveMutation.error?.message || rejectMutation.error?.message || completeMutation.error?.message || "";
-
-  const handleApprove = (requestId: string) => approveMutation.mutate(requestId);
-  const handleReject = (requestId: string) => rejectMutation.mutate(requestId);
-  const handleComplete = () => completeMutation.mutate();
-
-  if (loading) {
+  if (isPending) {
     return (
-      <div className="px-6 py-20 flex flex-col items-center gap-3 font-medium tracking-wide">
-        <Loader2 className="w-5 h-5 text-subtle animate-spin" />
-        <p className="text-sm text-subtle">Loading post…</p>
+      <div className="text-fg">
+        {back}
+        <DetailSkeleton />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="px-6 py-20 flex flex-col items-center gap-4 font-medium tracking-wide">
-        <div className="flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3 max-w-sm w-full">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{error?.message || "Post not found."}</p>
-        </div>
-        <button
-          onClick={() => navigate("/feed")}
-          className="cursor-pointer text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted transition-colors"
+      <div className="text-fg">
+        {back}
+        <EmptyState
+          icon={<UtensilsCrossed />}
+          title="We couldn't open this post"
+          actions={<Button to="/feed">Back to the feed</Button>}
         >
-          Back to Feed
-        </button>
+          <p>{error?.message === "Post not found" ? "It may have been deleted, or the link is wrong." : error?.message}</p>
+        </EmptyState>
       </div>
     );
   }
 
   const { post, isPoster, isApprovedPicker, pendingRequest } = data;
+  const statusTag = STATUS_TAG[post.status];
+  const spot = pickupSpotText(post.status, isPoster, isApprovedPicker);
 
   return (
-    <div className="px-6 py-8 font-medium tracking-wide">
+    <div className="text-fg">
+      {back}
 
-      {/* Back */}
-      <button
-        onClick={() => navigate(-1)}
-        className="cursor-pointer flex items-center gap-1.5 text-sm text-subtle hover:text-foreground transition-colors mb-6"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        Back
-      </button>
+      <div className="grid items-start gap-8 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-12">
+        <ImageViewer src={post.photoUrl} alt={post.title} placeholder={<UtensilsCrossed />} className="shadow-card" />
 
-      <div className="grid md:grid-cols-[3fr_2fr] gap-6 lg:gap-8 items-start">
-
-        {/* Left — photo + post info, stays in view while acting on the right */}
-        <div className="flex flex-col gap-6 md:sticky md:top-20">
-
-          {post.photoUrl ? (
-            // The whole photo at its own shape, unlike the cropped feed card.
-            // Height is capped so a tall photo doesn't push the details off
-            // screen; it then sits centred in a frame as wide as the card below.
-            <div className="flex justify-center overflow-hidden rounded-xl bg-surface">
-              <img src={post.photoUrl} alt={post.title} className="block h-auto max-h-[60vh] w-auto max-w-full" />
-            </div>
-          ) : (
-            <div className="w-full h-72 bg-surface rounded-xl flex items-center justify-center">
-              <UtensilsCrossed className="w-10 h-10 text-subtle" />
-            </div>
-          )}
-
-          <div className="bg-surface border border-border rounded-xl px-5 py-5 flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="font-semibold text-xl text-foreground tracking-tight leading-tight">
-                {post.title}
-              </h1>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {post.isDemo && <DemoBadge />}
-                <StatusBadge status={post.status} />
+        <div className="flex flex-col gap-6">
+          <header>
+            {(statusTag || post.isDemo) && (
+              <div className="mb-3 flex gap-1.5">
+                {statusTag && <span className={`${TAG} text-fg`}>{statusTag}</span>}
+                {post.isDemo && <span className={`${TAG} text-leaf`}>Demo</span>}
               </div>
-            </div>
-
-            {post.description && (
-              <p className="text-sm leading-relaxed text-muted">{post.description}</p>
             )}
+            <h1 className="font-display text-3xl font-semibold leading-tight text-balance sm:text-4xl">{post.title}</h1>
+            {post.description && (
+              <p className="mt-3 leading-relaxed text-pretty whitespace-pre-line text-fg-muted">{post.description}</p>
+            )}
+          </header>
 
-            <div className="border-t border-border" />
-
-            <div className="flex flex-col gap-2.5 text-sm text-muted">
-              {post.posterName && (
-                <div className="flex items-center gap-2">
-                  <span className="text-subtle">Posted by</span>
-                  <span className="font-medium text-foreground">{post.posterName}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-subtle shrink-0" />
-                <span>Pickup window: {formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
-              </div>
-            </div>
-
-            {(isPoster || isApprovedPicker) && post.pickupLat && post.pickupLng && (
-              <MapsLink lat={post.pickupLat} lng={post.pickupLng} />
+          <div className="flex flex-col gap-4">
+            <Fact icon={<Clock />} label="Pickup time">
+              <span className="tabular-nums">{formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
+            </Fact>
+            {spot && (
+              <Fact icon={<MapPin />} label="Pickup spot">
+                {spot}
+              </Fact>
+            )}
+            {post.posterName && !isPoster && (
+              <Fact icon={<UserRound />} label="Shared by">
+                {post.posterName}
+              </Fact>
             )}
           </div>
-        </div>
 
-        {/* Right — actions */}
-        <div className="flex flex-col gap-4">
-          {isApprovedPicker && <ApprovedPickerView status={post.status} />}
-
-          {isPoster && (
-            <PosterView
-              post={post}
-              pendingRequest={pendingRequest}
-              actionLoading={actionLoading}
-              actionError={actionError}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onComplete={handleComplete}
-            />
-          )}
-
-          {!isPoster && !isApprovedPicker && (
-            <VisitorView status={post.status} onRequest={() => setShowModal(true)} />
+          {isPoster ? (
+            <PosterPanel post={post} pendingRequest={pendingRequest} />
+          ) : isApprovedPicker ? (
+            <PickerPanel post={post} />
+          ) : (
+            <VisitorPanel status={post.status} onRequest={() => setRequesting(true)} />
           )}
         </div>
       </div>
 
-      {showModal && (
+      {requesting && (
         <RequestModal
           postId={post.id}
-          onClose={() => setShowModal(false)}
-          onSuccess={() => { setShowModal(false); invalidatePost(); }}
+          onClose={() => setRequesting(false)}
+          onSuccess={() => {
+            setRequesting(false);
+            queryClient.invalidateQueries({ queryKey: ["posts", post.id] });
+          }}
         />
       )}
     </div>

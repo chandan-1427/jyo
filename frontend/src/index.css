@@ -49,6 +49,11 @@
   --color-cta-top:    oklch(0.7 0.115 158);
   --color-lifted-top: oklch(0.26 0.006 165);
   --color-danger:    #EF7C8E; /*  7.4:1, destructive actions only */
+  /* Solid destructive buttons (Delete post): a deeper red than danger, which
+     reads pink as a fill. White text on it is 5.1:1. */
+  --color-danger-solid:      oklch(0.56 0.17 25); /* #C43F3E */
+  --color-danger-solid-top:  oklch(0.61 0.16 25);
+  --color-danger-solid-deep: oklch(0.4 0.13 25);
 
   --shadow-lift: 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 4px 12px rgb(0 0 0 / 0.35);
   /* Resting cards: a tight contact shadow plus a soft one below. */
