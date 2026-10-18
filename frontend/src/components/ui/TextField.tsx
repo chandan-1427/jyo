@@ -1,4 +1,5 @@
 import { useId, useState, type ComponentProps, type ReactNode } from "react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FieldProps {
@@ -150,5 +151,51 @@ export function TextAreaField({ label, error, hint, labelAside, icon, className,
         />
       </div>
     </FieldFrame>
+  );
+}
+
+interface SearchFieldProps extends Omit<ComponentProps<"input">, "className" | "value" | "onChange" | "type"> {
+  value: string;
+  onChange: (value: string) => void;
+  // Read by screen readers; the placeholder says it visually.
+  label: string;
+  className?: string;
+}
+
+// A search box in the same style as the other fields: a search icon, and a
+// clear button once something's typed. Escape clears it too. The browser's
+// own clear "x" is hidden so there's only one.
+export function SearchField({ value, onChange, label, className, placeholder = "Search", ...input }: SearchFieldProps) {
+  return (
+    <div role="search" className={cn("relative flex items-center", className)}>
+      <span className={ICON} aria-hidden="true">
+        <Search />
+      </span>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && value) {
+            e.preventDefault();
+            onChange("");
+          }
+        }}
+        aria-label={label}
+        placeholder={placeholder}
+        className={cn(CONTROL, "h-11 pr-11 pl-11 [&::-webkit-search-cancel-button]:appearance-none")}
+        {...input}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Clear search"
+          className="absolute right-1.5 grid size-8 cursor-pointer place-items-center rounded-lg text-fg-subtle transition-colors hover:bg-lifted hover:text-fg focus-visible:outline-2 focus-visible:outline-leaf"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </button>
+      )}
+    </div>
   );
 }
