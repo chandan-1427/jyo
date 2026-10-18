@@ -10,6 +10,7 @@ vi.mock("../src/lib/mailer.js", () => ({
 import { createApp } from "../src/app.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { ownUploadUrl } from "./helpers/uploads.js";
 
 const app = createApp();
 
@@ -154,6 +155,71 @@ describe("GET /posts (feed)", () => {
   });
 });
 
+describe("photo and selfie addresses", () => {
+  const HOUR = 3_600_000;
+  const post = (cookie: string, photoUrl: string) =>
+    authedRequest(app, "/posts", cookie, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Rice and dal for 2",
+        photoUrl,
+        pickupLat: TIRUPATI.lat,
+        pickupLng: TIRUPATI.lng,
+        pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
+        pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+      }),
+    });
+
+  // An image on someone else's server would let it log the IP address, and
+  // so the rough location, of everyone who opens the post or request.
+  it("only accepts our own uploads for a post's photo", async () => {
+    const poster = await createVerifiedUser(app, { email: "own-photo@example.com" });
+
+    expect((await post(poster.cookie, ownUploadUrl("food-photos"))).status).toBe(201);
+
+    const outside = await post(poster.cookie, "https://tracker.example.com/pixel.jpg");
+    expect(outside.status).toBe(400);
+    expect((await outside.json()).details.photoUrl).toBeDefined();
+
+    // A selfie upload can't be passed off as a food photo either.
+    expect((await post(poster.cookie, ownUploadUrl("selfies"))).status).toBe(400);
+  });
+
+  it("only accepts our own uploads when a post's photo is changed", async () => {
+    const poster = await createVerifiedUser(app, { email: "own-photo-edit@example.com" });
+    const created = await createPostAt(poster.cookie, TIRUPATI);
+
+    const res = await authedRequest(app, `/posts/${created.id}`, poster.cookie, {
+      method: "PUT",
+      body: JSON.stringify({
+        title: "Rice and dal for 2",
+        photoUrl: "https://tracker.example.com/pixel.jpg",
+        pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
+        pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("only accepts our own uploads for a request's selfie", async () => {
+    const poster = await createVerifiedUser(app, { email: "own-selfie-poster@example.com" });
+    const picker = await createVerifiedUser(app, { email: "own-selfie-picker@example.com" });
+    const created = await createPostAt(poster.cookie, TIRUPATI);
+
+    const request = (selfieUrl: string) =>
+      authedRequest(app, "/requests", picker.cookie, {
+        method: "POST",
+        body: JSON.stringify({ postId: created.id, pickerName: "Picker", etaMinutes: 15, selfieUrl, ...TIRUPATI }),
+      });
+
+    const outside = await request("https://tracker.example.com/me.jpg");
+    expect(outside.status).toBe(400);
+    expect((await outside.json()).details.selfieUrl).toBeDefined();
+
+    expect((await request(ownUploadUrl("selfies"))).status).toBe(201);
+  });
+});
+
 describe("PUT /posts/:id (edit)", () => {
   const HOUR = 3_600_000;
   const edit = (cookie: string, postId: string, changes: Record<string, unknown> = {}) =>
@@ -170,11 +236,12 @@ describe("PUT /posts/:id (edit)", () => {
 
   it("lets the poster change an open post, keeping the photo and spot", async () => {
     const poster = await createVerifiedUser(app, { email: "edit-open@example.com" });
+    const photoUrl = ownUploadUrl("food-photos");
     const created = await authedRequest(app, "/posts", poster.cookie, {
       method: "POST",
       body: JSON.stringify({
         title: "Rice and dal for 2",
-        photoUrl: "https://example.com/food.jpg",
+        photoUrl,
         pickupLat: TIRUPATI.lat,
         pickupLng: TIRUPATI.lng,
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
@@ -188,7 +255,7 @@ describe("PUT /posts/:id (edit)", () => {
     const { post: updated } = await res.json();
     expect(updated.title).toBe("Rice, dal and curd for 3");
     expect(updated.description).toBe("Made this afternoon");
-    expect(updated.photoUrl).toBe("https://example.com/food.jpg");
+    expect(updated.photoUrl).toBe(photoUrl);
     expect(updated.pickupLat).toBe(TIRUPATI.lat);
   });
 

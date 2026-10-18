@@ -6,7 +6,7 @@ import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/geo/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
-import { uploadFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
+import { uploadFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { createRequestLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { z } from "zod";
 import { createNotification } from "../lib/notifications/notify.js";
@@ -34,6 +34,11 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   }
 
   const { postId, pickerName, selfieUrl, etaMinutes, lat, lng } = result.data;
+
+  // Only our own uploads: see isOwnUploadUrl for why.
+  if (selfieUrl && !isOwnUploadUrl(selfieUrl, "selfies")) {
+    return c.json({ error: "Invalid input", details: { selfieUrl: [FOREIGN_UPLOAD_MESSAGE] } }, 400);
+  }
 
   const post = await findPostById(postId);
 

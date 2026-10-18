@@ -5,7 +5,7 @@ import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, gte, asc, desc, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
-import { uploadFile, deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
+import { uploadFile, deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { isValidUuid, findPostById } from "../lib/domain/finders.js";
 import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
@@ -31,6 +31,11 @@ postRoutes.post("/", createPostLimiter, async (c) => {
   }
 
   const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd } = result.data;
+
+  // Only our own uploads: see isOwnUploadUrl for why.
+  if (photoUrl && !isOwnUploadUrl(photoUrl, "food-photos")) {
+    return c.json({ error: "Invalid input", details: { photoUrl: [FOREIGN_UPLOAD_MESSAGE] } }, 400);
+  }
 
   if (env.APP_ENV === "production" && !isDemo && !isWithinTirupati(pickupLat, pickupLng)) {
     return c.json(
@@ -322,6 +327,11 @@ postRoutes.put("/:id", async (c) => {
   }
 
   const { title, description, photoUrl, pickupWindowStart, pickupWindowEnd } = result.data;
+
+  // Only our own uploads: see isOwnUploadUrl for why.
+  if (photoUrl && !isOwnUploadUrl(photoUrl, "food-photos")) {
+    return c.json({ error: "Invalid input", details: { photoUrl: [FOREIGN_UPLOAD_MESSAGE] } }, 400);
+  }
 
   // Same guard as approve/reject/cancel: conditional on the post still being
   // open, so a request that claims it between the check above and this
