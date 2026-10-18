@@ -69,6 +69,27 @@ export async function uploadFile(
   return data.publicUrl;
 }
 
+type Bucket = "food-photos" | "selfies" | "avatars";
+
+// Uploads only ever get a random UUID name with an allowed extension (above).
+const UPLOADED_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|heic)$/;
+
+// Shown in the 400's field details; the app always uploads first, so only
+// someone calling the API directly with another address ever sees it.
+export const FOREIGN_UPLOAD_MESSAGE = "Upload the image through Jyo first, then use the address it returns.";
+
+// Whether a photo or selfie address is one of our own uploads to `bucket`.
+// The API takes these as plain URLs, and every viewer's browser loads them.
+// An address on someone else's server would let that server log the IP
+// address, and so the rough location, of everyone who opens the post or
+// request, in an app built around not revealing where people are. The
+// prefix comes from the same client that builds upload URLs, so it matches
+// them exactly.
+export function isOwnUploadUrl(url: string, bucket: Bucket): boolean {
+  const prefix = supabase.storage.from(bucket).getPublicUrl("x").data.publicUrl.slice(0, -1);
+  return url.startsWith(prefix) && UPLOADED_NAME.test(url.slice(prefix.length));
+}
+
 // Best-effort cleanup for when a row referencing an uploaded file is
 // deleted outright (as opposed to just changing status) — the file's
 // public URL is the only thing we ever stored, so the filename has to be
