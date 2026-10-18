@@ -154,6 +154,46 @@ describe("GET /posts (feed)", () => {
   });
 });
 
+describe("pickup time limit", () => {
+  const DAY = 86_400_000;
+  const create = (cookie: string, endsInDays: number) =>
+    authedRequest(app, "/posts", cookie, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Rice and dal for 2",
+        pickupLat: TIRUPATI.lat,
+        pickupLng: TIRUPATI.lng,
+        pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
+        pickupWindowEnd: new Date(Date.now() + endsInDays * DAY).toISOString(),
+      }),
+    });
+
+  it("accepts a pickup ending within a week and rejects one beyond it", async () => {
+    const poster = await createVerifiedUser(app, { email: "limit-create@example.com" });
+
+    expect((await create(poster.cookie, 6.5)).status).toBe(201);
+
+    const tooFar = await create(poster.cookie, 8);
+    expect(tooFar.status).toBe(400);
+    expect((await tooFar.json()).details.pickupWindowEnd).toEqual(["Pickup has to end within 7 days"]);
+  });
+
+  it("applies the same limit when a post is edited", async () => {
+    const poster = await createVerifiedUser(app, { email: "limit-edit@example.com" });
+    const post = await createPostAt(poster.cookie, TIRUPATI);
+
+    const res = await authedRequest(app, `/posts/${post.id}`, poster.cookie, {
+      method: "PUT",
+      body: JSON.stringify({
+        title: "Rice and dal for 2",
+        pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
+        pickupWindowEnd: new Date(Date.now() + 10 * DAY).toISOString(),
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("PUT /posts/:id (edit)", () => {
   const HOUR = 3_600_000;
   const edit = (cookie: string, postId: string, changes: Record<string, unknown> = {}) =>

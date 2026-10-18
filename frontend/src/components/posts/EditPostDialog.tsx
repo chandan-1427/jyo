@@ -4,7 +4,7 @@ import { Controller } from "react-hook-form";
 import { ImagePlus } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { uploadImage } from "@/lib/supabase";
-import { editPostSchema } from "@/lib/validation";
+import { editPostSchema, MAX_PICKUP_DAYS_AHEAD } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { toDateTimeInput } from "@/lib/format";
 import type { FoodPost } from "@/types/api";
@@ -14,9 +14,6 @@ import { Button } from "../ui/Button";
 import { Notice } from "../ui/Notice";
 import { PhotoField } from "../ui/PhotoField";
 import { DateTimeField } from "../ui/DateTimeField";
-
-// Leftover food doesn't keep, so pickup can't be set further out than this.
-const MAX_DAYS_AHEAD = 7;
 
 type EditValues = {
   title: string;
@@ -70,7 +67,7 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
   const start = watch("pickupWindowStart");
   const now = toDateTimeInput(new Date());
   // Fixed when the dialog opens.
-  const [latest] = useState(() => toDateTimeInput(new Date(Date.now() + MAX_DAYS_AHEAD * 86_400_000)));
+  const [latest] = useState(() => toDateTimeInput(new Date(Date.now() + MAX_PICKUP_DAYS_AHEAD * 86_400_000)));
 
   return (
     <Dialog title="Edit post" size="lg" onClose={onClose}>

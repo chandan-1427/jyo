@@ -89,6 +89,14 @@ type PickupWindow = { pickupWindowStart: string; pickupWindowEnd: string };
 const endAfterStart = (data: PickupWindow) => new Date(data.pickupWindowEnd) > new Date(data.pickupWindowStart);
 const endInFuture = (data: PickupWindow) => new Date(data.pickupWindowEnd) > new Date();
 
+// Leftover food doesn't keep, so a pickup can't be set more than a week out.
+// The frontend's validation.ts has the same limit, and its date picker stops
+// there. The extra hour is slack for a device whose clock runs a little fast.
+export const MAX_PICKUP_DAYS_AHEAD = 7;
+const endWithinLimit = (data: PickupWindow) =>
+  new Date(data.pickupWindowEnd).getTime() <= Date.now() + MAX_PICKUP_DAYS_AHEAD * 86_400_000 + 3_600_000;
+const WITHIN_LIMIT = { message: `Pickup has to end within ${MAX_PICKUP_DAYS_AHEAD} days`, path: ["pickupWindowEnd"] };
+
 export const createPostSchema = z
   .object({
     ...postFields,
@@ -96,11 +104,13 @@ export const createPostSchema = z
     pickupLng: z.number().min(-180).max(180),
   })
   .refine(endAfterStart, { message: "End time must be after start time", path: ["pickupWindowEnd"] })
-  .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] });
+  .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] })
+  .refine(endWithinLimit, WITHIN_LIMIT);
 
 // The pickup spot can't be edited: it was checked against the service area
 // when the post was made. Omitting photoUrl or description keeps the current one.
 export const updatePostSchema = z
   .object(postFields)
   .refine(endAfterStart, { message: "End time must be after start time", path: ["pickupWindowEnd"] })
-  .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] });
+  .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] })
+  .refine(endWithinLimit, WITHIN_LIMIT);
