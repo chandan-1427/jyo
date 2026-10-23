@@ -6,7 +6,7 @@ export function FeedIllustration() {
     <svg
       aria-hidden="true"
       viewBox="10 60 230 220"
-      className="pointer-events-none fixed right-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] -z-10 w-28 opacity-40 sm:right-10 sm:bottom-0 sm:w-40"
+      className="pointer-events-none fixed right-4 bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.5rem)] -z-10 w-28 opacity-40 sm:right-10 sm:bottom-0 sm:w-40"
       fill="none"
       strokeLinecap="round"
       strokeLinejoin="round"

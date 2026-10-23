@@ -3,11 +3,12 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch, BASE_URL } from "@/lib/api/api";
-import { Bell, Home, PlusSquare, Package, PackageOpen, CircleUserRound } from "lucide-react";
+import { Bell } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Logo } from "../ui/Logo";
 import { Avatar } from "../ui/Avatar";
+import { FeedIcon, MyPostsIcon, MyRequestsIcon, PostFoodIcon, ProfileIcon } from "./NavIcons";
 
 type Notification = {
   id: string;
@@ -18,13 +19,21 @@ type Notification = {
 };
 
 const NAV_LINKS = [
-  { label: "Feed", path: "/feed", icon: Home },
-  { label: "Post food", path: "/create", icon: PlusSquare },
-  { label: "My posts", path: "/my-posts", icon: Package },
-  { label: "My requests", path: "/my-requests", icon: PackageOpen },
+  { label: "Feed", path: "/feed" },
+  { label: "Post food", path: "/create" },
+  { label: "My posts", path: "/my-posts" },
+  { label: "My requests", path: "/my-requests" },
 ];
 
-const MOBILE_TABS = [...NAV_LINKS, { label: "Profile", path: "/profile", icon: CircleUserRound }];
+// Icons only on phones; the labels are for screen readers. Profile is last
+// and drawn separately (it shows your photo).
+const MOBILE_TABS = [
+  { label: "Feed", path: "/feed", icon: FeedIcon },
+  { label: "Post food", path: "/create", icon: PostFoodIcon },
+  { label: "My posts", path: "/my-posts", icon: MyPostsIcon },
+  { label: "My requests", path: "/my-requests", icon: MyRequestsIcon },
+  { label: "Profile", path: "/profile", icon: null },
+];
 
 const notificationsKey = ["notifications"] as const;
 
@@ -248,21 +257,31 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Mobile tab bar */}
+      {/* Mobile tab bar: a pill of frosted glass floating above the page, which
+          scrolls on underneath it. Glass is kept to this navigation layer and
+          not used on content; the tint is dark enough that the labels stay
+          legible over bright food photos. Without backdrop-filter support it
+          falls back to a near-solid fill. */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-fg/[0.06] bg-canvas pb-[env(safe-area-inset-bottom)] sm:hidden"
+        className="fixed inset-x-4 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-full bg-canvas/70 shadow-lift ring-1 ring-inset ring-fg/[0.08] backdrop-blur-lg backdrop-saturate-150 supports-[not(backdrop-filter:blur(0))]:bg-canvas/95 sm:hidden"
       >
-        <ul className="flex h-16">
+        {/* A faint highlight along the top edge, where light would catch glass. */}
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]" />
+        <ul className="relative flex h-14 p-1.5">
           {MOBILE_TABS.map(({ label, path, icon: Icon }) => (
-            <li key={path} className="flex-1">
+            <li key={path} className="relative flex-1">
               <Link
                 to={path}
                 aria-current={current(path)}
-                className="flex h-full flex-col items-center justify-center gap-1 text-fg-subtle transition-colors aria-[current=page]:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
+                className="flex h-full items-center justify-center rounded-full text-fg-muted transition-colors aria-[current=page]:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
               >
-                <Icon className="size-5" strokeWidth={isActive(path) ? 2.25 : 1.75} aria-hidden="true" />
-                <span className="text-[11px] font-medium leading-none">{label}</span>
+                {Icon ? (
+                  <Icon active={isActive(path)} />
+                ) : (
+                  <ProfileIcon src={user?.avatarUrl} active={isActive(path)} />
+                )}
+                <span className="sr-only">{label}</span>
               </Link>
             </li>
           ))}
