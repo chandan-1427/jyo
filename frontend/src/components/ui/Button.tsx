@@ -57,3 +57,18 @@ export function Button({
     </button>
   );
 }
+
+// A page's main action at the end of a toolbar row, as tall as the search
+// and filter beside it. On phones only the icon shows, in a 44px square, so
+// the row fits on one line; the label stays for screen readers.
+export function ToolbarButton({ to, icon, children }: { to: string; icon: ReactNode; children: string }) {
+  return (
+    <Link
+      to={to}
+      className={buttonClasses({ size: "lg", className: "shrink-0 max-sm:w-11 max-sm:gap-0 max-sm:px-0" })}
+    >
+      {icon}
+      <span className="max-sm:sr-only">{children}</span>
+    </Link>
+  );
+}
