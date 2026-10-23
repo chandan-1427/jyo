@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Clock, UtensilsCrossed } from "lucide-react";
 import type { FoodPost } from "@/types/api";
@@ -37,6 +37,45 @@ const BODY_FADE =
 // and out instead of snapping.
 const ROLL = "transition-transform duration-300 ease-[cubic-bezier(0.45,0,0.25,1)] motion-reduce:transition-none";
 
+// Shimmers until the photo has fully arrived, then fades it in whole rather
+// than letting it paint in strips. A photo already in the browser's cache is
+// complete by the time the ref runs, so it shows at once with no shimmer.
+function CardPhoto({ src }: { src: string | null }) {
+  const [state, setState] = useState<"loading" | "loaded" | "failed">("loading");
+
+  if (!src || state === "failed") {
+    return (
+      <div className="grid size-full place-items-center text-fg-subtle">
+        <UtensilsCrossed className="size-8 transition-colors group-hover:text-fg-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  const loaded = state === "loaded";
+  return (
+    <>
+      {!loaded && <span aria-hidden="true" className="shimmer absolute inset-0" />}
+      <img
+        ref={(img) => {
+          if (img?.complete && img.naturalWidth > 0) setState("loaded");
+        }}
+        src={src}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setState("loaded")}
+        onError={() => setState("failed")}
+        // Absolute, so a tall photo can't stretch the 3:2 box (an
+        // aspect-ratio box still grows to fit in-flow content).
+        className={cn(
+          "absolute inset-0 size-full rounded-t-2xl object-cover outline-1 -outline-offset-1 outline-white/10 transition-[opacity,filter] duration-200 ease-out group-hover:brightness-110",
+          !loaded && "opacity-0"
+        )}
+      />
+    </>
+  );
+}
+
 // Nearly every post in the feed is open, so "Open" isn't shown; only the
 // states that change what you'd do are: someone already asked, or it's a demo.
 // With a `status` line, that line says where the post stands instead.
@@ -55,20 +94,7 @@ export default function PostCard({ post, status, cta: ctaLabel, action, selectio
         className="group flex flex-1 flex-col overflow-hidden rounded-2xl bg-raised shadow-card ring-1 ring-inset ring-fg/[0.06] transition-colors hover:bg-lifted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
       >
         <div className="relative aspect-[3/2] bg-lifted">
-          {post.photoUrl ? (
-            <img
-              src={post.photoUrl}
-              alt=""
-              loading="lazy"
-              // Absolute, so a tall photo can't stretch the 3:2 box (an
-              // aspect-ratio box still grows to fit in-flow content).
-              className="absolute inset-0 size-full rounded-t-2xl object-cover outline-1 -outline-offset-1 outline-white/10 transition-[filter] group-hover:brightness-110"
-            />
-          ) : (
-            <div className="grid size-full place-items-center text-fg-subtle">
-              <UtensilsCrossed className="size-8 transition-colors group-hover:text-fg-muted" aria-hidden="true" />
-            </div>
-          )}
+          <CardPhoto key={post.photoUrl} src={post.photoUrl} />
           {/* Wavy edge where the photo meets the text, filled with the card's
               colour (and its hover colour); -bottom-px avoids a hairline seam. */}
           <svg

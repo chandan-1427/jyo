@@ -71,6 +71,46 @@
   }
 }
 
+/* A soft band of light sweeping across a placeholder. It moves with transform
+   rather than background-position, so a grid of them doesn't repaint every
+   frame. With reduced motion the placeholder just stays still. */
+@utility shimmer {
+  overflow: hidden;
+
+  /* Three times the box's size and centred on it, so it still covers the box
+     while sliding diagonally; "to bottom right" keeps the band parallel to
+     the box's other diagonal whatever its shape. */
+  &::after {
+    content: "";
+    position: absolute;
+    top: -100%;
+    left: -100%;
+    width: 300%;
+    height: 300%;
+    background: linear-gradient(
+      to bottom right,
+      transparent 42%,
+      color-mix(in oklab, var(--color-fg) 6%, transparent) 50%,
+      transparent 58%
+    );
+    transform: translate(-25%, -25%);
+    animation: shimmer 1.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      display: none;
+    }
+  }
+}
+
+@keyframes shimmer {
+  70%,
+  100% {
+    transform: translate(25%, 25%);
+  }
+}
+
 /* Registered so the scrollbar thumb colour can be transitioned (plain colours
    in scrollbar-color can't be). Browsers without @property simply show and
    hide it. */

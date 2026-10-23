@@ -11,7 +11,7 @@ export function PostGrid({ children }: { children: ReactNode }) {
 // Same shape as a PostCard, so nothing jumps when the real posts arrive.
 function PostCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl bg-raised shadow-card ring-1 ring-inset ring-fg/[0.06] motion-safe:animate-pulse">
+    <div className="shimmer relative rounded-2xl bg-raised shadow-card ring-1 ring-inset ring-fg/[0.06]">
       <div className="aspect-[3/2] bg-lifted" />
       <div className="p-4">
         <div className="h-5 w-3/4 rounded bg-lifted" />
