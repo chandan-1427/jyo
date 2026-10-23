@@ -1,28 +1,21 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, X, Clock, AlertCircle } from "lucide-react";
+import { Controller } from "react-hook-form";
+import { Loader2, MapPin, MapPinOff, Send } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
-import { createPostSchema } from "@/lib/validation";
+import { createPostSchema, MAX_PICKUP_DAYS_AHEAD } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
+import { toDateTimeInput } from "@/lib/format";
 import { uploadImage } from "@/lib/supabase";
+import { useV2Theme } from "@/lib/theme";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { LinkButton } from "@/components/ui/LinkButton";
-import { LocationStatus } from "@/components/ui/LocationStatus";
-import { Field } from "@/components/ui/Field";
-import { DateTimePicker } from "@/components/ui/DateTimePicker";
-
-function nowLocal(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
+import { Button } from "@/components/ui/Button";
+import { DateTimeField } from "@/components/ui/DateTimeField";
+import { ImagePickerField } from "@/components/ui/ImagePickerField";
+import { Notice } from "@/components/ui/Notice";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TextAreaField, TextField } from "@/components/ui/TextField";
 
 type PostValues = {
   title: string;
@@ -32,32 +25,54 @@ type PostValues = {
   pickupWindowEnd: string;
 };
 
-function FieldError({ message }: { message?: string }) {
-  return message ? <p className="text-xs text-red-400">{message}</p> : null;
+const HOUR = 3_600_000;
+const SLOT = 5 * 60_000;
+
+// Pickup starts at the next 5-minute slot and runs two hours by default, so
+// most people only nudge the times rather than pick both from scratch.
+function defaultWindow() {
+  const start = new Date(Math.ceil((Date.now() + 60_000) / SLOT) * SLOT);
+  return { start: toDateTimeInput(start), end: toDateTimeInput(new Date(start.getTime() + 2 * HOUR)) };
 }
 
 export default function CreatePost() {
+  useV2Theme();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // Fixed when the page opens, like the times' limits below.
+  const [{ start, end, latest }] = useState(() => ({
+    ...defaultWindow(),
+    latest: toDateTimeInput(new Date(Date.now() + MAX_PICKUP_DAYS_AHEAD * 24 * HOUR)),
+  }));
 
-  const { register, handleSubmit, setValue, watch, setError, formState: { errors } } = useZodForm(createPostSchema, {
+  const { register, control, handleSubmit, setValue, watch, setError, formState: { errors } } = useZodForm(createPostSchema, {
     title: "",
     description: "",
-    pickupWindowStart: nowLocal(),
-    pickupWindowEnd: "",
+    pickupWindowStart: start,
+    pickupWindowEnd: end,
   });
-  const pickupWindowStart = watch("pickupWindowStart");
-  const pickupWindowEnd = watch("pickupWindowEnd");
+  const pickupStart = watch("pickupWindowStart");
 
-  const [photoPreview, setPhotoPreview] = useState("");
+  // The pickup spot is wherever the poster is now.
   const [coords, setCoords] = useState<Coords | null>(null);
-  const [locLoading, setLocLoading] = useState(true);
-  const [formError, setFormError] = useState("");
+  const [locating, setLocating] = useState(true);
+  const [locationError, setLocationError] = useState("");
+  const fetchLocation = useCallback(() => {
+    getCurrentLocation()
+      .then(setCoords)
+      .catch((err: unknown) => setLocationError(err instanceof Error ? err.message : "We couldn't get your location."))
+      .finally(() => setLocating(false));
+  }, []);
+  useEffect(fetchLocation, [fetchLocation]);
+  const locate = () => {
+    setLocating(true);
+    setLocationError("");
+    fetchLocation();
+  };
 
-  const createMutation = useMutation<unknown, Error, PostValues>({
+  const create = useMutation<unknown, Error, PostValues>({
     mutationFn: async (values) => {
       const photoUrl = await uploadImage(values.photo, "food-photos");
-
       return apiFetch("/posts", {
         method: "POST",
         body: JSON.stringify({
@@ -72,8 +87,7 @@ export default function CreatePost() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts", "mine"] });
-      queryClient.invalidateQueries({ queryKey: ["posts", "feed"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
       navigate("/my-posts");
     },
     onError: (err) => {
@@ -81,153 +95,115 @@ export default function CreatePost() {
     },
   });
 
-  const loading = createMutation.isPending;
-  // Field-level server errors show under their fields; anything else up top.
+  // Field-level server errors show under their fields; anything else here
+  // (e.g. "outside the service area").
   const fieldLevel = Object.values(errors).some((e) => e?.type === "server");
-  const error = formError || (!fieldLevel ? createMutation.error?.message ?? "" : "");
+  const error = !fieldLevel ? create.error?.message ?? "" : "";
 
-  useEffect(() => {
-    getCurrentLocation()
-      .then(setCoords)
-      .catch(() => setFormError("Could not detect your location. Please enable location access."))
-      .finally(() => setLocLoading(false));
-  }, []);
-
-  const setStart = (value: string) => {
-    setValue("pickupWindowStart", value, { shouldValidate: true });
-    // An end time that is no longer after the new start is cleared, as before.
-    if (pickupWindowEnd && pickupWindowEnd <= value) setValue("pickupWindowEnd", "");
-  };
-
-  const setEnd = (value: string) => {
-    setValue("pickupWindowEnd", value, { shouldValidate: true });
-  };
-
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setValue("photo", file, { shouldValidate: true });
-    setPhotoPreview(URL.createObjectURL(file));
-  };
-
-  const clearPhoto = () => {
-    setValue("photo", undefined as unknown as File, { shouldValidate: true });
-    setPhotoPreview("");
-  };
-
-  const onSubmit = handleSubmit((values) => {
-    setFormError("");
-    if (!coords) {
-      setFormError("Location is required to post food. Please enable location access.");
-      return;
-    }
-    createMutation.mutate(values);
-  });
-
-  const minStart = nowLocal();
-  const minEnd = pickupWindowStart || minStart;
+  const onSubmit = handleSubmit((values) => coords && create.mutate(values));
+  const now = toDateTimeInput(new Date());
 
   return (
-    <div className="px-6 py-8 font-medium tracking-wide">
+    <div className="text-fg">
+      <PageHeader title="Post food" subtitle="Share what you have with someone nearby." />
 
-      {/* Page header */}
-      <div className="mb-8">
-        <p className="text-sm text-subtle mb-1">Share with your community</p>
-        <h1 className="font-semibold text-2xl text-foreground tracking-tight">Post Food</h1>
-      </div>
+      {error && <Notice tone="error" className="mb-6">{error}</Notice>}
 
-      {/* Error */}
-      {error && (
-        <div role="alert" className="mb-6 flex items-start gap-2.5 rounded-lg border border-red-900/40 bg-red-950/30 px-3.5 py-3">
-          <AlertCircle className="w-4 h-4 text-red-400 mt-px shrink-0" />
-          <p className="text-sm text-red-400 leading-snug">{error}</p>
-        </div>
-      )}
+      <form onSubmit={onSubmit} noValidate className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12">
+        <ImagePickerField
+          label="Photo"
+          hint="A clear photo helps people decide."
+          error={errors.photo?.message}
+          onChange={(file) => setValue("photo", file ?? (undefined as unknown as File), { shouldValidate: true })}
+        />
 
-      <form onSubmit={onSubmit} noValidate className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
-
-        {/* Left — photo */}
-        <div className="lg:sticky lg:top-20">
-          <Field label="Food Photo">
-            {photoPreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-border">
-                <img src={photoPreview} alt="Food preview" className="w-full h-80 lg:h-96 object-cover" />
-                <button
-                  type="button"
-                  onClick={clearPhoto}
-                  aria-label="Remove photo"
-                  className="cursor-pointer absolute top-2.5 right-2.5 bg-surface border border-border rounded-full p-1 text-muted hover:text-red-400 hover:border-red-900/40 transition-colors shadow-sm"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center h-80 lg:h-96 rounded-xl border border-dashed border-border bg-surface cursor-pointer hover:border-border-strong transition-colors duration-150 group">
-                <Camera className="w-6 h-6 text-subtle group-hover:text-muted transition-colors mb-2" />
-                <span className="text-sm text-subtle group-hover:text-muted transition-colors">
-                  Tap to add a food photo
-                </span>
-                <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
-              </label>
-            )}
-            <FieldError message={errors.photo?.message} />
-          </Field>
-        </div>
-
-        {/* Right — form fields */}
         <div className="flex flex-col gap-5">
+          <TextField label="What are you sharing?" placeholder="e.g. Rice and dal for 2" error={errors.title?.message} {...register("title")} />
 
-          <Field label="Food Title">
-            <Input
-              type="text"
-              placeholder="e.g. Rice and dal for 2"
-              aria-invalid={errors.title ? true : undefined}
-              {...register("title")}
-            />
-            <FieldError message={errors.title?.message} />
-          </Field>
-
-          <Field label="Description" hint="optional">
-            <Textarea
-              placeholder="Details about the food, quantity, allergens..."
-              rows={4}
-              aria-invalid={errors.description ? true : undefined}
-              {...register("description")}
-            />
-            <FieldError message={errors.description?.message} />
-          </Field>
-
-          <Field label="Pickup Window">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[12px] text-subtle flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> From
-                </span>
-                <DateTimePicker value={pickupWindowStart} onChange={setStart} min={minStart} />
-                <FieldError message={errors.pickupWindowStart?.message} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[12px] text-subtle flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> To
-                </span>
-                <DateTimePicker value={pickupWindowEnd} onChange={setEnd} min={minEnd} />
-                <FieldError message={errors.pickupWindowEnd?.message} />
-              </div>
-            </div>
-          </Field>
-
-          <LocationStatus loading={locLoading} coords={coords} />
-
-          <LinkButton
-            as="button"
-            type="submit"
-            label={loading ? "Posting…" : "Post Food"}
-            disabled={loading || !coords}
-            loading={loading}
-            loadingLabel="Posting…"
-            className="mt-1 w-full"
+          <TextAreaField
+            label="Description"
+            labelAside={<span className="text-sm text-fg-subtle">Optional</span>}
+            placeholder="How much there is, when it was made, anything to know (spicy, contains nuts…)"
+            rows={4}
+            error={errors.description?.message}
+            {...register("description")}
           />
 
+          {/* Nothing in the past, nothing more than a week out, and the end
+              no earlier than the start. */}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Controller
+              control={control}
+              name="pickupWindowStart"
+              render={({ field }) => (
+                <DateTimeField
+                  label="Pickup starts"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  min={now}
+                  max={latest}
+                  error={errors.pickupWindowStart?.message}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="pickupWindowEnd"
+              render={({ field }) => (
+                <DateTimeField
+                  label="Pickup ends"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  min={pickupStart > now ? pickupStart : now}
+                  max={latest}
+                  error={errors.pickupWindowEnd?.message}
+                />
+              )}
+            />
+          </div>
+
+          {/* Where it's picked up from, and who gets to see that. */}
+          {locating ? (
+            <Notice>
+              <span className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Finding your location for the pickup spot…
+              </span>
+            </Notice>
+          ) : coords ? (
+            <div className="flex gap-3 rounded-xl bg-raised px-4 py-3.5 text-sm leading-relaxed text-fg-muted ring-1 ring-inset ring-fg/[0.06]">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-leaf" aria-hidden="true" />
+              <p>
+                <span className="font-medium text-fg">Pickup spot: where you are now.</span> Only the person you approve
+                sees it.
+              </p>
+            </div>
+          ) : (
+            <Notice
+              tone="error"
+              action={
+                <Button size="sm" variant="secondary" onClick={locate} iconLeft={<MapPinOff className="size-4" aria-hidden="true" />}>
+                  Try again
+                </Button>
+              }
+            >
+              {locationError} Your location is the pickup spot, so it's needed to post.
+            </Notice>
+          )}
+
+          <Button
+            type="submit"
+            size="lg"
+            fullWidth
+            loading={create.isPending}
+            disabled={!coords}
+            iconLeft={<Send className="size-4" aria-hidden="true" />}
+            className="mt-1"
+          >
+            {create.isPending ? "Posting…" : "Post food"}
+          </Button>
         </div>
       </form>
     </div>
