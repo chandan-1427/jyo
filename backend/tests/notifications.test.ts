@@ -24,7 +24,8 @@ beforeEach(async () => {
 // createNotification() call — that's a side effect of a different route
 // and would make these tests race against an un-awaited insert.
 async function seedNotification(userId: string, message: string, read = false) {
-  await db.insert(notifications).values({ userId, message, read });
+  const [row] = await db.insert(notifications).values({ userId, message, read }).returning({ id: notifications.id });
+  return row.id;
 }
 
 describe("GET /notifications", () => {
@@ -47,6 +48,41 @@ describe("GET /notifications", () => {
   it("rejects an unauthenticated request", async () => {
     const res = await app.request("/notifications");
     expect(res.status).toBe(401);
+  });
+});
+
+describe("PUT /notifications/:id/read", () => {
+  it("marks only that notification as read", async () => {
+    const user = await createVerifiedUser(app, { email: "read-one-owner@example.com" });
+    const opened = await seedNotification(user.userId, "Opened");
+    await seedNotification(user.userId, "Still unread");
+
+    const res = await authedRequest(app, `/notifications/${opened}/read`, user.cookie, { method: "PUT" });
+    expect(res.status).toBe(200);
+
+    const body = await (await authedRequest(app, "/notifications", user.cookie)).json();
+    const readByMessage = Object.fromEntries(
+      body.notifications.map((n: { message: string; read: boolean }) => [n.message, n.read])
+    );
+    expect(readByMessage).toEqual({ Opened: true, "Still unread": false });
+  });
+
+  it("is a 404 for someone else's notification, and leaves it unread", async () => {
+    const user = await createVerifiedUser(app, { email: "read-one-intruder@example.com" });
+    const other = await createVerifiedUser(app, { email: "read-one-victim@example.com" });
+    const theirs = await seedNotification(other.userId, "Not yours");
+
+    const res = await authedRequest(app, `/notifications/${theirs}/read`, user.cookie, { method: "PUT" });
+    expect(res.status).toBe(404);
+
+    const body = await (await authedRequest(app, "/notifications", other.cookie)).json();
+    expect(body.notifications[0].read).toBe(false);
+  });
+
+  it("is a 404 for an id that isn't a UUID", async () => {
+    const user = await createVerifiedUser(app, { email: "read-one-bad-id@example.com" });
+    const res = await authedRequest(app, "/notifications/not-a-uuid/read", user.cookie, { method: "PUT" });
+    expect(res.status).toBe(404);
   });
 });
 

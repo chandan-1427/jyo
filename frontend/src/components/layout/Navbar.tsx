@@ -44,18 +44,19 @@ export default function Navbar() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleMarkAllRead = async () => {
-    await apiFetch("/notifications/read-all", { method: "PUT" });
+  // Opening the panel only shows what's new; a notification counts as read
+  // once it's clicked (or all at once with "Mark all as read"). The list
+  // updates straight away, and is refetched if the server didn't take it.
+  const markRead = (id?: string) => {
     queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) =>
-      prev.map((n) => ({ ...n, read: true }))
+      prev.map((n) => (id === undefined || n.id === id ? { ...n, read: true } : n))
+    );
+    apiFetch(id ? `/notifications/${id}/read` : "/notifications/read-all", { method: "PUT" }).catch(() =>
+      queryClient.invalidateQueries({ queryKey: notificationsKey })
     );
   };
 
-  const toggleNotifications = () => {
-    const next = !open;
-    setOpen(next);
-    if (next && unreadCount > 0) handleMarkAllRead();
-  };
+  const toggleNotifications = () => setOpen(!open);
 
   // Close on a click outside the bell and its panel, or on Escape.
   useEffect(() => {
@@ -114,9 +115,13 @@ export default function Navbar() {
   const isActive = (path: string) => location.pathname === path;
   const current = (path: string) => (isActive(path) ? "page" : undefined);
 
-  const openNotification = (postId: string) => {
+  // One whose post was deleted has nowhere to go, so clicking it only marks
+  // it read and the panel stays open.
+  const openNotification = (n: Notification) => {
+    if (!n.read) markRead(n.id);
+    if (!n.postId) return;
     setOpen(false);
-    navigate(`/posts/${postId}`);
+    navigate(`/posts/${n.postId}`);
   };
 
   return (
@@ -161,24 +166,48 @@ export default function Navbar() {
               </button>
 
               {open && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-raised shadow-lift ring-1 ring-inset ring-fg/[0.06]">
-                  <p className="px-4 pt-4 pb-2 text-sm font-semibold text-fg">Notifications</p>
+                // Compact on phones, where it nearly fills the screen; on wider
+                // screens the text matches the rest of the app's sizes.
+                <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-raised shadow-lift ring-1 ring-inset ring-fg/[0.06] sm:w-96">
+                  <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1 sm:px-5 sm:pt-4 sm:pb-2">
+                    <p className="text-sm font-semibold text-fg sm:font-display sm:text-lg">Notifications</p>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => markRead()}
+                        className="-mr-2 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-leaf sm:text-[13px]"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
                   {notifications.length === 0 ? (
-                    <p className="px-4 pt-2 pb-6 text-sm text-fg-subtle">No notifications yet.</p>
+                    <p className="px-4 pt-2 pb-6 text-sm text-fg-subtle sm:px-5 sm:pb-7 sm:text-[15px]">No notifications yet.</p>
                   ) : (
-                    <ul className="max-h-80 overflow-y-auto pb-2">
+                    <ul className="max-h-80 overflow-y-auto pb-2 sm:max-h-[26rem]">
                       {notifications.map((n) => {
                         const body = (
                           <>
+                            {/* Centred on the message's first line. */}
                             <span
-                              className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", n.read ? "bg-transparent" : "bg-leaf")}
+                              className={cn(
+                                "mt-1.5 size-1.5 shrink-0 rounded-full sm:mt-[7px] sm:size-2",
+                                n.read ? "bg-transparent" : "bg-leaf"
+                              )}
                               aria-hidden="true"
                             />
                             <span className="min-w-0">
-                              <span className={cn("block text-sm leading-snug", n.read ? "text-fg-muted" : "text-fg")}>
+                              <span
+                                className={cn(
+                                  "block text-sm leading-snug text-pretty sm:text-[15px] sm:leading-[22px]",
+                                  n.read ? "text-fg-muted" : "text-fg"
+                                )}
+                              >
+                                {/* The dot and brighter text, in words for screen readers. */}
+                                {!n.read && <span className="sr-only">Unread: </span>}
                                 {n.message}
                               </span>
-                              <span className="mt-0.5 block text-xs text-fg-subtle tabular-nums">
+                              <span className="mt-0.5 block text-xs text-fg-subtle tabular-nums sm:mt-1 sm:text-[13px]">
                                 {formatDateTime(n.createdAt)}
                               </span>
                             </span>
@@ -186,16 +215,16 @@ export default function Navbar() {
                         );
                         return (
                           <li key={n.id}>
-                            {n.postId ? (
+                            {n.postId || !n.read ? (
                               <button
                                 type="button"
-                                onClick={() => openNotification(n.postId!)}
-                                className="flex w-full cursor-pointer gap-3 px-4 py-2.5 text-left transition-colors hover:bg-lifted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
+                                onClick={() => openNotification(n)}
+                                className="flex w-full cursor-pointer gap-3 px-4 py-2.5 text-left sm:px-5 sm:py-3 transition-colors hover:bg-lifted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
                               >
                                 {body}
                               </button>
                             ) : (
-                              <div className="flex gap-3 px-4 py-2.5">{body}</div>
+                              <div className="flex gap-3 px-4 py-2.5 sm:px-5 sm:py-3">{body}</div>
                             )}
                           </li>
                         );

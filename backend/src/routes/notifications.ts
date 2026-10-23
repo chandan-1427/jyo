@@ -5,6 +5,7 @@ import { notifications } from "../db/schema.js";
 import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { subscribe, unsubscribe } from "../lib/notifications/notificationStream.js";
+import { isValidUuid } from "../lib/domain/finders.js";
 
 export const notificationRoutes = new Hono();
 
@@ -58,6 +59,29 @@ notificationRoutes.get("/", async (c) => {
     .limit(20);
 
   return c.json({ notifications: items });
+});
+
+// Mark one as read, when it's opened. Matching on userId as well as id means
+// one user can't mark another's; either way it's a plain 404.
+notificationRoutes.put("/:id/read", async (c) => {
+  const { userId } = c.get("user");
+  const notificationId = c.req.param("id");
+
+  if (!isValidUuid(notificationId)) {
+    return c.json({ error: "Notification not found" }, 404);
+  }
+
+  const [updated] = await db
+    .update(notifications)
+    .set({ read: true })
+    .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)))
+    .returning({ id: notifications.id });
+
+  if (!updated) {
+    return c.json({ error: "Notification not found" }, 404);
+  }
+
+  return c.json({ message: "Notification marked as read" });
 });
 
 // Mark all as read
