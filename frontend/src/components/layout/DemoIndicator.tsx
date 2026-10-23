@@ -15,8 +15,9 @@ function formatRemaining(ms: number): string {
 const DRAG_THRESHOLD_PX = 3;
 // Gap between the indicator and the screen edges it snaps to.
 const EDGE_PX = 16;
-// Phones have a 64px tab bar at the bottom; the indicator stays above it.
-const TAB_BAR_PX = 64;
+// Phones have a 56px tab bar floating 12px above the bottom; the indicator
+// stays above it.
+const TAB_BAR_PX = 68;
 // Collapse to just the countdown after this long with no interaction.
 const IDLE_MS = 3000;
 // How far ahead (ms) a throw is projected when picking the side to snap to.
@@ -300,7 +301,7 @@ export default function DemoIndicator() {
         "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf",
         "motion-safe:animate-enter",
         side === "left" ? "left-4" : "right-4",
-        top === null && "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bottom-6",
+        top === null && "bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.25rem)] sm:bottom-6",
         settling && SETTLE,
         "motion-reduce:transition-none",
         dragging ? "cursor-grabbing" : "cursor-grab"
