@@ -11,6 +11,10 @@ interface SelectMenuProps<T extends string> {
   onChange: (value: T) => void;
   // Small icon at the start of the button, e.g. a filter icon.
   icon?: ReactNode;
+  // On phones, just the icon in a 44px square, to share a line with other
+  // controls. Needs an `icon`; the chosen option's name stays in the button's
+  // accessible name, so screen readers still hear it.
+  compact?: boolean;
   className?: string;
 }
 
@@ -19,7 +23,7 @@ interface SelectMenuProps<T extends string> {
 // lines up beside a search box. The menu opens in the top layer and keeps
 // itself on screen (useAnchoredPopover); Escape or a click outside closes
 // it. Arrow keys, Home and End move through the options.
-export function SelectMenu<T extends string>({ label, options, value, onChange, icon, className }: SelectMenuProps<T>) {
+export function SelectMenu<T extends string>({ label, options, value, onChange, icon, compact, className }: SelectMenuProps<T>) {
   const id = useId();
   const menuId = `${id}-menu`;
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -68,13 +72,18 @@ export function SelectMenu<T extends string>({ label, options, value, onChange, 
           "flex h-11 cursor-pointer items-center gap-2.5 rounded-xl bg-[var(--field-bg,var(--color-raised))] pr-3 pl-4 text-left text-base text-fg outline-none ring-1 ring-inset ring-fg/[0.08] transition-colors hover:bg-lifted",
           "focus-visible:ring-2 focus-visible:ring-leaf",
           open && "ring-2 ring-leaf",
+          compact && "max-sm:w-11 max-sm:justify-center max-sm:px-0",
           className
         )}
       >
         {icon && <span className="flex shrink-0 text-fg-subtle [&>svg]:size-[18px]" aria-hidden="true">{icon}</span>}
-        <span className="min-w-0 flex-1 truncate">{current.label}</span>
+        <span className={cn("min-w-0 flex-1 truncate", compact && "max-sm:hidden")}>{current.label}</span>
         <ChevronDown
-          className={cn("size-4 shrink-0 text-fg-subtle transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")}
+          className={cn(
+            "size-4 shrink-0 text-fg-subtle transition-transform duration-200 motion-reduce:transition-none",
+            open && "rotate-180",
+            compact && "max-sm:hidden"
+          )}
           aria-hidden="true"
         />
       </button>

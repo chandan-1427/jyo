@@ -10,11 +10,10 @@ import PostCard from "@/components/posts/PostCard";
 import { FindFoodIllustration } from "@/components/posts/FindFoodIllustration";
 import { EmptySlipIllustration } from "@/components/posts/EmptySlipIllustration";
 import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
-import { Button } from "@/components/ui/Button";
+import { Button, ToolbarButton } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListSection } from "@/components/ui/ListSection";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectMenu } from "@/components/ui/SelectMenu";
 import { SearchField } from "@/components/ui/TextField";
 
@@ -103,8 +102,6 @@ export default function MyRequests() {
     queryFn: () => apiFetch("/requests/mine"),
   });
   const requests = data?.requests ?? [];
-  const count = (group: Group) => requests.filter((r) => describe(r).group === group).length;
-  const ready = requests.filter((r) => describe(r).attention).length;
 
   // Only what matches the search (everything when it's empty).
   const search = useSearch(requests, (r) => `${r.postTitle} ${r.postDescription ?? ""}`);
@@ -114,16 +111,6 @@ export default function MyRequests() {
     return group === "approved" || group === "waiting" ? list.sort(byPickupEnd) : list;
   };
   const inFilter = filter === "all" ? GROUPS.flatMap(inGroup) : inGroup(filter);
-
-  const subtitle = isPending
-    ? "Loading your requests…"
-    : ready > 0
-      ? `${ready} ${ready === 1 ? "pickup is" : "pickups are"} ready for you`
-      : // Only the groups that exist: "2 waiting, 1 collected", not "0 declined".
-        (["waiting", "collected", "declined", "cancelled"] as const)
-          .filter((g) => count(g) > 0)
-          .map((g) => `${count(g)} ${g}`)
-          .join(", ");
 
   // In "All" every card says where it stands. Under its own heading that
   // would mostly repeat the heading, so a finished request says when it was
@@ -140,14 +127,16 @@ export default function MyRequests() {
       post={asPost(r)}
       status={statusOf(r)}
       cta={describe(r).cta ?? "View"}
-      // A request still waiting can be taken back from its card.
+      compact
+      // A request still waiting can be taken back from its card. The invisible
+      // ::after widens its hit area towards a finger's 44px.
       action={
         r.status === "pending" && (
           <button
             type="button"
             onClick={() => setCancelling(r)}
             aria-label={`Cancel your request for "${r.postTitle}"`}
-            className="grid size-9 cursor-pointer place-items-center rounded-lg bg-canvas/85 text-fg-muted ring-1 ring-inset ring-fg/[0.08] backdrop-blur-sm transition-colors hover:text-danger focus-visible:outline-2 focus-visible:outline-leaf"
+            className="relative grid size-9 cursor-pointer place-items-center after:absolute after:-inset-1.5 rounded-lg bg-canvas/85 text-fg-muted ring-1 ring-inset ring-fg/[0.08] backdrop-blur-sm transition-colors hover:text-danger focus-visible:outline-2 focus-visible:outline-leaf"
           >
             <X className="size-4" aria-hidden="true" />
           </button>
@@ -186,41 +175,42 @@ export default function MyRequests() {
 
   return (
     <div className="text-fg">
-      <PageHeader
-        title="My requests"
-        subtitle={subtitle}
-        actions={
-          requests.length > 0 && (
-            <>
-              {/* Full width on phones, where the actions sit under the title. */}
-              <SearchField
-                label="Search your requests"
-                placeholder="Search your requests"
-                value={search.query}
-                onChange={search.setQuery}
-                className="w-full sm:w-72"
-              />
-              {/* Six stages are too many for a row of buttons. Each shows how
-                  many requests it has (of those matching the search). */}
-              <SelectMenu
-                label="Show requests"
-                icon={<ListFilter />}
-                options={FILTERS.map((f) => ({
-                  ...f,
-                  count: f.value === "all" ? shown.length : shown.filter((r) => describe(r).group === f.value).length,
-                }))}
-                value={filter}
-                onChange={setFilter}
-                className="w-full sm:w-48"
-              />
-              {findFoodButton}
-            </>
-          )
-        }
-      />
+      {/* No visible title: the nav already says which page this is. Screen
+          readers still get one to land on. */}
+      <h1 className="sr-only">My requests</h1>
+      {requests.length > 0 && (
+        // One line, all 44px tall, at the right on wider screens. On phones
+        // the filter and Find food shrink to icons so the search keeps room.
+        <div className="mb-6 flex items-center gap-2 sm:justify-end">
+          <SearchField
+            label="Search your requests"
+            placeholder="Search your requests"
+            value={search.query}
+            onChange={search.setQuery}
+            className="min-w-0 flex-1 sm:w-72 sm:flex-none"
+          />
+          {/* Six stages are too many for a row of buttons. Each shows how
+              many requests it has (of those matching the search). */}
+          <SelectMenu
+            label="Show requests"
+            icon={<ListFilter />}
+            options={FILTERS.map((f) => ({
+              ...f,
+              count: f.value === "all" ? shown.length : shown.filter((r) => describe(r).group === f.value).length,
+            }))}
+            value={filter}
+            onChange={setFilter}
+            compact
+            className="shrink-0 sm:w-48"
+          />
+          <ToolbarButton to="/feed" icon={<MapPin className="size-4" aria-hidden="true" />}>
+            Find food
+          </ToolbarButton>
+        </div>
+      )}
 
       {isPending ? (
-        <PostGridSkeleton count={4} />
+        <PostGridSkeleton count={4} compact />
       ) : error ? (
         <EmptyState
           icon={<RotateCw />}
@@ -241,10 +231,10 @@ export default function MyRequests() {
         nothingHere
       ) : filter === "all" ? (
         // Everything in one grid, in the same order the groups use.
-        <PostGrid>{inFilter.map(card)}</PostGrid>
+        <PostGrid compact>{inFilter.map(card)}</PostGrid>
       ) : (
         <ListSection title={TITLES[filter]}>
-          <PostGrid>{inFilter.map(card)}</PostGrid>
+          <PostGrid compact>{inFilter.map(card)}</PostGrid>
         </ListSection>
       )}
 

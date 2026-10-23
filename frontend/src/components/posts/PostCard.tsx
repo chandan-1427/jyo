@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Clock, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, ChevronRight, Clock, UtensilsCrossed } from "lucide-react";
 import type { FoodPost } from "@/types/api";
 import { formatPickupTime } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
@@ -24,9 +24,16 @@ type Props = {
   // screens, which have none); ticking it is how picking starts. Once active,
   // a click anywhere on the card toggles it instead of opening it.
   selection?: { active: boolean; selected: boolean; onToggle: () => void };
+  // On phones, a short row with the photo beside the text instead of a tall
+  // card, for lists scanned for where each post stands rather than browsed.
+  compact?: boolean;
 };
 
 const TAG = "rounded-md bg-canvas/85 px-2 py-1 text-xs font-medium backdrop-blur-sm";
+
+// A larger invisible hit area around the small corner controls, closer to
+// the 44px a finger needs.
+const HIT_AREA = "after:absolute after:-inset-1.5";
 
 // Starts at the card colour, so it meets the wave without a seam, and darkens
 // slightly towards the page colour at the bottom. Hover shifts both ends up a step.
@@ -68,7 +75,7 @@ function CardPhoto({ src }: { src: string | null }) {
         // Absolute, so a tall photo can't stretch the 3:2 box (an
         // aspect-ratio box still grows to fit in-flow content).
         className={cn(
-          "absolute inset-0 size-full rounded-t-2xl object-cover outline-1 -outline-offset-1 outline-white/10 transition-[opacity,filter] duration-200 ease-out group-hover:brightness-110",
+          "absolute inset-0 size-full rounded-[inherit] object-cover outline-1 -outline-offset-1 outline-white/10 transition-[opacity,filter] duration-200 ease-out group-hover:brightness-110",
           !loaded && "opacity-0"
         )}
       />
@@ -79,21 +86,27 @@ function CardPhoto({ src }: { src: string | null }) {
 // Nearly every post in the feed is open, so "Open" isn't shown; only the
 // states that change what you'd do are: someone already asked, or it's a demo.
 // With a `status` line, that line says where the post stands instead.
-export default function PostCard({ post, status, cta: ctaLabel, action, selection }: Props) {
+export default function PostCard({ post, status, cta: ctaLabel, action, selection, compact }: Props) {
   const { user } = useAuth();
   // Short, to share a row with the pickup time. Only an open post that
   // isn't your own can be requested; anything else is just a look.
   const cta = ctaLabel ?? (post.status === "open" && post.posterId !== user?.id ? "Request" : "View");
   const requestedTag = !status && post.status === "pending_approval";
+  const corner = Boolean(selection || action);
 
   return (
     // flex, so the link fills the grid row's height whether or not there's an action.
     <div className="group/card relative flex">
       <Link
         to={`/posts/${post.id}`}
-        className="group flex flex-1 flex-col overflow-hidden rounded-2xl bg-raised shadow-card ring-1 ring-inset ring-fg/[0.06] transition-colors hover:bg-lifted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+        className={cn(
+          "group flex flex-1 flex-col overflow-hidden rounded-2xl bg-raised shadow-card ring-1 ring-inset ring-fg/[0.06] transition-colors hover:bg-lifted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf",
+          compact && "max-sm:flex-row max-sm:gap-3 max-sm:p-2.5"
+        )}
       >
-        <div className="relative aspect-[3/2] bg-lifted">
+        {/* As a row, the photo's corners are the card's minus its padding
+            (16 - 10 = 6px), so the two curves stay concentric. */}
+        <div className={cn("relative aspect-[3/2] rounded-t-2xl bg-lifted", compact && "max-sm:aspect-auto max-sm:size-20 max-sm:shrink-0 max-sm:overflow-hidden max-sm:rounded-md")}>
           <CardPhoto key={post.photoUrl} src={post.photoUrl} />
           {/* Wavy edge where the photo meets the text, filled with the card's
               colour (and its hover colour); -bottom-px avoids a hairline seam. */}
@@ -101,22 +114,30 @@ export default function PostCard({ post, status, cta: ctaLabel, action, selectio
             aria-hidden="true"
             viewBox="0 0 120 12"
             preserveAspectRatio="none"
-            className="absolute inset-x-0 -bottom-px h-3 w-full fill-raised transition-colors group-hover:fill-lifted"
+            className={cn("absolute inset-x-0 -bottom-px h-3 w-full fill-raised transition-colors group-hover:fill-lifted", compact && "max-sm:hidden")}
           >
             <path d="M0 6 Q6 0 12 6 T24 6 T36 6 T48 6 T60 6 T72 6 T84 6 T96 6 T108 6 T120 6 V12 H0 Z" />
           </svg>
           {(requestedTag || post.isDemo) && (
-            <div className="absolute top-3 left-3 flex gap-1.5">
-              {requestedTag && <span className={`${TAG} text-fg`}>Requested</span>}
-              {post.isDemo && <span className={`${TAG} text-leaf`}>Demo</span>}
+            <div className={cn("absolute top-3 left-3 flex gap-1.5", compact && "max-sm:top-1 max-sm:left-1")}>
+              {requestedTag && <span className={cn(TAG, "text-fg", compact && "max-sm:rounded-sm max-sm:px-1.5 max-sm:py-0.5 max-sm:text-[11px]")}>Requested</span>}
+              {post.isDemo && <span className={cn(TAG, "text-leaf", compact && "max-sm:rounded-sm max-sm:px-1.5 max-sm:py-0.5 max-sm:text-[11px]")}>Demo</span>}
             </div>
           )}
         </div>
 
-        <div className={`flex flex-1 flex-col p-4 ${BODY_FADE}`}>
-          <h2 className="line-clamp-2 font-display text-lg font-semibold leading-snug text-balance">{post.title}</h2>
+        <div className={cn("flex flex-1 flex-col p-4", BODY_FADE, compact && "max-sm:min-w-0 max-sm:bg-none max-sm:p-0 max-sm:pr-1.5")}>
+          <h2
+            className={cn(
+              "line-clamp-2 font-display text-lg font-semibold leading-snug text-balance",
+              compact && "max-sm:line-clamp-1 max-sm:text-base",
+              compact && corner && "max-sm:pr-9"
+            )}
+          >
+            {post.title}
+          </h2>
           {status ? (
-            <p className={cn("mt-1.5 flex items-center gap-2 text-sm", status.attention ? "font-medium text-leaf" : "text-fg-muted")}>
+            <p className={cn("mt-1.5 flex items-center gap-2 text-sm", compact && "max-sm:mt-0.5", status.attention ? "font-medium text-leaf" : "text-fg-muted")}>
               {/* A small dot as well as the colour, so "needs you" isn't colour alone. */}
               {status.attention && <span className="size-2 shrink-0 rounded-full bg-leaf" aria-hidden="true" />}
               {status.text}
@@ -127,7 +148,7 @@ export default function PostCard({ post, status, cta: ctaLabel, action, selectio
             )
           )}
 
-          <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+          <div className={cn("mt-auto flex items-center justify-between gap-3 pt-4", compact && "max-sm:pt-1")}>
             {/* On a narrow card a long window wraps to two lines rather than
                 squeezing the button. */}
             <p className="flex min-w-0 items-start gap-2 text-sm text-fg tabular-nums">
@@ -138,7 +159,7 @@ export default function PostCard({ post, status, cta: ctaLabel, action, selectio
             {/* Looks like a button but is part of the card's link, so the whole
                 card stays one big target. Secondary, so a grid of cards isn't a
                 wall of bright green competing with the page's Post food button. */}
-            <span aria-hidden="true" className={buttonClasses({ variant: "secondary", size: "sm", className: "shrink-0" })}>
+            <span aria-hidden="true" className={buttonClasses({ variant: "secondary", size: "sm", className: cn("shrink-0", compact && "max-sm:hidden") })}>
               {/* On card hover the label rolls up out of a one-line window and
                   the arrow rolls in from below; leaving reverses it. Transitions,
                   so a quick pass over the card turns back from wherever it got to. */}
@@ -151,6 +172,12 @@ export default function PostCard({ post, status, cta: ctaLabel, action, selectio
             </span>
           </div>
         </div>
+        {/* A row has no room for the button beside a long pickup window, and
+            its status line already says what's needed. Left out when a corner
+            control is there, which it would sit just under. */}
+        {compact && !corner && (
+          <ChevronRight className="hidden size-4 shrink-0 self-center text-fg-subtle max-sm:block" aria-hidden="true" />
+        )}
       </Link>
       {selection ? (
         // The same elements in both modes, so switching fades rather than
@@ -167,6 +194,7 @@ export default function PostCard({ post, status, cta: ctaLabel, action, selectio
           <span
             className={cn(
               "pointer-events-auto absolute top-3 right-3 grid size-9 place-items-center rounded-lg bg-canvas/85 backdrop-blur-sm",
+              HIT_AREA,
               "transition-[opacity,scale] duration-200 ease-out motion-reduce:transition-none",
               selection.active
                 ? "opacity-100"

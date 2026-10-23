@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, RotateCw, Trash2 } from "lucide-react";
+import { ListFilter, Plus, RotateCw, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { formatDate } from "@/lib/format";
 import { useV2Theme } from "@/lib/theme";
@@ -12,12 +12,11 @@ import { TiffinIllustration } from "@/components/posts/TiffinIllustration";
 import { EmptyPlateIllustration } from "@/components/posts/EmptyPlateIllustration";
 import { DeletePostDialog } from "@/components/posts/DeletePostDialog";
 import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
-import { Button } from "@/components/ui/Button";
+import { Button, ToolbarButton } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListSection } from "@/components/ui/ListSection";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { SelectMenu } from "@/components/ui/SelectMenu";
 import { SearchField } from "@/components/ui/TextField";
 
 type Status = FoodPost["status"];
@@ -76,10 +75,6 @@ export default function MyPosts() {
     queryFn: () => apiFetch("/posts/mine"),
   });
   const posts = data?.posts ?? [];
-  const waiting = posts.filter((p) => p.status === "pending_approval").length;
-  const activeCount = posts.filter((p) => ACTIVE_ORDER.includes(p.status)).length;
-  const collectedCount = posts.filter((p) => p.status === "completed").length;
-  const endedCount = posts.filter((p) => p.status === "expired").length;
 
   // Only what matches the search (everything when it's empty).
   const search = useSearch(posts, (p) => `${p.title} ${p.description ?? ""}`);
@@ -120,19 +115,6 @@ export default function MyPosts() {
     setFilter(next);
   };
 
-  const subtitle = isPending
-    ? "Loading your posts…"
-    : waiting > 0
-      ? `${waiting} ${waiting === 1 ? "request needs" : "requests need"} your answer`
-      : // Only the groups that exist: "3 active, 1 ended", not "0 collected".
-        [
-          activeCount && `${activeCount} active`,
-          collectedCount && `${collectedCount} collected`,
-          endedCount && `${endedCount} ended`,
-        ]
-          .filter(Boolean)
-          .join(", ");
-
   // How each card describes itself. In "All" there are no section titles, so
   // past posts say what they are; under their own section, that would repeat
   // the title, so they say when they were posted instead.
@@ -148,6 +130,7 @@ export default function MyPosts() {
       post={post}
       status={statusOf(post)}
       cta={ACTIVE[post.status]?.cta}
+      compact
       // Ended posts can be picked for deleting, on the Ended filter: ticking a
       // card's box (shown on hover) starts selecting, with it picked.
       selection={
@@ -159,15 +142,17 @@ export default function MyPosts() {
   );
 
   const swapIn = "col-start-1 row-start-1 flex items-center gap-2 transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none";
+  // On phones it takes its own line under the heading: "Select all" at the
+  // start, the buttons at the end.
   const endedActions = (
-    <div className="grid justify-items-end">
-      <div inert={!selecting} className={cn(swapIn, selecting ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-3 opacity-0")}>
+    <div className="grid justify-items-end max-sm:w-full max-sm:justify-items-stretch">
+      <div inert={!selecting} className={cn(swapIn, "max-sm:justify-end", selecting ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-3 opacity-0")}>
         <Checkbox
           label="Select all"
           checked={allSelected}
           indeterminate={selected.length > 0 && !allSelected}
           onChange={() => setPicks(allSelected ? new Set() : new Set(ended.map((p) => p.id)))}
-          className="mr-2"
+          className="mr-2 max-sm:mr-auto"
         />
         <Button size="sm" variant="ghost" onClick={stopSelecting}>
           Cancel
@@ -186,7 +171,7 @@ export default function MyPosts() {
         </Button>
       </div>
       {/* The other way in, besides ticking a card's hover checkbox. */}
-      <div inert={selecting} className={cn(swapIn, selecting ? "pointer-events-none -translate-x-3 opacity-0" : "translate-x-0 opacity-100")}>
+      <div inert={selecting} className={cn(swapIn, "max-sm:justify-end", selecting ? "pointer-events-none -translate-x-3 opacity-0" : "translate-x-0 opacity-100")}>
         <Button size="sm" variant="secondary" onClick={() => setSelecting(true)}>
           Select
         </Button>
@@ -224,29 +209,38 @@ export default function MyPosts() {
 
   return (
     <div className="text-fg">
-      <PageHeader
-        title="My posts"
-        subtitle={subtitle}
-        actions={
-          posts.length > 0 && (
-            <>
-              {/* Full width on phones, where the actions sit under the title. */}
-              <SearchField
-                label="Search your posts"
-                placeholder="Search your posts"
-                value={search.query}
-                onChange={search.setQuery}
-                className="w-full sm:w-72"
-              />
-              <SegmentedControl label="Show" options={FILTERS} value={filter} onChange={changeFilter} className="w-full sm:w-auto" />
-              {postFoodButton}
-            </>
-          )
-        }
-      />
+      {/* No visible title: the nav already says which page this is. Screen
+          readers still get one to land on. */}
+      <h1 className="sr-only">My posts</h1>
+      {posts.length > 0 && (
+        // One line, all 44px tall, at the right on wider screens. On phones
+        // the filter and Post food shrink to icons so the search keeps room.
+        <div className="mb-6 flex items-center gap-2 sm:justify-end">
+          <SearchField
+            label="Search your posts"
+            placeholder="Search your posts"
+            value={search.query}
+            onChange={search.setQuery}
+            className="min-w-0 flex-1 sm:w-72 sm:flex-none"
+          />
+          {/* Each option shows how many posts it has (of those matching the search). */}
+          <SelectMenu
+            label="Show posts"
+            icon={<ListFilter />}
+            options={FILTERS.map((f) => ({ ...f, count: { all: shown.length, active: active.length, collected: collected.length, ended: ended.length }[f.value] }))}
+            value={filter}
+            onChange={changeFilter}
+            compact
+            className="shrink-0 sm:w-48"
+          />
+          <ToolbarButton to="/create" icon={<Plus className="size-4" aria-hidden="true" />}>
+            Post food
+          </ToolbarButton>
+        </div>
+      )}
 
       {isPending ? (
-        <PostGridSkeleton count={4} />
+        <PostGridSkeleton count={4} compact />
       ) : error ? (
         <EmptyState
           icon={<RotateCw />}
@@ -267,13 +261,13 @@ export default function MyPosts() {
         nothingHere
       ) : filter === "all" ? (
         // Everything in one grid, in the same order the sections use.
-        <PostGrid>{inFilter.map(card)}</PostGrid>
+        <PostGrid compact>{inFilter.map(card)}</PostGrid>
       ) : (
         <ListSection
           title={{ active: "Active", collected: "Collected", ended: "Ended without a pickup" }[filter]}
           actions={filter === "ended" && endedActions}
         >
-          <PostGrid>{inFilter.map(card)}</PostGrid>
+          <PostGrid compact>{inFilter.map(card)}</PostGrid>
         </ListSection>
       )}
 
