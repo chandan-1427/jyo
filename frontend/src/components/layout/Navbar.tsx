@@ -274,13 +274,17 @@ export default function Navbar() {
               <Link
                 to={path}
                 aria-current={current(path)}
-                className="flex h-full items-center justify-center rounded-full text-fg-muted transition-colors aria-[current=page]:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
+                className="group/tab flex h-full items-center justify-center rounded-full text-fg-muted transition-colors aria-[current=page]:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
               >
-                {Icon ? (
-                  <Icon active={isActive(path)} />
-                ) : (
-                  <ProfileIcon src={user?.avatarUrl} active={isActive(path)} />
-                )}
+                {/* Pressing shrinks just the icon, at once, so the tap is felt
+                    before the page changes; the target itself stays full size. */}
+                <span className="flex transition-[scale] duration-150 ease-out group-active/tab:scale-90 motion-reduce:transition-none">
+                  {Icon ? (
+                    <Icon active={isActive(path)} />
+                  ) : (
+                    <ProfileIcon src={user?.avatarUrl} active={isActive(path)} />
+                  )}
+                </span>
                 <span className="sr-only">{label}</span>
               </Link>
             </li>
