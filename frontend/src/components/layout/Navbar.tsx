@@ -3,12 +3,11 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch, BASE_URL } from "@/lib/api/api";
-import { Bell } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Logo } from "../ui/Logo";
 import { Avatar } from "../ui/Avatar";
-import { FeedIcon, MyPostsIcon, MyRequestsIcon, PostFoodIcon, ProfileIcon } from "./NavIcons";
+import { BellIcon, FeedIcon, MyPostsIcon, MyRequestsIcon, PostFoodIcon, ProfileIcon } from "./NavIcons";
 
 type Notification = {
   id: string;
@@ -43,6 +42,8 @@ export default function Navbar() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  // Counts notifications pushed while the page is open; each one rings the bell.
+  const [rings, setRings] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { data: notifications = [] } = useQuery({
@@ -94,6 +95,7 @@ export default function Navbar() {
     source.addEventListener("notification", (e: MessageEvent<string>) => {
       const newNotif = JSON.parse(e.data) as Notification;
       queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) => [newNotif, ...prev]);
+      setRings((n) => n + 1);
       // Every notification is about a post (a request came in, was approved,
       // ...), so if that post's page is open it updates in place. This also
       // covers demo posts, which send no "feed" event.
@@ -161,17 +163,14 @@ export default function Navbar() {
                 aria-expanded={open}
                 aria-haspopup="true"
                 aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-                className="relative grid size-11 cursor-pointer place-items-center rounded-lg text-fg-muted transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-leaf sm:size-9"
+                className="group/bell relative grid size-11 cursor-pointer place-items-center rounded-lg text-fg-muted transition-colors hover:bg-raised hover:text-fg aria-expanded:text-white focus-visible:outline-2 focus-visible:outline-leaf sm:size-9"
               >
-                <Bell className="size-5 sm:size-[18px]" aria-hidden="true" />
-                {/* A dot, not a count; the exact number is in the label for
-                    screen readers and in the list itself. */}
-                {unreadCount > 0 && (
-                  <span
-                    className="absolute top-2.5 right-2.5 size-2 rounded-full bg-leaf ring-2 ring-canvas sm:top-1.5 sm:right-1.5"
-                    aria-hidden="true"
-                  />
-                )}
+                {/* Pressing shrinks the bell at once, as on the tab bar. Unread
+                    shows as a dot on the bell, not a count; the exact number is
+                    in the label for screen readers and in the list. */}
+                <span className="flex transition-[scale] duration-150 ease-out group-active/bell:scale-90 motion-reduce:transition-none">
+                  <BellIcon active={open} dot={unreadCount > 0} ringKey={rings} className="size-6 sm:size-5" />
+                </span>
               </button>
 
               {open && (

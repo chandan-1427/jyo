@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 // away mid-way reverses it from wherever it got to. Off with reduced motion.
 const POSE = "transition-[translate,rotate] duration-200 ease-out motion-reduce:transition-none";
 
-function Icon({ active, children }: { active: boolean; children: ReactNode }) {
+function Icon({ active, children, className }: { active: boolean; children: ReactNode; className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -27,7 +27,8 @@ function Icon({ active, children }: { active: boolean; children: ReactNode }) {
         // overflow-visible: a pose can lift a line just past the 24px box
         // (the tiffin handle does), which would otherwise be clipped.
         "size-6 overflow-visible [&_.fill]:fill-current [&_.fill]:transition-[fill-opacity] [&_.fill]:duration-200",
-        active ? "[&_.fill]:[fill-opacity:0.3]" : "[&_.fill]:[fill-opacity:0]"
+        active ? "[&_.fill]:[fill-opacity:0.3]" : "[&_.fill]:[fill-opacity:0]",
+        className
       )}
     >
       {children}
@@ -76,6 +77,43 @@ export function MyRequestsIcon({ active }: { active: boolean }) {
       <g className={cn(POSE, "origin-center [transform-box:fill-box]", active && "-rotate-6")}>
         <path className="fill" d="M6 3.5h12v17l-2-1.25-2 1.25-2-1.25-2 1.25-2-1.25-2 1.25Z" />
         <path d="M9 8h6M9 11.5h6M9 15h3.5" />
+      </g>
+    </Icon>
+  );
+}
+
+// The notifications bell in the top bar, drawn to match; "active" while its
+// panel is open. Its pose is a small swing from the top. The unread dot is
+// drawn on the bell (green, ringed in the page colour) so it swings with it
+// rather than floating loose over it.
+//
+// Each time `ringKey` goes up (a notification arrived) the bell rings once:
+// a short back-and-forth that settles. The key remounts the ringing group,
+// which restarts the animation. A keyframe animation, since it's a one-off
+// signal rather than a response to a tap; it never loops, and it's off with
+// reduced motion. It's on its own group so it doesn't fight the pose.
+export function BellIcon({
+  active,
+  dot,
+  ringKey = 0,
+  className,
+}: {
+  active: boolean;
+  dot: boolean;
+  ringKey?: number;
+  className?: string;
+}) {
+  const fromTop = "origin-[12px_3.5px] [transform-box:view-box]";
+  return (
+    <Icon active={active} className={className}>
+      <g key={ringKey} className={cn(fromTop, ringKey > 0 && "motion-safe:animate-bell-ring")}>
+        <g className={cn(POSE, fromTop, active && "-rotate-12")}>
+          <path className="fill" d="M6.25 16.5V11a5.75 5.75 0 0 1 11.5 0v5.5l1.5 2H4.75Z" />
+          <path d="M12 5.25V3.5M10.25 20.75a1.9 1.9 0 0 0 3.5 0" />
+          {dot && (
+            <circle cx="17.25" cy="6" r="3.25" strokeWidth={1.5} className="fill-leaf stroke-canvas" />
+          )}
+        </g>
       </g>
     </Icon>
   );
