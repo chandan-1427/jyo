@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapPinOff, Plus, Sparkles, UtensilsCrossed } from "lucide-react";
+import { MapPinOff, Plus, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
 import { isWithinTirupati } from "@/lib/location/geofence";
@@ -10,6 +10,7 @@ import type { FoodPost } from "@/types/api";
 import PostCard from "@/components/posts/PostCard";
 import OutOfRegionCard from "@/components/posts/OutOfRegionCard";
 import { FeedIllustration } from "@/components/posts/FeedIllustration";
+import { EmptyPlateIllustration } from "@/components/posts/EmptyPlateIllustration";
 import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -137,7 +138,10 @@ export default function Feed() {
       {demoError && <Notice tone="error" className="mb-6">{demoError}</Notice>}
 
       {posts.length === 0 ? (
-        <EmptyState icon={<UtensilsCrossed />} title="No food near you right now">
+        <EmptyState
+          art={<EmptyPlateIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
+          title="No food near you right now"
+        >
           <p>New posts show up here on their own. You can also share food yourself.</p>
         </EmptyState>
       ) : (
