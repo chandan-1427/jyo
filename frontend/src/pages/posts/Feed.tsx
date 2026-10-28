@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, MapPinOff, Plus, RefreshCw, Sparkles, UtensilsCrossed } from "lucide-react";
+import { MapPinOff, Plus, Sparkles, UtensilsCrossed } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
 import { isWithinTirupati } from "@/lib/location/geofence";
 import { useV2Theme } from "@/lib/theme";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import type { FoodPost } from "@/types/api";
 import PostCard from "@/components/posts/PostCard";
 import OutOfRegionCard from "@/components/posts/OutOfRegionCard";
 import { FeedIllustration } from "@/components/posts/FeedIllustration";
 import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
@@ -45,7 +43,6 @@ export default function Feed() {
     data,
     error: fetchError,
     isPending: postsLoading,
-    refetch,
   } = useQuery<{ posts: FoodPost[] }>({
     queryKey: ["posts", "feed", coords?.lat, coords?.lng],
     queryFn: () => apiFetch(`/posts?lat=${coords!.lat}&lng=${coords!.lng}`),
@@ -56,16 +53,6 @@ export default function Feed() {
     refetchInterval: 5 * 60_000,
   });
   const posts = data?.posts ?? [];
-
-  // Tracked separately from the query's isFetching, which is also true for
-  // pushed and background refetches; the button should only spin when the
-  // person asked for a refresh.
-  const [refreshing, setRefreshing] = useState(false);
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
 
   const handleStartDemo = async () => {
     setStartingDemo(true);
@@ -90,6 +77,10 @@ export default function Feed() {
     </Button>
   );
 
+  // No visible title: the nav already says this is the feed. Screen readers
+  // still get one to land on.
+  const heading = <h1 className="sr-only">Food near you</h1>;
+
   // A disabled query (no coords yet, e.g. geolocation failed) reports
   // isPending: true forever in TanStack Query — gating on !!coords too
   // stops that from masking the locationError branch below forever.
@@ -97,7 +88,7 @@ export default function Feed() {
     return (
       <div className="relative isolate text-fg">
         <FeedIllustration />
-        <PageHeader title="Food near you" icon={<MapPin />} subtitle={locating ? "Finding your location…" : "Looking for food near you…"} />
+        {heading}
         <PostGridSkeleton />
       </div>
     );
@@ -107,7 +98,7 @@ export default function Feed() {
     return (
       <div className="relative isolate text-fg">
         <FeedIllustration />
-        <PageHeader title="Food near you" icon={<MapPin />} subtitle="Location needed" />
+        {heading}
         <EmptyState
           icon={<MapPinOff />}
           title="We couldn't find your location"
@@ -124,7 +115,7 @@ export default function Feed() {
     return (
       <div className="relative isolate text-fg">
         <FeedIllustration />
-        <PageHeader title="Food near you" icon={<MapPin />} subtitle="Outside the service area" />
+        {heading}
         <OutOfRegionCard />
       </div>
     );
@@ -133,28 +124,15 @@ export default function Feed() {
   return (
     <div className="relative isolate text-fg">
       <FeedIllustration />
-      <PageHeader title="Food near you" icon={<MapPin />}
-        subtitle={`${posts.length} ${posts.length === 1 ? "post" : "posts"} within 20 km`}
-        actions={
-          <>
-            <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
-              Post food
-            </Button>
-            {demoButton}
-            <Button
-              variant="secondary"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              aria-label="Refresh"
-              className="size-10 px-0"
-            >
-              <RefreshCw className={cn("size-4", refreshing && "motion-safe:animate-spin")} aria-hidden="true" />
-            </Button>
-          </>
-        }
-      />
+      {heading}
+      <div className="mb-6 flex flex-wrap items-center justify-end gap-2">
+        {demoButton}
+        <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
+          Post food
+        </Button>
+      </div>
 
-      {/* A failed refresh keeps showing the posts already loaded. */}
+      {/* A failed update keeps showing the posts already loaded. */}
       {fetchError && <Notice tone="error" className="mb-6">{fetchError.message}</Notice>}
       {demoError && <Notice tone="error" className="mb-6">{demoError}</Notice>}
 
