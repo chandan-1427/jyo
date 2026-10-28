@@ -24,6 +24,9 @@ lerna-debug.log*
 # local notes / scratch docs
 docs/
 
+# local-only dev config: previewing on a phone over Wi-Fi
+frontend/vite.lan.config.ts
+
 # editor / OS
 .vscode/*
 !.vscode/extensions.json
