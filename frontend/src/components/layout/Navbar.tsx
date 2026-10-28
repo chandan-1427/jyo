@@ -2,20 +2,18 @@ import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch, BASE_URL } from "@/lib/api/api";
+import {
+  fetchNotifications,
+  markNotificationsRead,
+  notificationsKey,
+  type Notification,
+} from "@/lib/api/queries/notifications";
+import { BASE_URL } from "@/lib/api/api";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Logo } from "../ui/Logo";
 import { Avatar } from "../ui/Avatar";
 import { BellIcon, FeedIcon, MyPostsIcon, MyRequestsIcon, PostFoodIcon, ProfileIcon } from "./NavIcons";
-
-type Notification = {
-  id: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-  postId: string | null;
-};
 
 const NAV_LINKS = [
   { label: "Feed", path: "/feed" },
@@ -34,8 +32,6 @@ const MOBILE_TABS = [
   { label: "Profile", path: "/profile", icon: null },
 ];
 
-const notificationsKey = ["notifications"] as const;
-
 export default function Navbar() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -48,23 +44,20 @@ export default function Navbar() {
 
   const { data: notifications = [] } = useQuery({
     queryKey: notificationsKey,
-    queryFn: () => apiFetch("/notifications").then((r) => r.notifications as Notification[]),
+    queryFn: fetchNotifications,
     enabled: !!user,
   });
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   // Opening the panel only shows what's new; a notification counts as read
-  // once it's clicked (or all at once with "Mark all as read"). The list
-  // updates straight away, and is refetched if the server didn't take it.
-  const markRead = (id?: string) => {
-    queryClient.setQueryData(notificationsKey, (prev: Notification[] = []) =>
-      prev.map((n) => (id === undefined || n.id === id ? { ...n, read: true } : n))
+  // once it's clicked (or all at once with "Mark all as read").
+  const markRead = (id?: string) =>
+    markNotificationsRead(
+      queryClient,
+      (n) => id === undefined || n.id === id,
+      id ? `/notifications/${id}/read` : "/notifications/read-all"
     );
-    apiFetch(id ? `/notifications/${id}/read` : "/notifications/read-all", { method: "PUT" }).catch(() =>
-      queryClient.invalidateQueries({ queryKey: notificationsKey })
-    );
-  };
 
   const toggleNotifications = () => setOpen(!open);
 
