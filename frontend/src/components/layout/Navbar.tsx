@@ -130,7 +130,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-fg/[0.06] bg-canvas">
+      <header className="sticky top-0 z-40 bg-canvas">
         <div className="flex h-14 items-center justify-between gap-6 px-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:px-6 lg:px-10">
           <Logo to="/feed" className="justify-self-start font-display text-2xl text-fg [&>span]:text-leaf" />
 
