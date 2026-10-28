@@ -63,7 +63,9 @@ const postFoodButton = (
 
 export default function MyPosts() {
   useV2Theme();
-  const [filter, setFilter] = useState<Filter>("all");
+  // Opens on Active: what still needs you (answering requests, confirming
+  // pickups) matters more than posts that have already ended.
+  const [filter, setFilter] = useState<Filter>("active");
   // The picked posts waiting on the delete confirmation.
   const [confirming, setConfirming] = useState<string[] | null>(null);
   const [selecting, setSelecting] = useState(false);

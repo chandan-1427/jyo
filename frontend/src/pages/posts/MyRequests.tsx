@@ -93,7 +93,9 @@ const findFoodButton = (
 export default function MyRequests() {
   useV2Theme();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<Filter>("all");
+  // Opens on Waiting: the requests still in play, rather than everything
+  // you've ever asked for.
+  const [filter, setFilter] = useState<Filter>("waiting");
   const [cancelling, setCancelling] = useState<MyRequest | null>(null);
 
   const { data, isPending, error, refetch } = useQuery<{ requests: MyRequest[] }>({
