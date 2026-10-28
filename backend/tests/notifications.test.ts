@@ -9,7 +9,7 @@ vi.mock("../src/lib/mailer.js", () => ({
 
 import { createApp } from "../src/app.js";
 import { db } from "../src/db/index.js";
-import { notifications } from "../src/db/schema.js";
+import { foodPosts, notifications } from "../src/db/schema.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
 
@@ -23,9 +23,33 @@ beforeEach(async () => {
 // Seeded directly rather than via a real request flow's fire-and-forget
 // createNotification() call — that's a side effect of a different route
 // and would make these tests race against an un-awaited insert.
-async function seedNotification(userId: string, message: string, read = false) {
-  const [row] = await db.insert(notifications).values({ userId, message, read }).returning({ id: notifications.id });
+async function seedNotification(userId: string, message: string, read = false, postId?: string) {
+  const [row] = await db
+    .insert(notifications)
+    .values({ userId, message, read, postId })
+    .returning({ id: notifications.id });
   return row.id;
+}
+
+async function seedPost(posterId: string) {
+  const now = Date.now();
+  const [row] = await db
+    .insert(foodPosts)
+    .values({
+      posterId,
+      title: "Leftover rice",
+      pickupLat: 13.63,
+      pickupLng: 79.42,
+      pickupWindowStart: new Date(now),
+      pickupWindowEnd: new Date(now + 2 * 60 * 60 * 1000),
+    })
+    .returning({ id: foodPosts.id });
+  return row.id;
+}
+
+async function readByMessage(cookie: string) {
+  const body = await (await authedRequest(app, "/notifications", cookie)).json();
+  return Object.fromEntries(body.notifications.map((n: { message: string; read: boolean }) => [n.message, n.read]));
 }
 
 describe("GET /notifications", () => {
@@ -82,6 +106,46 @@ describe("PUT /notifications/:id/read", () => {
   it("is a 404 for an id that isn't a UUID", async () => {
     const user = await createVerifiedUser(app, { email: "read-one-bad-id@example.com" });
     const res = await authedRequest(app, "/notifications/not-a-uuid/read", user.cookie, { method: "PUT" });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("PUT /notifications/post/:postId/read", () => {
+  it("marks all of that post's notifications read, and only that post's", async () => {
+    const user = await createVerifiedUser(app, { email: "read-post-owner@example.com" });
+    const opened = await seedPost(user.userId);
+    const other = await seedPost(user.userId);
+    await seedNotification(user.userId, "Request came in", false, opened);
+    await seedNotification(user.userId, "Request cancelled", false, opened);
+    await seedNotification(user.userId, "About another post", false, other);
+
+    const res = await authedRequest(app, `/notifications/post/${opened}/read`, user.cookie, { method: "PUT" });
+    expect(res.status).toBe(200);
+    expect((await res.json()).marked).toBe(2);
+
+    expect(await readByMessage(user.cookie)).toEqual({
+      "Request came in": true,
+      "Request cancelled": true,
+      "About another post": false,
+    });
+  });
+
+  it("leaves other users' notifications about the same post unread", async () => {
+    const poster = await createVerifiedUser(app, { email: "read-post-poster@example.com" });
+    const picker = await createVerifiedUser(app, { email: "read-post-picker@example.com" });
+    const post = await seedPost(poster.userId);
+    await seedNotification(picker.userId, "Your request was approved", false, post);
+
+    const res = await authedRequest(app, `/notifications/post/${post}/read`, poster.cookie, { method: "PUT" });
+    expect(res.status).toBe(200);
+    expect((await res.json()).marked).toBe(0);
+
+    expect(await readByMessage(picker.cookie)).toEqual({ "Your request was approved": false });
+  });
+
+  it("is a 404 for a post id that isn't a UUID", async () => {
+    const user = await createVerifiedUser(app, { email: "read-post-bad-id@example.com" });
+    const res = await authedRequest(app, "/notifications/post/not-a-uuid/read", user.cookie, { method: "PUT" });
     expect(res.status).toBe(404);
   });
 });

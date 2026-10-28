@@ -84,6 +84,29 @@ notificationRoutes.put("/:id/read", async (c) => {
   return c.json({ message: "Notification marked as read" });
 });
 
+// Mark every notification about one post as read, when that post is opened
+// (from My posts, My requests, the feed or a link): seeing the post is
+// dealing with what they said. Only ever the current user's. A post with
+// none to mark is fine, so it's not a 404; only a malformed id is.
+notificationRoutes.put("/post/:postId/read", async (c) => {
+  const { userId } = c.get("user");
+  const postId = c.req.param("postId");
+
+  if (!isValidUuid(postId)) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  const updated = await db
+    .update(notifications)
+    .set({ read: true })
+    .where(
+      and(eq(notifications.userId, userId), eq(notifications.postId, postId), eq(notifications.read, false))
+    )
+    .returning({ id: notifications.id });
+
+  return c.json({ marked: updated.length });
+});
+
 // Mark all as read
 notificationRoutes.put("/read-all", async (c) => {
   const { userId } = c.get("user");

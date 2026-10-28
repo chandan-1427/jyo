@@ -6,6 +6,7 @@ import {
   UserRound, UtensilsCrossed, X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
+import { useMarkPostNotificationsRead } from "@/lib/api/queries/notifications";
 import { formatPickupWindow } from "@/lib/format";
 import { useV2Theme } from "@/lib/theme";
 import type { FoodPost, PickupRequest } from "@/types/api";
@@ -420,6 +421,8 @@ export default function PostDetail() {
     queryFn: () => apiFetch(`/posts/${id}`),
     enabled: !!id,
   });
+  // Once the post is actually on screen, not while it's still loading.
+  useMarkPostNotificationsRead(data ? id : undefined);
 
   // A post opened from a shared link has no page behind it in the app, and
   // going back would leave Jyo altogether; the feed is the sensible parent.
