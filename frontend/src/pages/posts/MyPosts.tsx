@@ -208,7 +208,7 @@ export default function MyPosts() {
     ));
 
   return (
-    <div className="text-fg">
+    <div className="fill-screen text-fg">
       {/* No visible title: the nav already says which page this is. Screen
           readers still get one to land on. */}
       <h1 className="sr-only">My posts</h1>
