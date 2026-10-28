@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowUpRight,
   Camera,
   Check,
   CircleQuestionMark,
@@ -625,18 +626,26 @@ export default function Profile() {
           icon={<CircleQuestionMark />}
           description="Questions or problems? Write to us."
         >
-          <ul className="flex flex-wrap items-center gap-y-3">
+          {/* Phones: full-width rows split by hairlines, each a 46px target,
+              rather than an inline row that wraps. Wider: one inline row. */}
+          <ul className="divide-y divide-fg/[0.06] max-sm:-my-3 sm:flex sm:flex-wrap sm:items-center sm:gap-y-3 sm:divide-y-0">
             {HELP_LINKS.map(({ label, icon: Icon, href }, i) => (
-              <li key={label} className="flex items-center">
-                {i > 0 && <span className="mx-5 h-5 w-px bg-fg/15" aria-hidden="true" />}
+              <li key={label} className="sm:flex sm:items-center">
+                {i > 0 && <span className="mx-5 hidden h-5 w-px bg-fg/15 sm:block" aria-hidden="true" />}
                 <a
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(ACTION_LINK, "text-fg decoration-leaf/50 hover:decoration-leaf")}
+                  className={cn(
+                    ACTION_LINK,
+                    "text-fg decoration-leaf/50 hover:decoration-leaf",
+                    "max-sm:flex max-sm:w-full max-sm:gap-3 max-sm:py-3 max-sm:no-underline"
+                  )}
                 >
                   <Icon className="size-[18px] shrink-0 text-leaf" aria-hidden="true" />
                   {label}
+                  {/* Each opens outside the app. */}
+                  <ArrowUpRight className="ml-auto size-4 text-fg-subtle sm:hidden" aria-hidden="true" />
                 </a>
               </li>
             ))}
@@ -649,13 +658,15 @@ export default function Profile() {
           icon={<Settings />}
           description={
             <>
-              Logged in as <span className="break-all font-semibold text-fg">{profile?.email}</span>
+              {/* On its own line on phones; breaks only if it can't fit whole. */}
+              Logged in as{" "}
+              <span className="font-semibold text-fg [overflow-wrap:anywhere] max-sm:block">{profile?.email}</span>
             </>
           }
           footer={
             <>
-              <span />
-              <LogoutButton />
+              <span className="max-sm:hidden" />
+              <LogoutButton className="max-sm:w-full" />
             </>
           }
         />
