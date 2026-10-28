@@ -1,38 +1,31 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 
-// Columns come from a minimum card width rather than breakpoints, so a card
-// is never squeezed narrow enough to cut off the pickup time. Compact rows
-// (PostCard's `compact`) sit closer together on phones.
-const grid = (compact?: boolean) =>
-  cn("grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-5", compact && "max-sm:gap-3");
+// Set columns that step up with the screen: 2 on phones, 3, 4, then 5 from
+// 1280px, where each card is still about 225px wide.
+const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5";
 
-export function PostGrid({ children, compact }: { children: ReactNode; compact?: boolean }) {
-  return <div className={grid(compact)}>{children}</div>;
+export function PostGrid({ children }: { children: ReactNode }) {
+  return <div className={GRID}>{children}</div>;
 }
 
 // Same shape as a PostCard, so nothing jumps when the real posts arrive.
-function PostCardSkeleton({ compact }: { compact?: boolean }) {
+function PostCardSkeleton() {
   return (
-    <div className={cn("shimmer relative rounded-2xl bg-raised shadow-card ring-1 ring-inset ring-fg/[0.06]", compact && "max-sm:flex max-sm:gap-3 max-sm:p-2.5")}>
-      <div className={cn("aspect-[3/2] bg-lifted", compact && "max-sm:aspect-auto max-sm:size-20 max-sm:shrink-0 max-sm:rounded-md")} />
-      <div className={cn("p-4", compact && "max-sm:flex max-sm:flex-1 max-sm:flex-col max-sm:p-0 max-sm:pr-1.5")}>
-        <div className={cn("h-5 w-3/4 rounded bg-lifted", compact && "max-sm:mt-0.5")} />
-        <div className={cn("mt-2.5 h-4 w-full rounded bg-lifted", compact && "max-sm:mt-2 max-sm:w-2/3")} />
-        <div className={cn("mt-6 flex items-center justify-between gap-3", compact && "max-sm:mt-auto")}>
-          <div className="h-4 w-1/2 rounded bg-lifted" />
-          <div className={cn("h-8 w-24 rounded-lg bg-lifted", compact && "max-sm:hidden")} />
-        </div>
+    <div className="shimmer relative rounded-2xl bg-lifted shadow-card ring-1 ring-inset ring-white/[0.08]">
+      <div className="aspect-[3/2] bg-raised" />
+      <div className="px-3 pt-1.5 pb-3 sm:px-3.5 sm:pt-2 sm:pb-3.5">
+        <div className="h-4 w-3/4 rounded bg-lifted-top" />
+        <div className="mt-3 h-3.5 w-2/3 rounded bg-lifted-top sm:mt-4 sm:h-4 sm:w-1/2" />
       </div>
     </div>
   );
 }
 
-export function PostGridSkeleton({ count = 8, compact }: { count?: number; compact?: boolean }) {
+export function PostGridSkeleton({ count = 10 }: { count?: number }) {
   return (
-    <div className={grid(compact)} aria-hidden="true">
+    <div className={GRID} aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
-        <PostCardSkeleton key={i} compact={compact} />
+        <PostCardSkeleton key={i} />
       ))}
     </div>
   );

@@ -49,14 +49,13 @@ const NOTHING_IN: Record<Group, string> = {
   cancelled: "You haven't cancelled any requests",
 };
 
-// Where a request stands, from the picker's side, and what its card's button
-// leads to. An approved pickup is the one thing waiting on them, so only
-// that is marked for attention.
-function describe(r: MyRequest): { group: Group; text: string; cta?: string; attention?: boolean } {
+// Where a request stands, from the picker's side. An approved pickup is the
+// one thing waiting on them, so only that is marked for attention.
+function describe(r: MyRequest): { group: Group; text: string; attention?: boolean } {
   if (r.status === "pending") return { group: "waiting", text: "Waiting for their answer" };
   if (r.status === "approved") {
     if (r.postStatus === "completed") return { group: "collected", text: "Collected" };
-    return { group: "approved", text: "Approved, go pick it up", cta: "Pick up", attention: true };
+    return { group: "approved", text: "Approved, go pick it up", attention: true };
   }
   if (r.status === "cancelled") return { group: "cancelled", text: "You cancelled" };
   // The expiry job also marks a waiting request declined when time runs out;
@@ -70,8 +69,8 @@ function byPickupEnd(a: MyRequest, b: MyRequest) {
   return new Date(a.pickupWindowEnd).getTime() - new Date(b.pickupWindowEnd).getTime();
 }
 
-// The request's post in the shape PostCard takes. posterId isn't sent (and
-// isn't needed, since the button label is always given).
+// The request's post in the shape PostCard takes. posterId isn't sent, and
+// the card doesn't need it.
 const asPost = (r: MyRequest): FoodPost => ({
   id: r.postId,
   posterId: "",
@@ -94,7 +93,9 @@ const findFoodButton = (
 export default function MyRequests() {
   useV2Theme();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<Filter>("all");
+  // Opens on Waiting: the requests still in play, rather than everything
+  // you've ever asked for.
+  const [filter, setFilter] = useState<Filter>("waiting");
   const [cancelling, setCancelling] = useState<MyRequest | null>(null);
 
   const { data, isPending, error, refetch } = useQuery<{ requests: MyRequest[] }>({
@@ -126,8 +127,6 @@ export default function MyRequests() {
       key={r.id}
       post={asPost(r)}
       status={statusOf(r)}
-      cta={describe(r).cta ?? "View"}
-      compact
       // A request still waiting can be taken back from its card. The invisible
       // ::after widens its hit area towards a finger's 44px.
       action={
@@ -210,7 +209,7 @@ export default function MyRequests() {
       )}
 
       {isPending ? (
-        <PostGridSkeleton count={4} compact />
+        <PostGridSkeleton />
       ) : error ? (
         <EmptyState
           icon={<RotateCw />}
@@ -231,10 +230,10 @@ export default function MyRequests() {
         nothingHere
       ) : filter === "all" ? (
         // Everything in one grid, in the same order the groups use.
-        <PostGrid compact>{inFilter.map(card)}</PostGrid>
+        <PostGrid>{inFilter.map(card)}</PostGrid>
       ) : (
         <ListSection title={TITLES[filter]}>
-          <PostGrid compact>{inFilter.map(card)}</PostGrid>
+          <PostGrid>{inFilter.map(card)}</PostGrid>
         </ListSection>
       )}
 

@@ -8,11 +8,13 @@ interface ListSectionProps {
   children: ReactNode;
 }
 
-// A titled group within a page's list, e.g. "Active" and "Ended".
+// A titled group within a page's list, e.g. "Active" and "Ended". Space above
+// only between sections: first-of-type, since a page's search bar and hidden
+// h1 come before the first one, so it's never its parent's first child.
 export function ListSection({ title, count, actions, children }: ListSectionProps) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className="mt-10 first:mt-0">
+    <section aria-labelledby={id} className="mt-10 first-of-type:mt-0">
       <div className="mb-4 flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 id={id} className="flex items-baseline gap-2 font-display text-xl font-semibold">
           {title}
