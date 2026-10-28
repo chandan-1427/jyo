@@ -36,13 +36,12 @@ const NOTHING_IN: Record<Exclude<Filter, "all">, string> = {
   ended: "No posts have ended without a pickup",
 };
 
-// What an active post's state means to the person who posted it, and what
-// its button leads to. Only a waiting request needs them, so only that one
-// is marked for attention.
-const ACTIVE: Partial<Record<Status, { text: string; cta: string; attention?: boolean }>> = {
-  pending_approval: { text: "Someone asked for this", cta: "Review", attention: true },
-  closed: { text: "Approved, waiting for pickup", cta: "Manage" },
-  open: { text: "No requests yet", cta: "View" },
+// What an active post's state means to the person who posted it. Only a
+// waiting request needs them, so only that one is marked for attention.
+const ACTIVE: Partial<Record<Status, { text: string; attention?: boolean }>> = {
+  pending_approval: { text: "Someone asked for this", attention: true },
+  closed: { text: "Approved, waiting for pickup" },
+  open: { text: "No requests yet" },
 };
 
 // Active posts are ordered by what needs doing: an answer first, then a
@@ -129,8 +128,6 @@ export default function MyPosts() {
       key={post.id}
       post={post}
       status={statusOf(post)}
-      cta={ACTIVE[post.status]?.cta}
-      compact
       // Ended posts can be picked for deleting, on the Ended filter: ticking a
       // card's box (shown on hover) starts selecting, with it picked.
       selection={
@@ -240,7 +237,7 @@ export default function MyPosts() {
       )}
 
       {isPending ? (
-        <PostGridSkeleton count={4} compact />
+        <PostGridSkeleton />
       ) : error ? (
         <EmptyState
           icon={<RotateCw />}
@@ -261,13 +258,13 @@ export default function MyPosts() {
         nothingHere
       ) : filter === "all" ? (
         // Everything in one grid, in the same order the sections use.
-        <PostGrid compact>{inFilter.map(card)}</PostGrid>
+        <PostGrid>{inFilter.map(card)}</PostGrid>
       ) : (
         <ListSection
           title={{ active: "Active", collected: "Collected", ended: "Ended without a pickup" }[filter]}
           actions={filter === "ended" && endedActions}
         >
-          <PostGrid compact>{inFilter.map(card)}</PostGrid>
+          <PostGrid>{inFilter.map(card)}</PostGrid>
         </ListSection>
       )}
 
