@@ -1,8 +1,8 @@
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { foodPosts, pickupRequests, users } from "../db/schema.js";
+import { and, eq, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { uploadLimiter } from "../middleware/limiters.js";
@@ -47,6 +47,28 @@ userRoutes.get("/me", async (c) => {
 });
 
 const userGone = (c: Context) => c.json({ error: "User not found" }, 404);
+
+// --- Own activity counts, for the profile ---
+// Counted here rather than from My posts and My requests, which only load a
+// page at a time. Demo-mode posts and requests count only while in demo mode.
+userRoutes.get("/me/stats", async (c) => {
+  const { userId, isDemo } = c.get("user");
+
+  const [posts] = await db
+    .select({
+      shared: sql<number>`count(*)::int`,
+      pickedUp: sql<number>`(count(*) filter (where ${foodPosts.status} = 'completed'))::int`,
+    })
+    .from(foodPosts)
+    .where(and(eq(foodPosts.posterId, userId), isDemo ? undefined : eq(foodPosts.isDemo, false)));
+
+  const [requests] = await db
+    .select({ requested: sql<number>`count(*)::int` })
+    .from(pickupRequests)
+    .where(and(eq(pickupRequests.pickerId, userId), isDemo ? undefined : eq(pickupRequests.isDemo, false)));
+
+  return c.json({ stats: { ...posts, ...requests } });
+});
 
 // --- Update own profile ---
 // A PATCH: only the fields sent are changed.

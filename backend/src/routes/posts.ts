@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
-import { eq, or, and, gte, asc, desc, sql } from "drizzle-orm";
+import { eq, or, and, gte, asc, desc, inArray, sql, getTableColumns } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
 import { deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
@@ -11,15 +11,19 @@ import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/domain/demo.js";
-import { createPostSchema, feedQuerySchema, updatePostSchema } from "../lib/validation.js";
+import { createPostSchema, feedQuerySchema, myPostsQuerySchema, updatePostSchema } from "../lib/validation.js";
 import { ConflictError } from "../lib/errors.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 import { parseJsonBody, parseQuery, uploadFromForm } from "../lib/http.js";
+import { PAGE_SIZE, afterCursor, matchesSearch, micros, toPage } from "../lib/pagination.js";
 
 export const postRoutes = new Hono();
 
 // The 403 for acting on someone else's post: logged in, just not allowed.
 const NOT_YOUR_POST = "You can only change your own posts";
+
+// Most feed posts it will return; see the feed handler.
+const FEED_LIMIT = 200;
 
 postRoutes.use("*", authMiddleware);
 
@@ -137,27 +141,78 @@ postRoutes.get("/", async (c) => {
       asc(foodPosts.id)
     );
 
-  // Filter by 20 km radius and strip exact location from response
+  // Filter by 20 km radius and strip exact location from response. Not paged:
+  // only food still within its pickup window, near one person, so the list
+  // stays short; the cap only guards against something unexpected.
   const nearbyPosts = posts
     .filter((post) =>
       haversineDistance(userLat, userLng, post.pickupLat, post.pickupLng) <= 20
     )
+    .slice(0, FEED_LIMIT)
     .map(({ pickupLat, pickupLng, ...rest }) => rest); // hide exact location
-  
+
   return c.json({ posts: nearbyPosts });
 });
 
+// --- Your own posts, paged ---
+// The order My posts shows them in, as one ascending key (see
+// lib/pagination): what still needs you first (a request to answer, then a
+// pickup to confirm, then ones still waiting), each soonest-ending first;
+// then collected, then ended, each newest first.
+const MY_POST_GROUPS = {
+  active: ["pending_approval", "closed", "open"],
+  collected: ["completed"],
+  ended: ["expired"],
+} as const;
+
+const myPostRank = sql<number>`(case ${foodPosts.status}
+  when 'pending_approval' then 0 when 'closed' then 1 when 'open' then 2
+  when 'completed' then 3 else 4 end)`;
+const myPostValue = sql<string>`(case when ${foodPosts.status} in ('pending_approval', 'closed', 'open')
+  then ${micros(sql`${foodPosts.pickupWindowEnd}`)}
+  else -${micros(sql`${foodPosts.createdAt}`)} end)`;
+
 postRoutes.get("/mine", async (c) => {
   const { userId, isDemo } = c.get("user");
+  const query = parseQuery(c, myPostsQuerySchema);
+  if (!query.ok) return query.response;
+  const { status, search, cursor, limit = PAGE_SIZE } = query.data;
 
-  const posts = await db
-    .select()
+  // Outside demo mode, posts made during a demo stay hidden.
+  const mine = and(eq(foodPosts.posterId, userId), isDemo ? undefined : eq(foodPosts.isDemo, false));
+  const matching = matchesSearch(sql`(${foodPosts.title} || ' ' || coalesce(${foodPosts.description}, ''))`, search);
+  const inGroup = (group: keyof typeof MY_POST_GROUPS) => inArray(foodPosts.status, [...MY_POST_GROUPS[group]]);
+
+  const rows = await db
+    .select({ ...getTableColumns(foodPosts), sortRank: myPostRank, sortValue: myPostValue })
     .from(foodPosts)
-    // Outside demo mode, posts made during a demo stay hidden.
-    .where(and(eq(foodPosts.posterId, userId), isDemo ? undefined : eq(foodPosts.isDemo, false)))
-    .orderBy(desc(foodPosts.createdAt));
+    .where(
+      and(
+        mine,
+        matching,
+        status === "all" ? undefined : inGroup(status),
+        cursor ? afterCursor(myPostRank, myPostValue, sql`${foodPosts.id}`, cursor) : undefined
+      )
+    )
+    .orderBy(myPostRank, myPostValue, asc(foodPosts.id))
+    .limit(limit + 1);
 
-  return c.json({ posts });
+  // How many match the search in each filter (for the filter menu), and how
+  // many posts there are at all, search aside (an empty page vs no posts).
+  const [counts] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      all: matching ? sql<number>`(count(*) filter (where ${matching}))::int` : sql<number>`count(*)::int`,
+      active: sql<number>`(count(*) filter (where ${and(matching, inGroup("active"))}))::int`,
+      collected: sql<number>`(count(*) filter (where ${and(matching, inGroup("collected"))}))::int`,
+      ended: sql<number>`(count(*) filter (where ${and(matching, inGroup("ended"))}))::int`,
+    })
+    .from(foodPosts)
+    .where(mine);
+
+  const { items, nextCursor } = toPage(rows, limit);
+  const { total, ...byFilter } = counts;
+  return c.json({ posts: items, nextCursor, counts: byFilter, total });
 });
 
 // --- Get single post ---

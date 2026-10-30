@@ -1,16 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { ListFilter, Plus, RotateCw, Trash2 } from "lucide-react";
-import { apiFetch } from "@/lib/api/api";
 import { formatDate } from "@/lib/format";
 import { useV2Theme } from "@/lib/theme";
-import { useSearch } from "@/lib/useSearch";
+import { usePagedList } from "@/lib/api/queries/paged";
 import { cn } from "@/lib/utils";
 import type { FoodPost } from "@/types/api";
 import PostCard from "@/components/posts/PostCard";
 import { TiffinIllustration } from "@/components/posts/TiffinIllustration";
 import { EmptyPlateIllustration } from "@/components/posts/EmptyPlateIllustration";
 import { DeletePostDialog } from "@/components/posts/DeletePostDialog";
+import { LoadMore } from "@/components/posts/LoadMore";
 import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
 import { Button, ToolbarButton } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -44,17 +43,6 @@ const ACTIVE: Partial<Record<Status, { text: string; attention?: boolean }>> = {
   open: { text: "No requests yet" },
 };
 
-// Active posts are ordered by what needs doing: an answer first, then a
-// pickup to confirm, then the ones still waiting, each soonest-ending first.
-const ACTIVE_ORDER: Status[] = ["pending_approval", "closed", "open"];
-
-function byUrgency(a: FoodPost, b: FoodPost) {
-  return (
-    ACTIVE_ORDER.indexOf(a.status) - ACTIVE_ORDER.indexOf(b.status) ||
-    new Date(a.pickupWindowEnd).getTime() - new Date(b.pickupWindowEnd).getTime()
-  );
-}
-
 const postFoodButton = (
   <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
     Post food
@@ -66,29 +54,28 @@ export default function MyPosts() {
   // Opens on Active: what still needs you (answering requests, confirming
   // pickups) matters more than posts that have already ended.
   const [filter, setFilter] = useState<Filter>("active");
+  const [searchText, setSearchText] = useState("");
   // The picked posts waiting on the delete confirmation.
   const [confirming, setConfirming] = useState<string[] | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
-  const { data, isPending, error, refetch } = useQuery<{ posts: FoodPost[] }>({
-    queryKey: ["posts", "mine"],
-    queryFn: () => apiFetch("/posts/mine"),
+  // Filtered, searched and ordered on the server (what needs you first),
+  // a page at a time.
+  const list = usePagedList<"posts", FoodPost>({
+    key: ["posts", "mine"],
+    path: "/posts/mine",
+    field: "posts",
+    filter,
+    search: searchText,
   });
-  const posts = data?.posts ?? [];
+  const posts = list.items;
+  const searching = list.searchTerm.length > 0;
 
-  // Only what matches the search (everything when it's empty).
-  const search = useSearch(posts, (p) => `${p.title} ${p.description ?? ""}`);
-  const shown = search.results;
-
-  // Collected and ended keep the server's order: newest first.
-  const active = shown.filter((p) => ACTIVE_ORDER.includes(p.status)).sort(byUrgency);
-  const collected = shown.filter((p) => p.status === "completed");
-  const ended = shown.filter((p) => p.status === "expired");
-  const inFilter = { all: [...active, ...collected, ...ended], active, collected, ended }[filter];
-
-  // Only ids still showing count, so a post that's gone (deleted, reopened
-  // elsewhere, or filtered out by the search) is never deleted unseen.
+  // Only ended posts can be picked, on the Ended filter; "Select all" takes
+  // the ones loaded so far. Only ids still showing count, so a post that's
+  // gone (deleted, or filtered out by the search) is never deleted unseen.
+  const ended = filter === "ended" ? posts : [];
   const selected = ended.filter((p) => picked.has(p.id)).map((p) => p.id);
   const allSelected = ended.length > 0 && selected.length === ended.length;
 
@@ -179,13 +166,13 @@ export default function MyPosts() {
   );
 
   const nothingHere =
-    inFilter.length === 0 &&
-    (search.searching ? (
+    posts.length === 0 &&
+    (searching ? (
       <EmptyState
         art={<EmptyPlateIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
-        title={`Nothing matches "${search.query.trim()}"`}
+        title={`Nothing matches "${list.searchTerm}"`}
         actions={
-          <Button variant="secondary" onClick={() => search.setQuery("")}>
+          <Button variant="secondary" onClick={() => setSearchText("")}>
             Clear search
           </Button>
         }
@@ -206,27 +193,42 @@ export default function MyPosts() {
       )
     ));
 
+  // The grid, the next page loading under it, and a dimmed look while a new
+  // filter or search replaces what's showing.
+  const grid = (
+    <div className={cn("transition-opacity duration-150", list.isPlaceholderData && "opacity-60")}>
+      <PostGrid>{posts.map(card)}</PostGrid>
+      <LoadMore
+        hasNextPage={list.hasNextPage}
+        isFetchingNextPage={list.isFetchingNextPage}
+        failed={list.isFetchNextPageError}
+        fetchNextPage={list.fetchNextPage}
+        label="Loading more posts"
+      />
+    </div>
+  );
+
   return (
     <div className="fill-screen text-fg">
       {/* No visible title: the nav already says which page this is. Screen
           readers still get one to land on. */}
       <h1 className="sr-only">My posts</h1>
-      {posts.length > 0 && (
+      {list.total > 0 && (
         // One line, all 44px tall, at the right on wider screens. On phones
         // the filter and Post food shrink to icons so the search keeps room.
         <div className="mb-6 flex items-center gap-2 sm:justify-end">
           <SearchField
             label="Search your posts"
             placeholder="Search your posts"
-            value={search.query}
-            onChange={search.setQuery}
+            value={searchText}
+            onChange={setSearchText}
             className="min-w-0 flex-1 sm:w-72 sm:flex-none"
           />
           {/* Each option shows how many posts it has (of those matching the search). */}
           <SelectMenu
             label="Show posts"
             icon={<ListFilter />}
-            options={FILTERS.map((f) => ({ ...f, count: { all: shown.length, active: active.length, collected: collected.length, ended: ended.length }[f.value] }))}
+            options={FILTERS.map((f) => ({ ...f, count: list.counts[f.value] ?? 0 }))}
             value={filter}
             onChange={changeFilter}
             compact
@@ -238,17 +240,17 @@ export default function MyPosts() {
         </div>
       )}
 
-      {isPending ? (
+      {list.isPending ? (
         <PostGridSkeleton />
-      ) : error ? (
+      ) : list.error && !list.data ? (
         <EmptyState
           icon={<RotateCw />}
           title="We couldn't load your posts"
-          actions={<Button onClick={() => refetch()}>Try again</Button>}
+          actions={<Button onClick={() => list.refetch()}>Try again</Button>}
         >
-          <p>{error.message}</p>
+          <p>{list.error.message}</p>
         </EmptyState>
-      ) : posts.length === 0 ? (
+      ) : list.total === 0 ? (
         <EmptyState
           art={<TiffinIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
           title="You haven't shared any food yet"
@@ -260,13 +262,13 @@ export default function MyPosts() {
         nothingHere
       ) : filter === "all" ? (
         // Everything in one grid, in the same order the sections use.
-        <PostGrid>{inFilter.map(card)}</PostGrid>
+        grid
       ) : (
         <ListSection
           title={{ active: "Active", collected: "Collected", ended: "Ended without a pickup" }[filter]}
           actions={filter === "ended" && endedActions}
         >
-          <PostGrid>{inFilter.map(card)}</PostGrid>
+          {grid}
         </ListSection>
       )}
 

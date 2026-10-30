@@ -30,7 +30,6 @@ import { uploadAvatar, removeAvatar } from "@/lib/supabase";
 import { profileSchema } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { useV2Theme } from "@/lib/theme";
-import type { FoodPost, PickupRequest } from "@/types/api";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -190,19 +189,16 @@ export default function Profile() {
     queryFn: fetchAuthMe,
   });
 
-  // Activity counts reuse My posts' and My requests' queries (same keys), so
-  // they come from the same cache and update whenever those lists do.
-  const { data: myPosts } = useQuery<{ posts: FoodPost[] }>({
-    queryKey: ["posts", "mine"],
-    queryFn: () => apiFetch("/posts/mine"),
+  // Activity counts, counted on the server: My posts and My requests only
+  // load a page at a time, so they can't be counted from those lists.
+  // Refetched each time the profile opens.
+  const { data: stats } = useQuery<{ stats: { shared: number; pickedUp: number; requested: number } }>({
+    queryKey: ["users", "me", "stats"],
+    queryFn: () => apiFetch("/users/me/stats"),
   });
-  const { data: myRequests } = useQuery<{ requests: PickupRequest[] }>({
-    queryKey: ["requests", "mine"],
-    queryFn: () => apiFetch("/requests/mine"),
-  });
-  const sharedCount = myPosts?.posts.length;
-  const pickedUpCount = myPosts?.posts.filter((p) => p.status === "completed").length;
-  const requestedCount = myRequests?.requests.length;
+  const sharedCount = stats?.stats.shared;
+  const pickedUpCount = stats?.stats.pickedUp;
+  const requestedCount = stats?.stats.requested;
 
   // ─── Demo mode ────────────────────────────────────────────────────────────
   const [demoActionLoading, setDemoActionLoading] = useState(false);

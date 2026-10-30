@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { ListFilter, MapPin, RotateCw, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
+import { usePagedList } from "@/lib/api/queries/paged";
 import { formatDate } from "@/lib/format";
 import { useV2Theme } from "@/lib/theme";
-import { useSearch } from "@/lib/useSearch";
+import { cn } from "@/lib/utils";
 import type { FoodPost, MyRequest } from "@/types/api";
 import PostCard from "@/components/posts/PostCard";
 import { FindFoodIllustration } from "@/components/posts/FindFoodIllustration";
 import { EmptySlipIllustration } from "@/components/posts/EmptySlipIllustration";
+import { LoadMore } from "@/components/posts/LoadMore";
 import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
 import { Button, ToolbarButton } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -20,8 +22,6 @@ import { SearchField } from "@/components/ui/TextField";
 // A request's stages, from the picker's side.
 type Group = "waiting" | "approved" | "collected" | "declined" | "cancelled";
 type Filter = "all" | Group;
-
-const GROUPS: Group[] = ["approved", "waiting", "collected", "declined", "cancelled"];
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
@@ -63,12 +63,6 @@ function describe(r: MyRequest): { group: Group; text: string; attention?: boole
   return { group: "declined", text: r.postStatus === "expired" ? "Ran out of time before an answer" : "Declined" };
 }
 
-// Groups in GROUPS order; within the two live ones, soonest-ending first.
-// The rest keep the server's newest-first order.
-function byPickupEnd(a: MyRequest, b: MyRequest) {
-  return new Date(a.pickupWindowEnd).getTime() - new Date(b.pickupWindowEnd).getTime();
-}
-
 // The request's post in the shape PostCard takes. posterId isn't sent, and
 // the card doesn't need it.
 const asPost = (r: MyRequest): FoodPost => ({
@@ -96,22 +90,21 @@ export default function MyRequests() {
   // Opens on Waiting: the requests still in play, rather than everything
   // you've ever asked for.
   const [filter, setFilter] = useState<Filter>("waiting");
+  const [searchText, setSearchText] = useState("");
   const [cancelling, setCancelling] = useState<MyRequest | null>(null);
 
-  const { data, isPending, error, refetch } = useQuery<{ requests: MyRequest[] }>({
-    queryKey: ["requests", "mine"],
-    queryFn: () => apiFetch("/requests/mine"),
+  // Filtered, searched and ordered on the server (approved pickups first,
+  // then waiting, each soonest-ending first; the rest newest first), a page
+  // at a time.
+  const list = usePagedList<"requests", MyRequest>({
+    key: ["requests", "mine"],
+    path: "/requests/mine",
+    field: "requests",
+    filter,
+    search: searchText,
   });
-  const requests = data?.requests ?? [];
-
-  // Only what matches the search (everything when it's empty).
-  const search = useSearch(requests, (r) => `${r.postTitle} ${r.postDescription ?? ""}`);
-  const shown = search.results;
-  const inGroup = (group: Group) => {
-    const list = shown.filter((r) => describe(r).group === group);
-    return group === "approved" || group === "waiting" ? list.sort(byPickupEnd) : list;
-  };
-  const inFilter = filter === "all" ? GROUPS.flatMap(inGroup) : inGroup(filter);
+  const requests = list.items;
+  const searching = list.searchTerm.length > 0;
 
   // In "All" every card says where it stands. Under its own heading that
   // would mostly repeat the heading, so a finished request says when it was
@@ -145,13 +138,13 @@ export default function MyRequests() {
   );
 
   const nothingHere =
-    inFilter.length === 0 &&
-    (search.searching ? (
+    requests.length === 0 &&
+    (searching ? (
       <EmptyState
         art={<EmptySlipIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
-        title={`Nothing matches "${search.query.trim()}"`}
+        title={`Nothing matches "${list.searchTerm}"`}
         actions={
-          <Button variant="secondary" onClick={() => search.setQuery("")}>
+          <Button variant="secondary" onClick={() => setSearchText("")}>
             Clear search
           </Button>
         }
@@ -172,20 +165,35 @@ export default function MyRequests() {
       )
     ));
 
+  // The grid, the next page loading under it, and a dimmed look while a new
+  // filter or search replaces what's showing.
+  const grid = (
+    <div className={cn("transition-opacity duration-150", list.isPlaceholderData && "opacity-60")}>
+      <PostGrid>{requests.map(card)}</PostGrid>
+      <LoadMore
+        hasNextPage={list.hasNextPage}
+        isFetchingNextPage={list.isFetchingNextPage}
+        failed={list.isFetchNextPageError}
+        fetchNextPage={list.fetchNextPage}
+        label="Loading more requests"
+      />
+    </div>
+  );
+
   return (
     <div className="fill-screen text-fg">
       {/* No visible title: the nav already says which page this is. Screen
           readers still get one to land on. */}
       <h1 className="sr-only">My requests</h1>
-      {requests.length > 0 && (
+      {list.total > 0 && (
         // One line, all 44px tall, at the right on wider screens. On phones
         // the filter and Find food shrink to icons so the search keeps room.
         <div className="mb-6 flex items-center gap-2 sm:justify-end">
           <SearchField
             label="Search your requests"
             placeholder="Search your requests"
-            value={search.query}
-            onChange={search.setQuery}
+            value={searchText}
+            onChange={setSearchText}
             className="min-w-0 flex-1 sm:w-72 sm:flex-none"
           />
           {/* Six stages are too many for a row of buttons. Each shows how
@@ -193,10 +201,7 @@ export default function MyRequests() {
           <SelectMenu
             label="Show requests"
             icon={<ListFilter />}
-            options={FILTERS.map((f) => ({
-              ...f,
-              count: f.value === "all" ? shown.length : shown.filter((r) => describe(r).group === f.value).length,
-            }))}
+            options={FILTERS.map((f) => ({ ...f, count: list.counts[f.value] ?? 0 }))}
             value={filter}
             onChange={setFilter}
             compact
@@ -208,17 +213,17 @@ export default function MyRequests() {
         </div>
       )}
 
-      {isPending ? (
+      {list.isPending ? (
         <PostGridSkeleton />
-      ) : error ? (
+      ) : list.error && !list.data ? (
         <EmptyState
           icon={<RotateCw />}
           title="We couldn't load your requests"
-          actions={<Button onClick={() => refetch()}>Try again</Button>}
+          actions={<Button onClick={() => list.refetch()}>Try again</Button>}
         >
-          <p>{error.message}</p>
+          <p>{list.error.message}</p>
         </EmptyState>
-      ) : requests.length === 0 ? (
+      ) : list.total === 0 ? (
         <EmptyState
           art={<FindFoodIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
           title="You haven't asked for any food yet"
@@ -230,11 +235,9 @@ export default function MyRequests() {
         nothingHere
       ) : filter === "all" ? (
         // Everything in one grid, in the same order the groups use.
-        <PostGrid>{inFilter.map(card)}</PostGrid>
+        grid
       ) : (
-        <ListSection title={TITLES[filter]}>
-          <PostGrid>{inFilter.map(card)}</PostGrid>
-        </ListSection>
+        <ListSection title={TITLES[filter]}>{grid}</ListSection>
       )}
 
       {cancelling && (
