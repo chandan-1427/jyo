@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cursorSchema, limitSchema, searchSchema } from "./pagination.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Field rules. frontend/src/lib/validation.ts defines the same `fields`, rule
@@ -94,6 +95,21 @@ const queryCoordinate = (min: number, max: number) =>
 export const feedQuerySchema = z.object({
   lat: queryCoordinate(-90, 90),
   lng: queryCoordinate(-180, 180),
+});
+
+// ─── My posts / My requests (paged) ─────────────────────────────────────────
+export const myPostsQuerySchema = z.object({
+  status: z.enum(["all", "active", "collected", "ended"]).default("all"),
+  search: searchSchema.optional(),
+  cursor: cursorSchema.optional(),
+  limit: limitSchema.optional(),
+});
+
+export const myRequestsQuerySchema = z.object({
+  status: z.enum(["all", "waiting", "approved", "collected", "declined", "cancelled"]).default("all"),
+  search: searchSchema.optional(),
+  cursor: cursorSchema.optional(),
+  limit: limitSchema.optional(),
 });
 
 // ─── Create / edit post ──────────────────────────────────────────────────────

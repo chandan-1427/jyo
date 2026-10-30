@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests } from "../db/schema.js";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, and, asc, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/geo/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
@@ -15,9 +15,10 @@ import { ConflictError } from "../lib/errors.js";
 import { isValidUuid, findPostById, findRequestById, findUserEmail } from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
-import { createRequestSchema } from "../lib/validation.js";
+import { createRequestSchema, myRequestsQuerySchema } from "../lib/validation.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
-import { parseJsonBody, uploadFromForm } from "../lib/http.js";
+import { parseJsonBody, parseQuery, uploadFromForm } from "../lib/http.js";
+import { PAGE_SIZE, afterCursor, matchesSearch, micros, toPage } from "../lib/pagination.js";
 
 export const requestRoutes = new Hono();
 
@@ -335,10 +336,36 @@ requestRoutes.post("/:id/cancel", async (c) => {
   return c.json({ message: "Request cancelled" });
 });
 
+// --- Your own requests, paged ---
+// Grouped as My requests shows them, from the picker's side: approved (go
+// pick it up), waiting for an answer, collected, declined, cancelled. The
+// two live groups are soonest-ending first, the rest newest first, all as
+// one ascending key (see lib/pagination).
+const myRequestRank = sql<number>`(case
+  when ${pickupRequests.status} = 'approved' and ${foodPosts.status} <> 'completed' then 0
+  when ${pickupRequests.status} = 'pending' then 1
+  when ${pickupRequests.status} = 'approved' then 2
+  when ${pickupRequests.status} = 'rejected' then 3
+  else 4 end)`;
+const myRequestValue = sql<string>`(case when ${myRequestRank} <= 1
+  then ${micros(sql`${foodPosts.pickupWindowEnd}`)}
+  else -${micros(sql`${pickupRequests.createdAt}`)} end)`;
+const MY_REQUEST_GROUPS = { approved: 0, waiting: 1, collected: 2, declined: 3, cancelled: 4 } as const;
+
 requestRoutes.get("/mine", async (c) => {
   const { userId, isDemo } = c.get("user");
+  const query = parseQuery(c, myRequestsQuerySchema);
+  if (!query.ok) return query.response;
+  const { status, search, cursor, limit = PAGE_SIZE } = query.data;
 
-  const requests = await db
+  // Outside demo mode, requests made during a demo stay hidden.
+  const mine = and(eq(pickupRequests.pickerId, userId), isDemo ? undefined : eq(pickupRequests.isDemo, false));
+  const matching = matchesSearch(sql`(${foodPosts.title} || ' ' || coalesce(${foodPosts.description}, ''))`, search);
+  const inGroup = (group: keyof typeof MY_REQUEST_GROUPS) => sql`${myRequestRank} = ${MY_REQUEST_GROUPS[group]}`;
+  const countIn = (group: keyof typeof MY_REQUEST_GROUPS) =>
+    sql<number>`(count(*) filter (where ${and(matching, inGroup(group))}))::int`;
+
+  const rows = await db
     .select({
       id: pickupRequests.id,
       postId: pickupRequests.postId,
@@ -356,14 +383,41 @@ requestRoutes.get("/mine", async (c) => {
       status: pickupRequests.status,
       isDemo: pickupRequests.isDemo,
       createdAt: pickupRequests.createdAt,
+      sortRank: myRequestRank,
+      sortValue: myRequestValue,
     })
     .from(pickupRequests)
     .innerJoin(foodPosts, eq(pickupRequests.postId, foodPosts.id))
-    // Outside demo mode, requests made during a demo stay hidden.
-    .where(and(eq(pickupRequests.pickerId, userId), isDemo ? undefined : eq(pickupRequests.isDemo, false)))
-    .orderBy(desc(pickupRequests.createdAt));
+    .where(
+      and(
+        mine,
+        matching,
+        status === "all" ? undefined : inGroup(status),
+        cursor ? afterCursor(myRequestRank, myRequestValue, sql`${pickupRequests.id}`, cursor) : undefined
+      )
+    )
+    .orderBy(myRequestRank, myRequestValue, asc(pickupRequests.id))
+    .limit(limit + 1);
 
-  return c.json({ requests });
+  // How many match the search in each filter (for the filter menu), and how
+  // many requests there are at all, search aside.
+  const [counts] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      all: matching ? sql<number>`(count(*) filter (where ${matching}))::int` : sql<number>`count(*)::int`,
+      approved: countIn("approved"),
+      waiting: countIn("waiting"),
+      collected: countIn("collected"),
+      declined: countIn("declined"),
+      cancelled: countIn("cancelled"),
+    })
+    .from(pickupRequests)
+    .innerJoin(foodPosts, eq(pickupRequests.postId, foodPosts.id))
+    .where(mine);
+
+  const { items, nextCursor } = toPage(rows, limit);
+  const { total, ...byFilter } = counts;
+  return c.json({ requests: items, nextCursor, counts: byFilter, total });
 });
 
 requestRoutes.post(

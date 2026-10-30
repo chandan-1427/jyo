@@ -57,6 +57,10 @@ Every status-changing endpoint that can be hit twice (double-click, retry) — `
 
 `tests/requests-concurrency.test.ts` fires real concurrent requests at these endpoints and asserts exactly one wins — this is the regression suite for that bug class; extend it if you touch this logic.
 
+### Paged lists: cursor (keyset) pagination
+
+`GET /posts/mine` and `GET /requests/mine` return 20 at a time, filtered (`status`) and searched (`search`) on the server, with `counts` per filter, a `total`, and a `nextCursor` (`lib/pagination.ts`). Each list is ordered by one ascending key `(rank, value, id)` and a page is "the next N after the cursor's key", so items arriving or changing mid-scroll never repeat or skip the way an offset would. **The value must be a whole number** (timestamps as `bigint` microseconds via `micros()`), never a float: Supabase returns float8 rounded to 15 significant digits, so a float cursor lost its microseconds and repeated items at page boundaries in the dev environment while the local test DB (full precision) passed. The frontend reads them through `usePagedList` (`lib/api/queries/paged.ts`, an infinite query keyed under `["posts", "mine"]` / `["requests", "mine"]` so existing invalidations refresh every loaded page) and `LoadMore`. Profile counts come from `GET /users/me/stats`, not from these lists. The feed isn't paged (it's bounded: active posts within 20 km, capped at 200).
+
 ### Post status lifecycle
 
 `open` → `pending_approval` (request submitted) → `closed` (approved) → `completed`, or → `expired` (cron job, pickup window passed) at any point before `closed`. Exact pickup coordinates (`pickupLat`/`pickupLng`) are stripped from every response except to the poster or approved picker once `closed` — see `posts.ts`'s `/:id` and `/` (feed) handlers for the redaction pattern. Preserve this when adding new fields derived from location.
