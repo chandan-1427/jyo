@@ -34,7 +34,7 @@ export function createApp() {
       },
       credentials: true,
       allowHeaders: ["Content-Type"],
-      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     })
   );
 
@@ -56,6 +56,10 @@ export function createApp() {
 
     return c.json({ error: "Internal server error" }, 500);
   });
+
+  // JSON like every other error, so a client reading `error` gets a message
+  // rather than failing to parse Hono's default plain-text "404 Not Found".
+  app.notFound((c) => c.json({ error: "Not found" }, 404));
 
   app.get("/", (c) => c.json({ status: "ok" }));
 

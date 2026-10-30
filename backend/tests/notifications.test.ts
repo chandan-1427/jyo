@@ -75,13 +75,13 @@ describe("GET /notifications", () => {
   });
 });
 
-describe("PUT /notifications/:id/read", () => {
+describe("POST /notifications/:id/read", () => {
   it("marks only that notification as read", async () => {
     const user = await createVerifiedUser(app, { email: "read-one-owner@example.com" });
     const opened = await seedNotification(user.userId, "Opened");
     await seedNotification(user.userId, "Still unread");
 
-    const res = await authedRequest(app, `/notifications/${opened}/read`, user.cookie, { method: "PUT" });
+    const res = await authedRequest(app, `/notifications/${opened}/read`, user.cookie, { method: "POST" });
     expect(res.status).toBe(200);
 
     const body = await (await authedRequest(app, "/notifications", user.cookie)).json();
@@ -96,7 +96,7 @@ describe("PUT /notifications/:id/read", () => {
     const other = await createVerifiedUser(app, { email: "read-one-victim@example.com" });
     const theirs = await seedNotification(other.userId, "Not yours");
 
-    const res = await authedRequest(app, `/notifications/${theirs}/read`, user.cookie, { method: "PUT" });
+    const res = await authedRequest(app, `/notifications/${theirs}/read`, user.cookie, { method: "POST" });
     expect(res.status).toBe(404);
 
     const body = await (await authedRequest(app, "/notifications", other.cookie)).json();
@@ -105,12 +105,12 @@ describe("PUT /notifications/:id/read", () => {
 
   it("is a 404 for an id that isn't a UUID", async () => {
     const user = await createVerifiedUser(app, { email: "read-one-bad-id@example.com" });
-    const res = await authedRequest(app, "/notifications/not-a-uuid/read", user.cookie, { method: "PUT" });
+    const res = await authedRequest(app, "/notifications/not-a-uuid/read", user.cookie, { method: "POST" });
     expect(res.status).toBe(404);
   });
 });
 
-describe("PUT /notifications/post/:postId/read", () => {
+describe("POST /notifications/post/:postId/read", () => {
   it("marks all of that post's notifications read, and only that post's", async () => {
     const user = await createVerifiedUser(app, { email: "read-post-owner@example.com" });
     const opened = await seedPost(user.userId);
@@ -119,7 +119,7 @@ describe("PUT /notifications/post/:postId/read", () => {
     await seedNotification(user.userId, "Request cancelled", false, opened);
     await seedNotification(user.userId, "About another post", false, other);
 
-    const res = await authedRequest(app, `/notifications/post/${opened}/read`, user.cookie, { method: "PUT" });
+    const res = await authedRequest(app, `/notifications/post/${opened}/read`, user.cookie, { method: "POST" });
     expect(res.status).toBe(200);
     expect((await res.json()).marked).toBe(2);
 
@@ -136,7 +136,7 @@ describe("PUT /notifications/post/:postId/read", () => {
     const post = await seedPost(poster.userId);
     await seedNotification(picker.userId, "Your request was approved", false, post);
 
-    const res = await authedRequest(app, `/notifications/post/${post}/read`, poster.cookie, { method: "PUT" });
+    const res = await authedRequest(app, `/notifications/post/${post}/read`, poster.cookie, { method: "POST" });
     expect(res.status).toBe(200);
     expect((await res.json()).marked).toBe(0);
 
@@ -145,12 +145,12 @@ describe("PUT /notifications/post/:postId/read", () => {
 
   it("is a 404 for a post id that isn't a UUID", async () => {
     const user = await createVerifiedUser(app, { email: "read-post-bad-id@example.com" });
-    const res = await authedRequest(app, "/notifications/post/not-a-uuid/read", user.cookie, { method: "PUT" });
+    const res = await authedRequest(app, "/notifications/post/not-a-uuid/read", user.cookie, { method: "POST" });
     expect(res.status).toBe(404);
   });
 });
 
-describe("PUT /notifications/read-all", () => {
+describe("POST /notifications/read-all", () => {
   it("marks all of the current user's notifications as read, without touching other users'", async () => {
     const user = await createVerifiedUser(app, { email: "read-all-owner@example.com" });
     const other = await createVerifiedUser(app, { email: "read-all-other@example.com" });
@@ -159,7 +159,7 @@ describe("PUT /notifications/read-all", () => {
     await seedNotification(user.userId, "Unread two");
     await seedNotification(other.userId, "Someone else's unread");
 
-    const res = await authedRequest(app, "/notifications/read-all", user.cookie, { method: "PUT" });
+    const res = await authedRequest(app, "/notifications/read-all", user.cookie, { method: "POST" });
     expect(res.status).toBe(200);
 
     const mine = await authedRequest(app, "/notifications", user.cookie);

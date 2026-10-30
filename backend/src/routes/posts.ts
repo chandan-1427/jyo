@@ -5,9 +5,8 @@ import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, gte, asc, desc, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
-import { uploadFile, deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
+import { deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { isValidUuid, findPostById } from "../lib/domain/finders.js";
-import { z } from "zod";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
@@ -15,32 +14,33 @@ import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../l
 import { createPostSchema, updatePostSchema } from "../lib/validation.js";
 import { ConflictError } from "../lib/errors.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
+import { parseJsonBody, uploadFromForm } from "../lib/http.js";
 
 export const postRoutes = new Hono();
+
+// The 403 for acting on someone else's post: logged in, just not allowed.
+const NOT_YOUR_POST = "You can only change your own posts";
 
 postRoutes.use("*", authMiddleware);
 
 // --- Create post ---
 postRoutes.post("/", createPostLimiter, async (c) => {
   const { userId, isDemo } = c.get("user");
-  const body = await c.req.json();
-  const result = createPostSchema.safeParse(body);
+  const parsed = await parseJsonBody(c, createPostSchema);
+  if (!parsed.ok) return parsed.response;
 
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
-
-  const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd } = result.data;
+  const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd } = parsed.data;
 
   // Only our own uploads: see isOwnUploadUrl for why.
   if (photoUrl && !isOwnUploadUrl(photoUrl, "food-photos")) {
     return c.json({ error: "Invalid input", details: { photoUrl: [FOREIGN_UPLOAD_MESSAGE] } }, 400);
   }
 
+  // A valid post the service won't take from there: a refusal, not bad input.
   if (env.APP_ENV === "production" && !isDemo && !isWithinTirupati(pickupLat, pickupLng)) {
     return c.json(
       { error: "Jyo is currently only available in Tirupati. Your location is outside the service area." },
-      400
+      403
     );
   }
 
@@ -248,26 +248,14 @@ postRoutes.post(
     onError: (c) => c.json({ error: "File is too large. Maximum size is 5MB." }, 413),
   }),
   async (c) => {
-    const body = await c.req.parseBody();
-    const file = body["file"];
-
-    if (!file || typeof file === "string") {
-      return c.json({ error: "No file provided" }, 400);
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    try {
-      const url = await uploadFile(buffer, "food-photos");
-      return c.json({ url });
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
-    }
+    const upload = await uploadFromForm(c, "food-photos");
+    if (!upload.ok) return upload.response;
+    return c.json({ url: upload.url }, 201);
   }
 );
 
 // Poster marks food as received/completed
-postRoutes.put("/:id/complete", async (c) => {
+postRoutes.post("/:id/complete", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
 
@@ -282,11 +270,11 @@ postRoutes.put("/:id/complete", async (c) => {
   }
 
   if (post.posterId !== userId) {
-    return c.json({ error: "Unauthorized" }, 403);
+    return c.json({ error: NOT_YOUR_POST }, 403);
   }
 
   if (post.status !== "closed") {
-    return c.json({ error: "Post must be closed before completing" }, 400);
+    return c.json({ error: "Post must be closed before completing" }, 409);
   }
 
   // Same double-click/concurrent-request guard as approve/reject/cancel —
@@ -299,7 +287,7 @@ postRoutes.put("/:id/complete", async (c) => {
     .returning({ id: foodPosts.id });
 
   if (!completed) {
-    return c.json({ error: "This post has already been processed" }, 400);
+    return c.json({ error: "This post has already been processed" }, 409);
   }
 
   return c.json({ message: "Post marked as completed" });
@@ -311,7 +299,8 @@ postRoutes.put("/:id/complete", async (c) => {
 const LOCKED_MESSAGE = "Someone has already asked for this food, so it can't be changed or deleted.";
 
 // --- Edit post ---
-postRoutes.put("/:id", async (c) => {
+// A PATCH: a description or photo left out keeps the current one.
+postRoutes.patch("/:id", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("id");
 
@@ -319,12 +308,8 @@ postRoutes.put("/:id", async (c) => {
     return c.json({ error: "Post not found" }, 404);
   }
 
-  const body = await c.req.json();
-  const result = updatePostSchema.safeParse(body);
-
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
+  const parsed = await parseJsonBody(c, updatePostSchema);
+  if (!parsed.ok) return parsed.response;
 
   const post = await findPostById(postId);
 
@@ -333,14 +318,14 @@ postRoutes.put("/:id", async (c) => {
   }
 
   if (post.posterId !== userId) {
-    return c.json({ error: "Unauthorized" }, 403);
+    return c.json({ error: NOT_YOUR_POST }, 403);
   }
 
   if (post.status !== "open") {
-    return c.json({ error: post.status === "expired" ? "This post has ended. Post the food again instead." : LOCKED_MESSAGE }, 400);
+    return c.json({ error: post.status === "expired" ? "This post has ended. Post the food again instead." : LOCKED_MESSAGE }, 409);
   }
 
-  const { title, description, photoUrl, pickupWindowStart, pickupWindowEnd } = result.data;
+  const { title, description, photoUrl, pickupWindowStart, pickupWindowEnd } = parsed.data;
 
   // Only our own uploads: see isOwnUploadUrl for why.
   if (photoUrl && !isOwnUploadUrl(photoUrl, "food-photos")) {
@@ -363,7 +348,7 @@ postRoutes.put("/:id", async (c) => {
     .returning();
 
   if (!updated) {
-    return c.json({ error: LOCKED_MESSAGE }, 400);
+    return c.json({ error: LOCKED_MESSAGE }, 409);
   }
 
   // A replaced photo is no longer referenced anywhere.
@@ -393,11 +378,11 @@ postRoutes.delete("/:id", async (c) => {
   }
 
   if (post.posterId !== userId) {
-    return c.json({ error: "Unauthorized" }, 403);
+    return c.json({ error: NOT_YOUR_POST }, 403);
   }
 
   if (post.status !== "open" && post.status !== "expired") {
-    return c.json({ error: LOCKED_MESSAGE }, 400);
+    return c.json({ error: LOCKED_MESSAGE }, 409);
   }
 
   // The post row is locked (FOR UPDATE) and its status re-checked inside the
@@ -432,7 +417,7 @@ postRoutes.delete("/:id", async (c) => {
     });
 
   if (!relatedRequests) {
-    return c.json({ error: LOCKED_MESSAGE }, 400);
+    return c.json({ error: LOCKED_MESSAGE }, 409);
   }
 
   if (!post.isDemo) broadcastFeedChange();

@@ -98,7 +98,7 @@ describe("GET /posts (feed)", () => {
     const beforeApproval = await (await authedRequest(app, `/posts/${post.id}`, picker.cookie)).json();
     expect(beforeApproval.post.posterName).toBeNull();
 
-    const approve = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" });
+    const approve = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
     expect(approve.status).toBe(200);
 
     const forPicker = await (await authedRequest(app, `/posts/${post.id}`, picker.cookie)).json();
@@ -190,7 +190,7 @@ describe("photo and selfie addresses", () => {
     const created = await createPostAt(poster.cookie, TIRUPATI);
 
     const res = await authedRequest(app, `/posts/${created.id}`, poster.cookie, {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify({
         title: "Rice and dal for 2",
         photoUrl: "https://tracker.example.com/pixel.jpg",
@@ -217,6 +217,17 @@ describe("photo and selfie addresses", () => {
     expect((await outside.json()).details.selfieUrl).toBeDefined();
 
     expect((await request(ownUploadUrl("selfies"))).status).toBe(201);
+  });
+
+  it("refuses a request on your own post as forbidden", async () => {
+    const poster = await createVerifiedUser(app, { email: "own-request@example.com" });
+    const created = await createPostAt(poster.cookie, TIRUPATI);
+
+    const res = await authedRequest(app, "/requests", poster.cookie, {
+      method: "POST",
+      body: JSON.stringify({ postId: created.id, pickerName: "Me", etaMinutes: 15, ...TIRUPATI }),
+    });
+    expect(res.status).toBe(403);
   });
 });
 
@@ -249,7 +260,7 @@ describe("pickup time limit", () => {
     const post = await createPostAt(poster.cookie, TIRUPATI);
 
     const res = await authedRequest(app, `/posts/${post.id}`, poster.cookie, {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify({
         title: "Rice and dal for 2",
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
@@ -260,11 +271,11 @@ describe("pickup time limit", () => {
   });
 });
 
-describe("PUT /posts/:id (edit)", () => {
+describe("PATCH /posts/:id (edit)", () => {
   const HOUR = 3_600_000;
   const edit = (cookie: string, postId: string, changes: Record<string, unknown> = {}) =>
     authedRequest(app, `/posts/${postId}`, cookie, {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify({
         title: "Rice, dal and curd for 3",
         description: "Made this afternoon",
@@ -306,10 +317,10 @@ describe("PUT /posts/:id (edit)", () => {
     const request = await createRequestFor(picker.cookie, post.id);
 
     const whilePending = await edit(poster.cookie, post.id);
-    expect(whilePending.status).toBe(400);
+    expect(whilePending.status).toBe(409);
     expect((await whilePending.json()).error).toMatch(/already asked/);
 
-    await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "PUT" });
+    await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" });
     expect((await edit(poster.cookie, post.id)).status).toBe(200);
   });
 
@@ -318,9 +329,9 @@ describe("PUT /posts/:id (edit)", () => {
     const picker = await createVerifiedUser(app, { email: "edit-approved-picker@example.com" });
     const post = await createPostAt(poster.cookie, TIRUPATI);
     const request = await createRequestFor(picker.cookie, post.id);
-    await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" });
+    await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
 
-    expect((await edit(poster.cookie, post.id)).status).toBe(400);
+    expect((await edit(poster.cookie, post.id)).status).toBe(409);
   });
 
   it("rejects editing someone else's post", async () => {
@@ -328,7 +339,9 @@ describe("PUT /posts/:id (edit)", () => {
     const other = await createVerifiedUser(app, { email: "edit-other@example.com" });
     const post = await createPostAt(poster.cookie, TIRUPATI);
 
-    expect((await edit(other.cookie, post.id)).status).toBe(403);
+    const res = await edit(other.cookie, post.id);
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("You can only change your own posts");
   });
 
   it("applies the same pickup time rules as creating a post", async () => {
@@ -359,7 +372,7 @@ describe("DELETE /posts/:id", () => {
     await createRequestFor(picker.cookie, post.id);
 
     const res = await authedRequest(app, `/posts/${post.id}`, poster.cookie, { method: "DELETE" });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
   });
 
   it("blocks deleting a closed (approved) post", async () => {
@@ -367,10 +380,10 @@ describe("DELETE /posts/:id", () => {
     const picker = await createVerifiedUser(app, { email: "delete-closed-picker@example.com" });
     const post = await createPostAt(poster.cookie, TIRUPATI);
     const request = await createRequestFor(picker.cookie, post.id);
-    await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" });
+    await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
 
     const res = await authedRequest(app, `/posts/${post.id}`, poster.cookie, { method: "DELETE" });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
   });
 
   it("blocks deleting a completed post", async () => {
@@ -378,11 +391,11 @@ describe("DELETE /posts/:id", () => {
     const picker = await createVerifiedUser(app, { email: "delete-completed-picker@example.com" });
     const post = await createPostAt(poster.cookie, TIRUPATI);
     const request = await createRequestFor(picker.cookie, post.id);
-    await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" });
-    await authedRequest(app, `/posts/${post.id}/complete`, poster.cookie, { method: "PUT" });
+    await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
+    await authedRequest(app, `/posts/${post.id}/complete`, poster.cookie, { method: "POST" });
 
     const res = await authedRequest(app, `/posts/${post.id}`, poster.cookie, { method: "DELETE" });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
   });
 
   it("rejects deleting someone else's post", async () => {

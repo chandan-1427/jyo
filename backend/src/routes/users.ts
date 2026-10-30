@@ -1,17 +1,17 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
-import { uploadFile, deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
+import { deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { uploadLimiter } from "../middleware/limiters.js";
-import { z } from "zod";
 import { updateProfileSchema } from "../lib/validation.js";
+import { parseJsonBody, uploadFromForm } from "../lib/http.js";
 
 export const userRoutes = new Hono();
 
-// Shared between the GET /me select and PUT /me's update().returning() —
+// Shared between the GET /me select and PATCH /me's update().returning() —
 // both want the same public profile shape, just via a different query.
 const profileColumns = {
   id: users.id,
@@ -46,17 +46,16 @@ userRoutes.get("/me", async (c) => {
   return c.json({ user });
 });
 
+const userGone = (c: Context) => c.json({ error: "User not found" }, 404);
+
 // --- Update own profile ---
-userRoutes.put("/me", async (c) => {
+// A PATCH: only the fields sent are changed.
+userRoutes.patch("/me", async (c) => {
   const { userId } = c.get("user");
-  const body = await c.req.json();
+  const parsed = await parseJsonBody(c, updateProfileSchema);
+  if (!parsed.ok) return parsed.response;
 
-  const result = updateProfileSchema.safeParse(body);
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
-
-  const { name, phone, locationText, description } = result.data;
+  const { name, phone, locationText, description } = parsed.data;
 
   // Build update object with only explicitly provided fields — an empty
   // string for a nullable field (locationText/description) clears it.
@@ -76,11 +75,13 @@ userRoutes.put("/me", async (c) => {
     .where(eq(users.id, userId))
     .returning(profileColumns);
 
+  if (!updatedUser) return userGone(c);
+
   return c.json({ message: "Profile updated", user: updatedUser });
 });
 
 // --- Upload/replace own avatar ---
-// Not exposed via PUT /me's updateProfileSchema: avatarUrl must only ever
+// Not exposed via PATCH /me's updateProfileSchema: avatarUrl must only ever
 // point at a file this endpoint itself uploaded to the "avatars" bucket
 // (validated by uploadFile's magic-byte check), never an arbitrary
 // client-supplied URL.
@@ -93,21 +94,9 @@ userRoutes.post(
   }),
   async (c) => {
     const { userId } = c.get("user");
-    const body = await c.req.parseBody();
-    const file = body["file"];
-
-    if (!file || typeof file === "string") {
-      return c.json({ error: "No file provided" }, 400);
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    let url: string;
-    try {
-      url = await uploadFile(buffer, "avatars");
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
-    }
+    const upload = await uploadFromForm(c, "avatars");
+    if (!upload.ok) return upload.response;
+    const { url } = upload;
 
     const [previous] = await db
       .select({ avatarUrl: users.avatarUrl })
@@ -120,6 +109,11 @@ userRoutes.post(
       .set({ avatarUrl: url })
       .where(eq(users.id, userId))
       .returning(profileColumns);
+
+    if (!updatedUser) {
+      await deleteFile(url, "avatars");
+      return userGone(c);
+    }
 
     // Best-effort — leaving the old file orphaned in storage is cheap
     // compared to failing this request over a cleanup step.
@@ -146,6 +140,8 @@ userRoutes.delete("/me/avatar", async (c) => {
     .set({ avatarUrl: null })
     .where(eq(users.id, userId))
     .returning(profileColumns);
+
+  if (!updatedUser) return userGone(c);
 
   if (previous?.avatarUrl) {
     await deleteFile(previous.avatarUrl, "avatars");

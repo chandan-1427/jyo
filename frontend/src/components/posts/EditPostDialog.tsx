@@ -38,7 +38,7 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
     mutationFn: async (values: EditValues) => {
       const photoUrl = values.photo ? await uploadImage(values.photo, "food-photos") : undefined;
       return apiFetch(`/posts/${post.id}`, {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({
           title: values.title,
           description: values.description,

@@ -57,5 +57,5 @@ export async function markNotificationsRead(
   queryClient.setQueryData<Notification[]>(notificationsKey, (prev = []) =>
     prev.map((n) => (matches(n) ? { ...n, read: true } : n))
   );
-  apiFetch(endpoint, { method: "PUT" }).catch(() => queryClient.invalidateQueries({ queryKey: notificationsKey }));
+  apiFetch(endpoint, { method: "POST" }).catch(() => queryClient.invalidateQueries({ queryKey: notificationsKey }));
 }

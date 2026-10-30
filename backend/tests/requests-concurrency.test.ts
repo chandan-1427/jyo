@@ -66,12 +66,12 @@ describe("concurrent approve", () => {
     const { poster, request, post } = await setUpPendingRequest();
 
     const [a, b] = await Promise.all([
-      authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" }),
-      authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" }),
+      authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" }),
+      authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" }),
     ]);
 
     const statuses = [a.status, b.status].sort();
-    expect(statuses).toEqual([200, 400]);
+    expect(statuses).toEqual([200, 409]);
 
     const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
     expect(finalPost.status).toBe("closed");
@@ -87,12 +87,12 @@ describe("concurrent reject", () => {
     const { poster, request, post } = await setUpPendingRequest();
 
     const [a, b] = await Promise.all([
-      authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "PUT" }),
-      authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "PUT" }),
+      authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" }),
+      authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" }),
     ]);
 
     const statuses = [a.status, b.status].sort();
-    expect(statuses).toEqual([200, 400]);
+    expect(statuses).toEqual([200, 409]);
 
     const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
     expect(finalPost.status).toBe("open");
@@ -107,12 +107,12 @@ describe("concurrent cancel", () => {
     const { picker, request, post } = await setUpPendingRequest();
 
     const [a, b] = await Promise.all([
-      authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "PUT" }),
-      authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "PUT" }),
+      authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" }),
+      authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" }),
     ]);
 
     const statuses = [a.status, b.status].sort();
-    expect(statuses).toEqual([200, 400]);
+    expect(statuses).toEqual([200, 409]);
 
     const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
     expect(finalPost.status).toBe("open");
@@ -124,11 +124,22 @@ describe("concurrent cancel", () => {
   it("cannot cancel a request that's already been approved", async () => {
     const { poster, picker, request } = await setUpPendingRequest();
 
-    const approveRes = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" });
+    const approveRes = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
     expect(approveRes.status).toBe(200);
 
-    const cancelRes = await authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "PUT" });
-    expect(cancelRes.status).toBe(400);
+    const cancelRes = await authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" });
+    expect(cancelRes.status).toBe(409);
+    expect((await cancelRes.json()).error).toBe("This request has already been approved");
+  });
+
+  // It used to always say "already been approved", whatever had happened.
+  it("says what happened to a request that was declined", async () => {
+    const { poster, picker, request } = await setUpPendingRequest();
+    await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" });
+
+    const cancelRes = await authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" });
+    expect(cancelRes.status).toBe(409);
+    expect((await cancelRes.json()).error).toBe("This request was already declined");
   });
 });
 
@@ -136,16 +147,16 @@ describe("concurrent complete", () => {
   it("only one of two simultaneous complete calls succeeds", async () => {
     const { poster, request, post } = await setUpPendingRequest();
 
-    const approveRes = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "PUT" });
+    const approveRes = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
     expect(approveRes.status).toBe(200);
 
     const [a, b] = await Promise.all([
-      authedRequest(app, `/posts/${post.id}/complete`, poster.cookie, { method: "PUT" }),
-      authedRequest(app, `/posts/${post.id}/complete`, poster.cookie, { method: "PUT" }),
+      authedRequest(app, `/posts/${post.id}/complete`, poster.cookie, { method: "POST" }),
+      authedRequest(app, `/posts/${post.id}/complete`, poster.cookie, { method: "POST" }),
     ]);
 
     const statuses = [a.status, b.status].sort();
-    expect(statuses).toEqual([200, 400]);
+    expect(statuses).toEqual([200, 409]);
 
     const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
     expect(finalPost.status).toBe("completed");
@@ -155,8 +166,8 @@ describe("concurrent complete", () => {
 describe("invalid IDs", () => {
   it("returns 404, not a 500, for a malformed request ID", async () => {
     const { poster } = await setUpPendingRequest();
-    const res = await authedRequest(app, "/requests/not-a-uuid/approve", poster.cookie, { method: "PUT" });
-    expect(res.status).toBe(400);
+    const res = await authedRequest(app, "/requests/not-a-uuid/approve", poster.cookie, { method: "POST" });
+    expect(res.status).toBe(404);
   });
 
   it("returns 404, not a 500, for a malformed post ID", async () => {
@@ -189,12 +200,12 @@ describe("delete racing a new request", () => {
       const requests = await db.select().from(pickupRequests).where(eq(pickupRequests.postId, post.id));
 
       if (deleteRes.status === 200) {
-        // 400 if it read the post before it was gone, 404 if after.
-        expect([400, 404]).toContain(requestRes.status);
+        // 409 if it read the post before it was gone, 404 if after.
+        expect([409, 404]).toContain(requestRes.status);
         expect(finalPost).toBeUndefined();
         expect(requests).toHaveLength(0);
       } else {
-        expect(deleteRes.status).toBe(400);
+        expect(deleteRes.status).toBe(409);
         expect(requestRes.status).toBe(201);
         expect(finalPost.status).toBe("pending_approval");
         expect(requests).toHaveLength(1);

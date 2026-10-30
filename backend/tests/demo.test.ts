@@ -83,6 +83,17 @@ describe("POST /auth/demo/start and /stop", () => {
     expect(dbUser.demoExpiresAt).toBeNull();
   });
 
+  // A cookie can outlive its account; re-signing a token for no one used to
+  // crash with a 500.
+  it("logs out a session whose account no longer exists", async () => {
+    const user = await createVerifiedUser(app, { email: "gone@example.com" });
+    await db.delete(users).where(eq(users.id, user.userId));
+
+    const res = await authedRequest(app, "/auth/demo/start", user.cookie, { method: "POST" });
+    expect(res.status).toBe(401);
+    expect(res.headers.get("set-cookie")).toMatch(/^token=;/);
+  });
+
   // Regression: demo rows outlive the session until the cleanup cron, and
   // the lists only filtered on ownership, so exiting early left demo posts,
   // requests and notifications showing in the user's normal feed and lists.

@@ -11,11 +11,17 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
+  // A link works once, so this must run once: never retried, and never
+  // refetched (on refocus, say), which would send the used token again and
+  // turn a success into "invalid link".
   const { data, isPending, error } = useQuery({
     queryKey: ["auth", "verify-email", token],
-    queryFn: () => apiFetch(`/auth/verify-email?token=${token}`),
+    queryFn: () => apiFetch("/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) }),
     enabled: !!token,
     retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const status = !token ? "error" : isPending ? "loading" : error ? "error" : "success";

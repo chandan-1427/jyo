@@ -3,6 +3,7 @@ import { fileTypeFromBuffer } from "file-type";
 import crypto from "crypto";
 import { env } from "../env.js";
 import { logger } from "./logger.js";
+import { UploadRejectedError } from "./errors.js";
 
 const supabase = createClient(
   env.SUPABASE_URL,
@@ -39,15 +40,16 @@ export async function uploadFile(
   bucket: "food-photos" | "selfies" | "avatars"
 ): Promise<string> {
   if (buffer.length > MAX_FILE_SIZE_BYTES) {
-    throw new Error("File is too large. Maximum size is 5MB.");
+    throw new UploadRejectedError("File is too large. Maximum size is 5MB.", 413);
   }
 
   const detected = await fileTypeFromBuffer(buffer);
   const ext = detected && ALLOWED_MIME_TYPES[detected.mime];
 
   if (!ext) {
-    throw new Error(
-      "Unsupported or unrecognized file type. Only JPEG, PNG, WEBP, and HEIC images are allowed."
+    throw new UploadRejectedError(
+      "Unsupported or unrecognized file type. Only JPEG, PNG, WEBP, and HEIC images are allowed.",
+      400
     );
   }
 
@@ -60,7 +62,9 @@ export async function uploadFile(
       upsert: false,
     });
 
-  if (error) throw new Error(`Upload failed: ${error.message}`);
+  // Storage's own failure, not the file's: a 500 from app.onError, which
+  // reports it. Its message stays in the logs, never in the response.
+  if (error) throw new Error(`Upload to ${bucket} failed: ${error.message}`);
 
   const { data } = supabase.storage
     .from(bucket)
