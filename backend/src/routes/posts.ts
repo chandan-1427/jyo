@@ -11,10 +11,10 @@ import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/domain/demo.js";
-import { createPostSchema, updatePostSchema } from "../lib/validation.js";
+import { createPostSchema, feedQuerySchema, updatePostSchema } from "../lib/validation.js";
 import { ConflictError } from "../lib/errors.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
-import { parseJsonBody, uploadFromForm } from "../lib/http.js";
+import { parseJsonBody, parseQuery, uploadFromForm } from "../lib/http.js";
 
 export const postRoutes = new Hono();
 
@@ -76,14 +76,14 @@ postRoutes.post("/", createPostLimiter, async (c) => {
 });
 
 // --- Get feed ---
+// The app sends lat/lng rounded to about 1 km: plenty for a 20 km radius,
+// and the URL (kept in proxy and hosting logs) never carries an exact spot.
 postRoutes.get("/", async (c) => {
   const { userId, isDemo } = c.get("user");
-  const userLat = parseFloat(c.req.query("lat") ?? "");
-  const userLng = parseFloat(c.req.query("lng") ?? "");
+  const query = parseQuery(c, feedQuerySchema);
+  if (!query.ok) return query.response;
 
-  if (isNaN(userLat) || isNaN(userLng)) {
-    return c.json({ error: "lat and lng query parameters are required" }, 400);
-  }
+  const { lat: userLat, lng: userLng } = query.data;
 
   if (isDemo) {
     await provisionSeededPost(userId, userLat, userLng);
@@ -241,7 +241,7 @@ postRoutes.get("/:id", async (c) => {
 });
 
 postRoutes.post(
-  "/upload",
+  "/photos",
   uploadLimiter,
   bodyLimit({
     maxSize: MAX_UPLOAD_REQUEST_BYTES,

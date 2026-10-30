@@ -1,5 +1,5 @@
-import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useLinkToken } from "@/lib/useLinkToken";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { AuthLayout } from "@/components/auth/AuthLayout";
@@ -8,8 +8,7 @@ import { Notice } from "@/components/ui/Notice";
 import { TextLink } from "@/components/ui/TextLink";
 
 export default function VerifyEmail() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const token = useLinkToken();
 
   // A link works once, so this must run once: never retried, and never
   // refetched (on refocus, say), which would send the used token again and

@@ -153,6 +153,34 @@ describe("GET /posts (feed)", () => {
     const res = await authedRequest(app, "/posts", viewer.cookie);
     expect(res.status).toBe(400);
   });
+
+  // Regression: a bare parseFloat took "13abc" as 13 and let Infinity and
+  // out-of-range values through (and a demo visitor's sample post is placed
+  // at these coordinates).
+  it("refuses coordinates that aren't plain numbers in range", async () => {
+    const viewer = await createVerifiedUser(app, { email: "bad-coords@example.com" });
+    const feed = (lat: string, lng: string) =>
+      authedRequest(app, `/posts?${new URLSearchParams({ lat, lng })}`, viewer.cookie);
+
+    for (const [lat, lng] of [
+      ["13abc", "79.42"],
+      ["Infinity", "79.42"],
+      ["1e3", "79.42"],
+      ["91", "79.42"],
+      ["13.63", "-181"],
+      ["", "79.42"],
+    ]) {
+      const res = await feed(lat, lng);
+      expect(res.status, `lat=${lat} lng=${lng}`).toBe(400);
+      expect((await res.json()).error).toBe("Invalid query");
+    }
+  });
+
+  it("accepts coordinates rounded to two decimals, as the app sends them", async () => {
+    const viewer = await createVerifiedUser(app, { email: "rounded-coords@example.com" });
+    const res = await authedRequest(app, "/posts?lat=13.63&lng=79.42", viewer.cookie);
+    expect(res.status).toBe(200);
+  });
 });
 
 describe("photo and selfie addresses", () => {

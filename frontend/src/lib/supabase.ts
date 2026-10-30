@@ -9,8 +9,8 @@ export async function uploadImage(
 
   const endpoint =
     bucket === "food-photos"
-      ? "/posts/upload"
-      : "/requests/upload-selfie";
+      ? "/posts/photos"
+      : "/requests/selfies";
 
   const res = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
     method: "POST",

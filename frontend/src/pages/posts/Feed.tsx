@@ -40,13 +40,18 @@ export default function Feed() {
   // the backend's own geofence bypass takes over. See docs/demo-mode-plan.md.
   const outOfRegion = !!coords && !user?.isDemo && !isWithinTirupati(coords.lat, coords.lng);
 
+  // Sent rounded to 2 decimals (about 1 km): plenty for a 20 km radius, and
+  // the request URL, which proxy and hosting logs keep, never holds an exact
+  // spot. Keying on it also stops GPS jitter from refetching the feed.
+  const approx = coords && { lat: coords.lat.toFixed(2), lng: coords.lng.toFixed(2) };
+
   const {
     data,
     error: fetchError,
     isPending: postsLoading,
   } = useQuery<{ posts: FoodPost[] }>({
-    queryKey: ["posts", "feed", coords?.lat, coords?.lng],
-    queryFn: () => apiFetch(`/posts?lat=${coords!.lat}&lng=${coords!.lng}`),
+    queryKey: ["posts", "feed", approx?.lat, approx?.lng],
+    queryFn: () => apiFetch(`/posts?${new URLSearchParams(approx!)}`),
     enabled: !!coords && !outOfRegion,
     // The server pushes a "feed" event whenever a post changes (see
     // Navbar.tsx), so this is only a backstop for a connection that died

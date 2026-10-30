@@ -50,19 +50,27 @@ describe("photo and selfie uploads", () => {
   it("answers a stored upload with 201 and its address", async () => {
     const user = await createVerifiedUser(app, { email: "uploader@example.com" });
 
-    for (const path of ["/posts/upload", "/requests/upload-selfie"]) {
+    for (const path of ["/posts/photos", "/requests/selfies"]) {
       const res = await upload(path, user.cookie, { bytes: PNG, type: "image/png" });
       expect(res.status, path).toBe(201);
       expect((await res.json()).url).toMatch(/^https:\/\/storage\.test\/.+\.png$/);
     }
   });
 
+  it("no longer answers at the old upload paths", async () => {
+    const user = await createVerifiedUser(app, { email: "old-paths@example.com" });
+    for (const path of ["/posts/upload", "/requests/upload-selfie"]) {
+      const res = await upload(path, user.cookie, { bytes: PNG, type: "image/png" });
+      expect(res.status, path).toBe(404);
+    }
+  });
+
   it("rejects a missing file and a file that isn't an allowed image with 400", async () => {
     const user = await createVerifiedUser(app, { email: "bad-file@example.com" });
 
-    expect((await upload("/posts/upload", user.cookie)).status).toBe(400);
+    expect((await upload("/posts/photos", user.cookie)).status).toBe(400);
 
-    const notImage = await upload("/posts/upload", user.cookie, {
+    const notImage = await upload("/posts/photos", user.cookie, {
       bytes: Buffer.from("<html>not an image</html>"),
       type: "image/jpeg",
     });
@@ -77,7 +85,7 @@ describe("photo and selfie uploads", () => {
     storageUpload.mockResolvedValue({ error: { message: "bucket quota exceeded (internal detail)" } });
     const user = await createVerifiedUser(app, { email: "storage-down@example.com" });
 
-    for (const path of ["/posts/upload", "/requests/upload-selfie", "/users/me/avatar"]) {
+    for (const path of ["/posts/photos", "/requests/selfies", "/users/me/avatar"]) {
       const res = await upload(path, user.cookie, { bytes: PNG, type: "image/png" });
       expect(res.status, path).toBe(500);
       const body = await res.json();

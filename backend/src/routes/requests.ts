@@ -367,7 +367,7 @@ requestRoutes.get("/mine", async (c) => {
 });
 
 requestRoutes.post(
-  "/upload-selfie",
+  "/selfies",
   uploadLimiter,
   bodyLimit({
     maxSize: MAX_UPLOAD_REQUEST_BYTES,
