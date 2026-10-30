@@ -250,7 +250,7 @@ export default function Profile() {
 
   const saveMutation = useMutation({
     mutationFn: (formData: ProfileValues) =>
-      apiFetch("/users/me", { method: "PUT", body: JSON.stringify(formData) }),
+      apiFetch("/users/me", { method: "PATCH", body: JSON.stringify(formData) }),
     onSuccess: (data) => {
       queryClient.setQueryData(authMeKey, data.user);
       reset(toFormValues(data.user));

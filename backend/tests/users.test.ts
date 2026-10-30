@@ -7,7 +7,10 @@ vi.mock("../src/lib/mailer.js", () => ({
   notifyPicker: vi.fn(),
 }));
 
+import { eq } from "drizzle-orm";
 import { createApp } from "../src/app.js";
+import { db } from "../src/db/index.js";
+import { users } from "../src/db/schema.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
 
@@ -40,12 +43,12 @@ describe("GET /users/me", () => {
   });
 });
 
-describe("PUT /users/me", () => {
+describe("PATCH /users/me", () => {
   it("updates the provided fields and leaves others untouched", async () => {
     const user = await createVerifiedUser(app, { email: "editor@example.com" });
 
     const res = await authedRequest(app, "/users/me", user.cookie, {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify({ locationText: "Balaji Nagar, Tirupati", description: "Student, loves biryani" }),
     });
     expect(res.status).toBe(200);
@@ -63,16 +66,27 @@ describe("PUT /users/me", () => {
   it("rejects an empty update body", async () => {
     const user = await createVerifiedUser(app, { email: "empty-update@example.com" });
     const res = await authedRequest(app, "/users/me", user.cookie, {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
   });
 
+  it("is a 404, not an empty success, when the account no longer exists", async () => {
+    const user = await createVerifiedUser(app, { email: "gone-update@example.com" });
+    await db.delete(users).where(eq(users.id, user.userId));
+
+    const res = await authedRequest(app, "/users/me", user.cookie, {
+      method: "PATCH",
+      body: JSON.stringify({ name: "Someone" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
   it("rejects an invalid field value", async () => {
     const user = await createVerifiedUser(app, { email: "invalid-update@example.com" });
     const res = await authedRequest(app, "/users/me", user.cookie, {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify({ name: "a" }), // below min length 2
     });
     expect(res.status).toBe(400);

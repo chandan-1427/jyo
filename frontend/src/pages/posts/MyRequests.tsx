@@ -245,7 +245,7 @@ export default function MyRequests() {
           busyLabel="Cancelling…"
           tone="danger"
           onConfirm={async () => {
-            await apiFetch(`/requests/${cancelling.id}/cancel`, { method: "PUT" });
+            await apiFetch(`/requests/${cancelling.id}/cancel`, { method: "POST" });
             queryClient.invalidateQueries({ queryKey: ["requests", "mine"] });
             queryClient.invalidateQueries({ queryKey: ["posts"] });
           }}

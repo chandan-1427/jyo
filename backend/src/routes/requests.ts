@@ -6,9 +6,8 @@ import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/geo/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
-import { uploadFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
+import { isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
 import { createRequestLimiter, uploadLimiter } from "../middleware/limiters.js";
-import { z } from "zod";
 import { createNotification } from "../lib/notifications/notify.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
@@ -18,22 +17,32 @@ import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
 import { createRequestSchema } from "../lib/validation.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
+import { parseJsonBody, uploadFromForm } from "../lib/http.js";
 
 export const requestRoutes = new Hono();
 
 requestRoutes.use("*", authMiddleware);
 
+// Someone else claimed the post first, or it closed: the request itself was
+// fine, it just conflicts with where the post is now (409).
+const NO_LONGER_AVAILABLE = "This post is no longer available for requests";
+const ALREADY_PROCESSED = "This request has already been processed";
+
+// What the request already became, for cancelling one that's no longer
+// waiting.
+const ALREADY: Record<string, string> = {
+  approved: "This request has already been approved",
+  rejected: "This request was already declined",
+  cancelled: "This request was already cancelled",
+};
+
 // --- Submit pickup request ---
 requestRoutes.post("/", createRequestLimiter, async (c) => {
   const { userId, isDemo } = c.get("user");
-  const body = await c.req.json();
-  const result = createRequestSchema.safeParse(body);
+  const parsed = await parseJsonBody(c, createRequestSchema);
+  if (!parsed.ok) return parsed.response;
 
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
-
-  const { postId, pickerName, selfieUrl, etaMinutes, lat, lng } = result.data;
+  const { postId, pickerName, selfieUrl, etaMinutes, lat, lng } = parsed.data;
 
   // Only our own uploads: see isOwnUploadUrl for why.
   if (selfieUrl && !isOwnUploadUrl(selfieUrl, "selfies")) {
@@ -42,28 +51,25 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
 
   const post = await findPostById(postId);
 
-  if (!post) {
+  // Demo posts are seeded for one specific visitor's session and
+  // auto-approve unconditionally below — anyone else requesting one would
+  // get a fake "approved" post for food that doesn't exist. To anyone else
+  // it's as if it isn't there.
+  if (!post || (post.isDemo && post.seededForUserId !== userId)) {
     return c.json({ error: "Post not found" }, 404);
   }
 
   if (post.posterId === userId) {
-    return c.json({ error: "You cannot request your own food post" }, 400);
-  }
-
-  // Demo posts are seeded for one specific visitor's session and
-  // auto-approve unconditionally below — anyone else requesting one would
-  // get a fake "approved" post for food that doesn't exist.
-  if (post.isDemo && post.seededForUserId !== userId) {
-    return c.json({ error: "This post is no longer available for requests" }, 400);
+    return c.json({ error: "You cannot request your own food post" }, 403);
   }
 
   if (post.status !== "open") {
-    return c.json({ error: "This post is no longer available for requests" }, 400);
+    return c.json({ error: NO_LONGER_AVAILABLE }, 409);
   }
 
   const distance = haversineDistance(lat, lng, post.pickupLat, post.pickupLng);
   if (env.APP_ENV === "production" && !isDemo && distance > 20) {
-    return c.json({ error: "You are too far from this post to request it" }, 400);
+    return c.json({ error: "You are too far from this post to request it" }, 403);
   }
 
   // Atomically claim the post — the status condition in the WHERE clause
@@ -84,7 +90,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   });
 
   if (!request) {
-    return c.json({ error: "This post is no longer available for requests" }, 400);
+    return c.json({ error: NO_LONGER_AVAILABLE }, 409);
   }
 
   const posterEmail = await findUserEmail(post.posterId);
@@ -122,12 +128,12 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
 });
 
 // --- Approve request ---
-requestRoutes.put("/:id/approve", async (c) => {
+requestRoutes.post("/:id/approve", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
   if (!isValidUuid(requestId)) {
-    return c.json({ error: "Invalid request ID" }, 400);
+    return c.json({ error: "Request not found" }, 404);
   }
 
   const request = await findRequestById(requestId);
@@ -143,11 +149,11 @@ requestRoutes.put("/:id/approve", async (c) => {
   }
 
   if (post.posterId !== userId) {
-    return c.json({ error: "Unauthorized" }, 403);
+    return c.json({ error: "Only the poster can answer this request" }, 403);
   }
 
   if (post.status !== "pending_approval") {
-    return c.json({ error: "This post is not awaiting approval" }, 400);
+    return c.json({ error: "This post is not awaiting approval" }, 409);
   }
 
   // Two concurrent approve calls (e.g. a double-click) could both pass the
@@ -158,7 +164,7 @@ requestRoutes.put("/:id/approve", async (c) => {
   const approved = await approveRequestTx(requestId, request.postId);
 
   if (!approved) {
-    return c.json({ error: "This request has already been processed" }, 400);
+    return c.json({ error: ALREADY_PROCESSED }, 409);
   }
 
   const pickerEmail = await findUserEmail(request.pickerId);
@@ -175,19 +181,17 @@ requestRoutes.put("/:id/approve", async (c) => {
   if (pickerEmail && !isSyntheticEmail(pickerEmail)) notifyPicker(pickerEmail, "request_approved");
   // The post leaves everyone's feed.
   if (!request.isDemo) broadcastFeedChange();
-  // duplicate `await notifyPicker(...)` call removed — was sending this
-  // email twice on every approval
 
   return c.json({ message: "Request approved" });
 });
 
 // --- Reject request ---
-requestRoutes.put("/:id/reject", async (c) => {
+requestRoutes.post("/:id/reject", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
   if (!isValidUuid(requestId)) {
-    return c.json({ error: "Invalid request ID" }, 400);
+    return c.json({ error: "Request not found" }, 404);
   }
 
   const request = await findRequestById(requestId);
@@ -203,11 +207,11 @@ requestRoutes.put("/:id/reject", async (c) => {
   }
 
   if (post.posterId !== userId) {
-    return c.json({ error: "Unauthorized" }, 403);
+    return c.json({ error: "Only the poster can answer this request" }, 403);
   }
 
   if (post.status !== "pending_approval") {
-    return c.json({ error: "This post is not awaiting approval" }, 400);
+    return c.json({ error: "This post is not awaiting approval" }, 409);
   }
 
   const rejected = await db
@@ -235,7 +239,7 @@ requestRoutes.put("/:id/reject", async (c) => {
     });
 
   if (!rejected) {
-    return c.json({ error: "This request has already been processed" }, 400);
+    return c.json({ error: ALREADY_PROCESSED }, 409);
   }
 
   const pickerEmail = await findUserEmail(request.pickerId);
@@ -252,18 +256,17 @@ requestRoutes.put("/:id/reject", async (c) => {
   if (pickerEmail && !isSyntheticEmail(pickerEmail)) notifyPicker(pickerEmail, "request_rejected");
   // The post is open again.
   if (!request.isDemo) broadcastFeedChange();
-  // duplicate call removed here too
 
   return c.json({ message: "Request rejected" });
 });
 
 // --- Cancel request ---
-requestRoutes.put("/:id/cancel", async (c) => {
+requestRoutes.post("/:id/cancel", async (c) => {
   const { userId } = c.get("user");
   const requestId = c.req.param("id");
 
   if (!isValidUuid(requestId)) {
-    return c.json({ error: "Invalid request ID" }, 400);
+    return c.json({ error: "Request not found" }, 404);
   }
 
   const request = await findRequestById(requestId);
@@ -273,11 +276,11 @@ requestRoutes.put("/:id/cancel", async (c) => {
   }
 
   if (request.pickerId !== userId) {
-    return c.json({ error: "Unauthorized" }, 403);
+    return c.json({ error: "You can only cancel your own requests" }, 403);
   }
 
   if (request.status !== "pending") {
-    return c.json({ error: "Cannot cancel a request that has already been approved" }, 400);
+    return c.json({ error: ALREADY[request.status] ?? ALREADY_PROCESSED }, 409);
   }
 
   const cancelled = await db
@@ -305,30 +308,29 @@ requestRoutes.put("/:id/cancel", async (c) => {
     });
 
   if (!cancelled) {
-    return c.json({ error: "This request has already been processed" }, 400);
+    return c.json({ error: ALREADY_PROCESSED }, 409);
   }
 
+  // The cancel has already gone through; the post only decides who to tell.
   const post = await findPostById(request.postId);
 
-  if (!post) {
-    return c.json({ error: "Post not found" }, 404);
+  if (post) {
+    const posterEmail = await findUserEmail(post.posterId);
+    const demoExpiresAt = request.isDemo ? request.demoExpiresAt ?? undefined : undefined;
+
+    createNotification(
+      post.posterId,
+      "A picker cancelled their request. Your post is open again.",
+      request.postId,
+      "request_cancelled",
+      demoExpiresAt
+    ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_cancelled notification"));
+
+    if (posterEmail && !isSyntheticEmail(posterEmail)) notifyPoster(posterEmail, "request_cancelled");
   }
 
-  const posterEmail = await findUserEmail(post.posterId);
-  const demoExpiresAt = request.isDemo ? request.demoExpiresAt ?? undefined : undefined;
-
-  createNotification(
-    post.posterId,
-    "A picker cancelled their request. Your post is open again.",
-    request.postId,
-    "request_cancelled",
-    demoExpiresAt
-  ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create request_cancelled notification"));
-
-  if (posterEmail && !isSyntheticEmail(posterEmail)) notifyPoster(posterEmail, "request_cancelled");
   // The post is open again.
   if (!request.isDemo) broadcastFeedChange();
-  // duplicate call removed here too
 
   return c.json({ message: "Request cancelled" });
 });
@@ -372,20 +374,8 @@ requestRoutes.post(
     onError: (c) => c.json({ error: "File is too large. Maximum size is 5MB." }, 413),
   }),
   async (c) => {
-    const body = await c.req.parseBody();
-    const file = body["file"];
-
-    if (!file || typeof file === "string") {
-      return c.json({ error: "No file provided" }, 400);
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    try {
-      const url = await uploadFile(buffer, "selfies");
-      return c.json({ url });
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : "Upload failed" }, 400);
-    }
+    const upload = await uploadFromForm(c, "selfies");
+    if (!upload.ok) return upload.response;
+    return c.json({ url: upload.url }, 201);
   }
 );

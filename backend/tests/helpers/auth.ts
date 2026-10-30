@@ -4,6 +4,14 @@ import { sendVerificationEmail } from "../../src/lib/mailer.js";
 
 let counter = 0;
 
+export function verifyEmail(app: Hono, token: string) {
+  return app.request("/auth/verify-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+}
+
 // Registers, captures the verification token from the mocked mailer call,
 // verifies, and logs in — returning the session cookie needed to call
 // authenticated routes plus the user's id (read back via /users/me).
@@ -27,7 +35,7 @@ export async function createVerifiedUser(app: Hono, overrides: Partial<{ name: s
   if (!call) throw new Error("sendVerificationEmail was never called during test user setup");
   const [, token] = call;
 
-  await app.request(`/auth/verify-email?token=${token}`);
+  await verifyEmail(app, token);
 
   const loginRes = await app.request("/auth/login", {
     method: "POST",

@@ -56,8 +56,12 @@ export const resendVerificationSchema = z.object({
   email: fields.email,
 });
 
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Verification token is required"),
+});
+
 // ─── Profile ─────────────────────────────────────────────────────────────────
-// Every field optional: PUT /users/me updates only what it's sent.
+// Every field optional: PATCH /users/me updates only what it's sent.
 export const updateProfileSchema = z.object({
   name: fields.name.optional(),
   phone: fields.phone.optional(),
@@ -108,7 +112,8 @@ export const createPostSchema = z
   .refine(endWithinLimit, WITHIN_LIMIT);
 
 // The pickup spot can't be edited: it was checked against the service area
-// when the post was made. Omitting photoUrl or description keeps the current one.
+// when the post was made. Omitting photoUrl or description keeps the current
+// one, which is why editing is a PATCH rather than a PUT.
 export const updatePostSchema = z
   .object(postFields)
   .refine(endAfterStart, { message: "End time must be after start time", path: ["pickupWindowEnd"] })

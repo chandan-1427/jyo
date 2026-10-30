@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
@@ -7,7 +7,6 @@ import { users } from "../db/schema.js";
 import { eq, and, lt } from "drizzle-orm";
 import crypto from "crypto";
 import { forgotPasswordLimiter, resetPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
-import { z } from "zod";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -23,7 +22,9 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   resendVerificationSchema,
+  verifyEmailSchema,
 } from "../lib/validation.js";
+import { parseJsonBody } from "../lib/http.js";
 
 export const authRoutes = new Hono();
 
@@ -52,14 +53,10 @@ const cookieOptions = {
 
 // --- Register ---
 authRoutes.post("/register", registerLimiter, async (c) => {
-  const body = await c.req.json();
-  const result = registerSchema.safeParse(body);
-  
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
+  const parsed = await parseJsonBody(c, registerSchema);
+  if (!parsed.ok) return parsed.response;
 
-  const { name, email, password, phone } = result.data;
+  const { name, email, password, phone } = parsed.data;
 
   const existing = await findUserByEmail(email);
 
@@ -73,7 +70,7 @@ authRoutes.post("/register", registerLimiter, async (c) => {
     existing.verificationTokenExpiry < new Date();
 
   if (existing && !reclaimable) {
-    return c.json({ error: "Email already registered" }, 400);
+    return c.json({ error: "Email already registered" }, 409);
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -99,7 +96,7 @@ authRoutes.post("/register", registerLimiter, async (c) => {
       .returning({ id: users.id, name: users.name, email: users.email });
 
     if (!updated) {
-      return c.json({ error: "Email already registered" }, 400);
+      return c.json({ error: "Email already registered" }, 409);
     }
     newUser = updated;
   } else {
@@ -115,7 +112,7 @@ authRoutes.post("/register", registerLimiter, async (c) => {
       // DrizzleQueryError with the original PostgresError on `.cause`, so
       // the unique-violation code has to be checked on both.
       if (err?.code === "23505" || err?.cause?.code === "23505") {
-        return c.json({ error: "Email already registered" }, 400);
+        return c.json({ error: "Email already registered" }, 409);
       }
       throw err;
     }
@@ -133,14 +130,10 @@ authRoutes.post("/register", registerLimiter, async (c) => {
 
 // --- Login ---
 authRoutes.post("/login", loginLimiter, async (c) => {
-  const body = await c.req.json();
-  const result = loginSchema.safeParse(body);
+  const parsed = await parseJsonBody(c, loginSchema);
+  if (!parsed.ok) return parsed.response;
 
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
-
-  const { email, password } = result.data;
+  const { email, password } = parsed.data;
 
   // Find user
   const user = await findUserByEmail(email);
@@ -185,6 +178,13 @@ authRoutes.post("/logout", (c) => {
   return c.json({ message: "Logged out successfully" });
 });
 
+// A still-valid cookie whose account has since been removed: log it out
+// rather than crash re-signing a token for no one.
+const accountGone = (c: Context) => {
+  deleteCookie(c, "token", cookieOptions);
+  return c.json({ error: "Your account no longer exists" }, 401);
+};
+
 // --- Start demo mode ---
 // Anyone can opt in — visitors outside Tirupati who hit a dead end at the
 // feed, and Tirupati locals exploring the app while there are few real
@@ -199,6 +199,8 @@ authRoutes.post("/demo/start", authMiddleware, async (c) => {
     .set({ isDemo: true, demoExpiresAt })
     .where(eq(users.id, userId))
     .returning({ id: users.id, name: users.name, email: users.email, isDemo: users.isDemo });
+
+  if (!updated) return accountGone(c);
 
   const token = await new SignJWT({ userId: updated.id, email: updated.email, isDemo: true })
     .setProtectedHeader({ alg: "HS256" })
@@ -223,6 +225,8 @@ authRoutes.post("/demo/stop", authMiddleware, async (c) => {
     .where(eq(users.id, userId))
     .returning({ id: users.id, name: users.name, email: users.email, isDemo: users.isDemo });
 
+  if (!updated) return accountGone(c);
+
   const token = await new SignJWT({ userId: updated.id, email: updated.email, isDemo: false })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
@@ -234,12 +238,13 @@ authRoutes.post("/demo/stop", authMiddleware, async (c) => {
 });
 
 // --- Verify email ---
-authRoutes.get("/verify-email", async (c) => {
-  const token = c.req.query("token");
+// A POST, since it changes the account. The email's link opens the app's
+// /verify-email page, which sends the token here.
+authRoutes.post("/verify-email", async (c) => {
+  const parsed = await parseJsonBody(c, verifyEmailSchema);
+  if (!parsed.ok) return parsed.response;
 
-  if (!token) {
-    return c.json({ error: "Token is required" }, 400);
-  }
+  const { token } = parsed.data;
 
   const [user] = await db
     .select()
@@ -265,14 +270,10 @@ authRoutes.get("/verify-email", async (c) => {
 
 // --- Forgot password ---
 authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
-  const body = await c.req.json();
-  const result = forgotPasswordSchema.safeParse(body);
+  const parsed = await parseJsonBody(c, forgotPasswordSchema);
+  if (!parsed.ok) return parsed.response;
 
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
-
-  const { email } = result.data;
+  const { email } = parsed.data;
 
   const user = await findUserByEmail(email);
 
@@ -297,14 +298,10 @@ authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
 
 // --- Reset password ---
 authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
-  const body = await c.req.json();
-  const result = resetPasswordSchema.safeParse(body);
+  const parsed = await parseJsonBody(c, resetPasswordSchema);
+  if (!parsed.ok) return parsed.response;
 
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
-
-  const { token, password } = result.data;
+  const { token, password } = parsed.data;
 
   const [user] = await db
     .select()
@@ -331,25 +328,21 @@ authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
   return c.json({ message: "Password reset successfully. You can now log in." });
 });
 
+// The same answer whether the email has no account, a verified one, or one
+// waiting to be verified, so this can't be used to find out which emails
+// have accounts (as with forgot-password). Only the last gets an email.
+const RESEND_MESSAGE = "If that email has an account waiting to be verified, a new link is on its way. Please check your inbox.";
+
 authRoutes.post("/resend-verification", resendVerificationLimiter, async (c) => {
-  const body = await c.req.json();
-  const result = resendVerificationSchema.safeParse(body);
+  const parsed = await parseJsonBody(c, resendVerificationSchema);
+  if (!parsed.ok) return parsed.response;
 
-  if (!result.success) {
-    return c.json({ error: "Invalid input", details: z.flattenError(result.error).fieldErrors }, 400);
-  }
-
-  const { email } = result.data;
+  const { email } = parsed.data;
 
   const user = await findUserByEmail(email);
 
-  // Always return success even if user not found
-  if (!user) {
-    return c.json({ message: "If that email is registered you will receive a new verification link." });
-  }
-
-  if (user.emailVerified) {
-    return c.json({ error: "This email is already verified. Please log in." }, 400);
+  if (!user || user.emailVerified) {
+    return c.json({ message: RESEND_MESSAGE });
   }
 
   // Generate new token
@@ -364,5 +357,5 @@ authRoutes.post("/resend-verification", resendVerificationLimiter, async (c) => 
   sendVerificationEmail(email, verificationToken)
     .catch((err) => logger.error({ err, userId: user.id }, "Resend verification failed"));
 
-  return c.json({ message: "Verification email sent. Please check your inbox." });
+  return c.json({ message: RESEND_MESSAGE });
 });

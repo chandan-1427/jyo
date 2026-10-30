@@ -63,7 +63,7 @@ notificationRoutes.get("/", async (c) => {
 
 // Mark one as read, when it's opened. Matching on userId as well as id means
 // one user can't mark another's; either way it's a plain 404.
-notificationRoutes.put("/:id/read", async (c) => {
+notificationRoutes.post("/:id/read", async (c) => {
   const { userId } = c.get("user");
   const notificationId = c.req.param("id");
 
@@ -88,7 +88,7 @@ notificationRoutes.put("/:id/read", async (c) => {
 // (from My posts, My requests, the feed or a link): seeing the post is
 // dealing with what they said. Only ever the current user's. A post with
 // none to mark is fine, so it's not a 404; only a malformed id is.
-notificationRoutes.put("/post/:postId/read", async (c) => {
+notificationRoutes.post("/post/:postId/read", async (c) => {
   const { userId } = c.get("user");
   const postId = c.req.param("postId");
 
@@ -108,7 +108,7 @@ notificationRoutes.put("/post/:postId/read", async (c) => {
 });
 
 // Mark all as read
-notificationRoutes.put("/read-all", async (c) => {
+notificationRoutes.post("/read-all", async (c) => {
   const { userId } = c.get("user");
 
   await db

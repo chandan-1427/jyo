@@ -62,7 +62,7 @@ describe("live feed updates", () => {
     const { request } = await requestRes.json();
     expect(feedPings()).toBe(2);
 
-    const reject = await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "PUT" });
+    const reject = await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" });
     expect(reject.status).toBe(200);
     expect(feedPings()).toBe(3);
   });

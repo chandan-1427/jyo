@@ -117,7 +117,7 @@ function VisitorPanel({
             busyLabel="Cancelling…"
             tone="danger"
             onConfirm={async () => {
-              await apiFetch(`/requests/${myRequest.id}/cancel`, { method: "PUT" });
+              await apiFetch(`/requests/${myRequest.id}/cancel`, { method: "POST" });
               queryClient.invalidateQueries({ queryKey: ["posts", post.id] });
               queryClient.invalidateQueries({ queryKey: ["requests", "mine"] });
             }}
@@ -198,15 +198,15 @@ function PosterPanel({ post, pendingRequest }: { post: Post; pendingRequest: Pic
     queryClient.invalidateQueries({ queryKey: ["posts", "mine"] });
   };
   const approve = useMutation({
-    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/approve`, { method: "PUT" }),
+    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/approve`, { method: "POST" }),
     onSuccess: refresh,
   });
   const decline = useMutation({
-    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/reject`, { method: "PUT" }),
+    mutationFn: (requestId: string) => apiFetch(`/requests/${requestId}/reject`, { method: "POST" }),
     onSuccess: refresh,
   });
   const complete = useMutation({
-    mutationFn: () => apiFetch(`/posts/${post.id}/complete`, { method: "PUT" }),
+    mutationFn: () => apiFetch(`/posts/${post.id}/complete`, { method: "POST" }),
     onSuccess: refresh,
   });
 
