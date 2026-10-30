@@ -79,6 +79,23 @@ export const createRequestSchema = z.object({
   lng: z.number().min(-180).max(180),
 });
 
+// ─── Feed ────────────────────────────────────────────────────────────────────
+// A plain decimal number in range, from the query string: "13abc", "Infinity", "1e9"
+// and an empty value are all refused (a bare parseFloat let them through,
+// and a demo visitor's sample post is placed at these coordinates).
+const queryCoordinate = (min: number, max: number) =>
+  z
+    .string()
+    .trim()
+    .regex(/^-?\d+(\.\d+)?$/, "Must be a number")
+    .transform(Number)
+    .pipe(z.number().min(min).max(max));
+
+export const feedQuerySchema = z.object({
+  lat: queryCoordinate(-90, 90),
+  lng: queryCoordinate(-180, 180),
+});
+
 // ─── Create / edit post ──────────────────────────────────────────────────────
 const postFields = {
   title: fields.title,

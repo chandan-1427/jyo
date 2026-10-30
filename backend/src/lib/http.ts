@@ -27,6 +27,19 @@ export async function parseJsonBody<S extends z.ZodType>(c: Context, schema: S):
   return { ok: true, data: result.data };
 }
 
+// Validates the query string against `schema`, answering a 400 with field
+// errors as parseJsonBody does for bodies.
+export function parseQuery<S extends z.ZodType>(c: Context, schema: S): Parsed<z.infer<S>> {
+  const result = schema.safeParse(c.req.query());
+  if (!result.success) {
+    return {
+      ok: false,
+      response: c.json({ error: "Invalid query", details: z.flattenError(result.error).fieldErrors }, 400),
+    };
+  }
+  return { ok: true, data: result.data };
+}
+
 // The multipart "file" field of an upload, stored in `bucket`. A missing
 // file or one refused for its size or type is answered here; a storage
 // failure is thrown on to app.onError.

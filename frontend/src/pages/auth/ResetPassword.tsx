@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
+import { useLinkToken } from "@/lib/useLinkToken";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api/api";
 import { resetPasswordSchema } from "@/lib/validation";
@@ -12,8 +12,7 @@ import { TextField } from "@/components/ui/TextField";
 import { TextLink } from "@/components/ui/TextLink";
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token") ?? "";
+  const token = useLinkToken() ?? "";
 
   const { register, handleSubmit, setError, formState: { errors } } = useZodForm(resetPasswordSchema, {
     password: "",

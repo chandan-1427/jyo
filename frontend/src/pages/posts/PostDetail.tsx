@@ -418,7 +418,8 @@ export default function PostDetail() {
 
   const { data, isPending, error } = useQuery<PostDetailData>({
     queryKey: ["posts", id],
-    queryFn: () => apiFetch(`/posts/${id}`),
+    // Encoded: it comes straight from the address bar.
+    queryFn: () => apiFetch(`/posts/${encodeURIComponent(id!)}`),
     enabled: !!id,
   });
   // Once the post is actually on screen, not while it's still loading.
