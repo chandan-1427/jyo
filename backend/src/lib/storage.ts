@@ -73,7 +73,7 @@ export async function uploadFile(
   return data.publicUrl;
 }
 
-type Bucket = "food-photos" | "selfies" | "avatars";
+export type Bucket = "food-photos" | "selfies" | "avatars";
 
 // Uploads only ever get a random UUID name with an allowed extension (above).
 const UPLOADED_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|heic)$/;
@@ -90,8 +90,41 @@ export const FOREIGN_UPLOAD_MESSAGE = "Upload the image through Jyo first, then 
 // prefix comes from the same client that builds upload URLs, so it matches
 // them exactly.
 export function isOwnUploadUrl(url: string, bucket: Bucket): boolean {
+  return uploadNameFromUrl(url, bucket) !== null;
+}
+
+// The stored file's name inside `bucket`, if `url` is one of our uploads there.
+export function uploadNameFromUrl(url: string, bucket: Bucket): string | null {
   const prefix = supabase.storage.from(bucket).getPublicUrl("x").data.publicUrl.slice(0, -1);
-  return url.startsWith(prefix) && UPLOADED_NAME.test(url.slice(prefix.length));
+  if (!url.startsWith(prefix)) return null;
+  const name = url.slice(prefix.length);
+  return UPLOADED_NAME.test(name) ? name : null;
+}
+
+export function isUploadName(name: string): boolean {
+  return UPLOADED_NAME.test(name);
+}
+
+const LIST_PAGE = 1000;
+
+// Every file in `bucket` (uploads are stored flat, with no folders).
+export async function listUploads(bucket: Bucket): Promise<{ name: string; createdAt: Date }[]> {
+  const files: { name: string; createdAt: Date }[] = [];
+  for (let offset = 0; ; offset += LIST_PAGE) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .list("", { limit: LIST_PAGE, offset, sortBy: { column: "name", order: "asc" } });
+    if (error) throw new Error(`Listing ${bucket} failed: ${error.message}`);
+    for (const file of data) {
+      if (file.id && file.created_at) files.push({ name: file.name, createdAt: new Date(file.created_at) });
+    }
+    if (data.length < LIST_PAGE) return files;
+  }
+}
+
+export async function removeUploads(bucket: Bucket, names: string[]): Promise<void> {
+  const { error } = await supabase.storage.from(bucket).remove(names);
+  if (error) throw new Error(`Removing from ${bucket} failed: ${error.message}`);
 }
 
 // Best-effort cleanup for when a row referencing an uploaded file is
