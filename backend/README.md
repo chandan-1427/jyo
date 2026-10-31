@@ -13,7 +13,7 @@ Hono REST API for [Jyo](../README.md), a free community food-sharing app for Tir
 | bcryptjs | Password hashing |
 | jose | JWT signing and verification |
 | resend | Transactional email |
-| node-cron | Post-expiry and notification-cleanup schedulers |
+| node-cron | Scheduled jobs: post expiry, notification, unverified-account and demo cleanup, unused-upload cleanup |
 | @sentry/node | Error tracking (optional) |
 | vitest | Test runner |
 | TypeScript | Type safety |
@@ -42,6 +42,7 @@ Runs on `http://localhost:3000` by default.
 | `pnpm db:migrate` | Apply migrations to the database in `DATABASE_URL` |
 | `pnpm db:push` | Push schema changes directly without a migration file (dev convenience only) |
 | `pnpm db:studio` | Open Drizzle Studio to browse the database |
+| `pnpm uploads:check` | Show what the nightly unused-upload cleanup would delete, without deleting anything (uses `.env`) |
 
 ### Running tests without the full `pnpm test` lifecycle
 
@@ -109,7 +110,7 @@ src/
 ├── routes/       # Hono route handlers (auth, users, posts, requests, notifications)
 ├── middleware/   # Auth, rate limiting, request logging
 ├── lib/          # Utilities: haversine distance, mailer, notifications, storage, errors
-├── jobs/         # Cron jobs (post expiry, notification cleanup)
+├── jobs/         # Cron jobs (post expiry, notification/account/demo cleanup, unused uploads)
 ├── app.ts        # App/route construction — shared by index.ts and the test suite
 ├── instrument.ts # Sentry initialization (must load first)
 └── index.ts      # Entry point: starts the server, cron jobs, graceful shutdown
