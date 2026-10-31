@@ -1,10 +1,9 @@
 import { Hono, type Context } from "hono";
-import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { and, eq, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
-import { deleteFile, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
+import { deleteFile } from "../lib/storage.js";
 import { uploadLimiter } from "../middleware/limiters.js";
 import { updateProfileSchema } from "../lib/validation.js";
 import { parseJsonBody, uploadFromForm } from "../lib/http.js";
@@ -110,10 +109,6 @@ userRoutes.patch("/me", async (c) => {
 userRoutes.post(
   "/me/avatar",
   uploadLimiter,
-  bodyLimit({
-    maxSize: MAX_UPLOAD_REQUEST_BYTES,
-    onError: (c) => c.json({ error: "File is too large. Maximum size is 5MB." }, 413),
-  }),
   async (c) => {
     const { userId } = c.get("user");
     const upload = await uploadFromForm(c, "avatars");

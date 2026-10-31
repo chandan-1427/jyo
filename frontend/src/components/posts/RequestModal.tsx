@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Camera, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api/api";
-import { uploadImage } from "@/lib/supabase";
+import { uploadImage } from "@/lib/uploads";
 import { getCurrentLocation } from "@/lib/location/location";
 import { requestSchema } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";

@@ -1,11 +1,10 @@
 import { Hono } from "hono";
-import { bodyLimit } from "hono/body-limit";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, gte, asc, desc, inArray, sql, getTableColumns } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
-import { deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE, MAX_UPLOAD_REQUEST_BYTES } from "../lib/storage.js";
+import { deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE } from "../lib/storage.js";
 import { isValidUuid, findPostById } from "../lib/domain/finders.js";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
@@ -298,10 +297,6 @@ postRoutes.get("/:id", async (c) => {
 postRoutes.post(
   "/photos",
   uploadLimiter,
-  bodyLimit({
-    maxSize: MAX_UPLOAD_REQUEST_BYTES,
-    onError: (c) => c.json({ error: "File is too large. Maximum size is 5MB." }, 413),
-  }),
   async (c) => {
     const upload = await uploadFromForm(c, "food-photos");
     if (!upload.ok) return upload.response;
