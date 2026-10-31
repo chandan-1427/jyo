@@ -9,10 +9,13 @@ export const fields = {
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Enter a valid 10-digit phone number"),
+  // bcrypt only uses a password's first 72 bytes and silently ignores the
+  // rest, so the limit is in bytes, not characters: 72 English letters, but
+  // only 24 in Telugu (3 bytes each).
   newPassword: z
     .string()
     .min(8, "Password must be at least 8 characters")
-    .max(100, "Password is too long"),
+    .refine((p) => new TextEncoder().encode(p).length <= 72, "Password is too long"),
   loginPassword: z.string().min(1, "Enter your password"),
   locationText: z.string().trim().max(200, "Area is too long"),
   about: z.string().trim().max(500, "About you is too long"),

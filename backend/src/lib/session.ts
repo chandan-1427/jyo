@@ -7,10 +7,16 @@ export const SESSION_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 
 const isProd = env.APP_ENV === "production";
 
+// SameSite=Lax: the browser only sends the cookie on requests from the same
+// site, so another website can't act as a logged-in user (CSRF; see
+// middleware/sameOrigin.ts for the second layer). The app and the API are
+// one site (www.jyo.co.in and api.jyo.co.in; localhost ports in
+// development), which is all Lax needs. It used to be None in production,
+// which sent the cookie with requests from any website.
 const cookieOptions = {
   httpOnly: true,
   secure: isProd,
-  sameSite: isProd ? ("None" as const) : ("Lax" as const),
+  sameSite: "Lax" as const,
   path: "/",
   maxAge: 60 * 60 * 24 * 7,
 };
