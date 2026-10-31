@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { foodPosts, pickupRequests, users } from "../../db/schema.js";
 
@@ -43,9 +43,9 @@ export async function findOwnActiveRequest(postId: string, pickerId: string) {
   return request ?? null;
 }
 
-// Whether this picker asked for the post before (other than `exceptId`)
-// since `since`, whatever became of that request.
-export async function hasEarlierRequestSince(postId: string, pickerId: string, exceptId: string, since: Date) {
+// Whether this picker cancelled a request of their own for the post since
+// `since`.
+export async function hasCancelledRequestSince(postId: string, pickerId: string, since: Date) {
   const [row] = await db
     .select({ id: pickupRequests.id })
     .from(pickupRequests)
@@ -53,7 +53,7 @@ export async function hasEarlierRequestSince(postId: string, pickerId: string, e
       and(
         eq(pickupRequests.postId, postId),
         eq(pickupRequests.pickerId, pickerId),
-        ne(pickupRequests.id, exceptId),
+        eq(pickupRequests.status, "cancelled"),
         gt(pickupRequests.createdAt, since)
       )
     )

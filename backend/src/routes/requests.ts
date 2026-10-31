@@ -17,7 +17,7 @@ import {
   findRequestById,
   findOwnActiveRequest,
   findUserEmail,
-  hasEarlierRequestSince,
+  hasCancelledRequestSince,
 } from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
@@ -125,10 +125,11 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   ).catch((err) => logger.error({ err, postId, pickupRequestId: request.id }, "Failed to create request_received notification"));
 
   // Asking, cancelling and asking again would email the poster each time.
-  // The notification above still shows every request; the email goes once
-  // an hour per picker and post.
-  const askedRecently = await hasEarlierRequestSince(postId, userId, request.id, new Date(Date.now() - 60 * 60 * 1000));
-  if (posterEmail && !isSyntheticEmail(posterEmail) && !askedRecently) notifyPoster(posterEmail, "request_received");
+  // The notification above still shows every request; the email is skipped
+  // only if this picker cancelled one in the last hour. After the poster
+  // declined, a new request is news to them and is emailed.
+  const churning = await hasCancelledRequestSince(postId, userId, new Date(Date.now() - 60 * 60 * 1000));
+  if (posterEmail && !isSyntheticEmail(posterEmail) && !churning) notifyPoster(posterEmail, "request_received");
 
   // The post now shows as "Requested" in everyone's feed.
   if (!post.isDemo) broadcastFeedChange();
