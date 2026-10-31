@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
 import { ImagePlus } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
-import { uploadImage } from "@/lib/uploads";
+import { useImageUpload } from "@/lib/uploads";
 import { editPostSchema, MAX_PICKUP_DAYS_AHEAD } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { toDateTimeInput } from "@/lib/format";
@@ -34,9 +34,10 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
     pickupWindowStart: toDateTimeInput(post.pickupWindowStart),
     pickupWindowEnd: toDateTimeInput(post.pickupWindowEnd),
   });
+  const uploadPhoto = useImageUpload("food-photos");
   const save = useMutation({
     mutationFn: async (values: EditValues) => {
-      const photoUrl = values.photo ? await uploadImage(values.photo, "food-photos") : undefined;
+      const photoUrl = values.photo ? await uploadPhoto(values.photo) : undefined;
       return apiFetch(`/posts/${post.id}`, {
         method: "PATCH",
         body: JSON.stringify({

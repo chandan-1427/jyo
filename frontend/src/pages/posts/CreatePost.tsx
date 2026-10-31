@@ -7,7 +7,8 @@ import { apiFetch } from "@/lib/api/api";
 import { createPostSchema, MAX_PICKUP_DAYS_AHEAD } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { toDateTimeInput } from "@/lib/format";
-import { uploadImage } from "@/lib/uploads";
+import { useImageUpload } from "@/lib/uploads";
+import { randomUuid } from "@/lib/randomUuid";
 import { useV2Theme } from "@/lib/theme";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
 import { Button } from "@/components/ui/Button";
@@ -55,6 +56,10 @@ export default function CreatePost() {
 
   // The pickup spot is wherever the poster is now.
   const [coords, setCoords] = useState<Coords | null>(null);
+  // One per visit to this form: if a submit's answer is lost and it's sent
+  // again, the API recognises it and returns the post it already made.
+  const [clientKey] = useState(randomUuid);
+  const uploadPhoto = useImageUpload("food-photos");
   const [locating, setLocating] = useState(true);
   const [locationError, setLocationError] = useState("");
   const fetchLocation = useCallback(() => {
@@ -72,7 +77,7 @@ export default function CreatePost() {
 
   const create = useMutation<unknown, Error, PostValues>({
     mutationFn: async (values) => {
-      const photoUrl = await uploadImage(values.photo, "food-photos");
+      const photoUrl = await uploadPhoto(values.photo);
       return apiFetch("/posts", {
         method: "POST",
         body: JSON.stringify({
@@ -83,6 +88,7 @@ export default function CreatePost() {
           pickupLng: coords!.lng,
           pickupWindowStart: new Date(values.pickupWindowStart).toISOString(),
           pickupWindowEnd: new Date(values.pickupWindowEnd).toISOString(),
+          clientKey,
         }),
       });
     },

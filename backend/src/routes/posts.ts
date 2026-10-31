@@ -5,7 +5,7 @@ import { eq, or, and, gte, asc, desc, inArray, sql, getTableColumns } from "driz
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
 import { deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE } from "../lib/storage.js";
-import { isValidUuid, findPostById } from "../lib/domain/finders.js";
+import { isValidUuid, findPostById, findPostByClientKey } from "../lib/domain/finders.js";
 import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
@@ -32,7 +32,14 @@ postRoutes.post("/", createPostLimiter, async (c) => {
   const parsed = await parseJsonBody(c, createPostSchema);
   if (!parsed.ok) return parsed.response;
 
-  const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd } = parsed.data;
+  const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd, clientKey } = parsed.data;
+
+  // The same submission again (its first answer was lost on the way): the
+  // post it already made, not a second copy in everyone's feed.
+  if (clientKey) {
+    const existing = await findPostByClientKey(userId, clientKey);
+    if (existing) return c.json({ message: "Post created", post: existing });
+  }
 
   // Only our own uploads: see isOwnUploadUrl for why.
   if (photoUrl && !isOwnUploadUrl(photoUrl, "food-photos")) {
@@ -65,8 +72,16 @@ postRoutes.post("/", createPostLimiter, async (c) => {
       pickupWindowEnd: new Date(pickupWindowEnd),
       isDemo,
       demoExpiresAt,
+      clientKey,
     })
+    .onConflictDoNothing({ target: [foodPosts.posterId, foodPosts.clientKey] })
     .returning();
+
+  // Two copies of the submission at once: the other one made the post.
+  if (!post) {
+    const existing = await findPostByClientKey(userId, clientKey!);
+    return c.json({ message: "Post created", post: existing });
+  }
 
   if (isDemo && demoExpiresAt) {
     seedRequestOnOwnPost(post.id, userId, demoExpiresAt)
@@ -323,6 +338,11 @@ postRoutes.post("/:id/complete", async (c) => {
     return c.json({ error: NOT_YOUR_POST }, 403);
   }
 
+  // Already done: a repeat answers as the first time did.
+  if (post.status === "completed") {
+    return c.json({ message: "Post marked as completed" });
+  }
+
   if (post.status !== "closed") {
     return c.json({ error: "Post must be closed before completing" }, 409);
   }
@@ -337,7 +357,9 @@ postRoutes.post("/:id/complete", async (c) => {
     .returning({ id: foodPosts.id });
 
   if (!completed) {
-    return c.json({ error: "This post has already been processed" }, 409);
+    return (await findPostById(postId))?.status === "completed"
+      ? c.json({ message: "Post marked as completed" })
+      : c.json({ error: "This post has already been processed" }, 409);
   }
 
   return c.json({ message: "Post marked as completed" });

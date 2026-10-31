@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests } from "../db/schema.js";
 import { eq, and, asc, sql } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { createNotification } from "../lib/notifications/notify.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { ConflictError } from "../lib/errors.js";
-import { isValidUuid, findPostById, findRequestById, findUserEmail } from "../lib/domain/finders.js";
+import { isValidUuid, findPostById, findRequestById, findOwnActiveRequest, findUserEmail } from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
 import { createRequestSchema, myRequestsQuerySchema } from "../lib/validation.js";
@@ -33,8 +33,22 @@ const ALREADY_PROCESSED = "This request has already been processed";
 const ALREADY: Record<string, string> = {
   approved: "This request has already been approved",
   rejected: "This request was already declined",
-  cancelled: "This request was already cancelled",
 };
+
+// Repeating an action that already happened (a double tap, or a retry whose
+// first answer was lost on the way) answers as the first time did, without
+// doing it again. Only an outcome other than the one asked for is a conflict.
+async function requestIsNow(requestId: string, status: string) {
+  return (await findRequestById(requestId))?.status === status;
+}
+
+// A post that isn't open may be held by this picker's own earlier request:
+// asking again gets that request back rather than "no longer available".
+async function ownRequestOrUnavailable(c: Context, postId: string, pickerId: string) {
+  const own = await findOwnActiveRequest(postId, pickerId);
+  if (own) return c.json({ message: "Request submitted", request: own });
+  return c.json({ error: NO_LONGER_AVAILABLE }, 409);
+}
 
 // --- Submit pickup request ---
 requestRoutes.post("/", createRequestLimiter, async (c) => {
@@ -64,7 +78,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   }
 
   if (post.status !== "open") {
-    return c.json({ error: NO_LONGER_AVAILABLE }, 409);
+    return ownRequestOrUnavailable(c, postId, userId);
   }
 
   const distance = haversineDistance(lat, lng, post.pickupLat, post.pickupLng);
@@ -90,7 +104,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   });
 
   if (!request) {
-    return c.json({ error: NO_LONGER_AVAILABLE }, 409);
+    return ownRequestOrUnavailable(c, postId, userId);
   }
 
   const posterEmail = await findUserEmail(post.posterId);
@@ -152,6 +166,10 @@ requestRoutes.post("/:id/approve", async (c) => {
     return c.json({ error: "Only the poster can answer this request" }, 403);
   }
 
+  if (request.status === "approved") {
+    return c.json({ message: "Request approved" });
+  }
+
   if (post.status !== "pending_approval") {
     return c.json({ error: "This post is not awaiting approval" }, 409);
   }
@@ -164,7 +182,9 @@ requestRoutes.post("/:id/approve", async (c) => {
   const approved = await approveRequestTx(requestId, request.postId);
 
   if (!approved) {
-    return c.json({ error: ALREADY_PROCESSED }, 409);
+    return (await requestIsNow(requestId, "approved"))
+      ? c.json({ message: "Request approved" })
+      : c.json({ error: ALREADY_PROCESSED }, 409);
   }
 
   const pickerEmail = await findUserEmail(request.pickerId);
@@ -210,6 +230,10 @@ requestRoutes.post("/:id/reject", async (c) => {
     return c.json({ error: "Only the poster can answer this request" }, 403);
   }
 
+  if (request.status === "rejected") {
+    return c.json({ message: "Request rejected" });
+  }
+
   if (post.status !== "pending_approval") {
     return c.json({ error: "This post is not awaiting approval" }, 409);
   }
@@ -239,7 +263,9 @@ requestRoutes.post("/:id/reject", async (c) => {
     });
 
   if (!rejected) {
-    return c.json({ error: ALREADY_PROCESSED }, 409);
+    return (await requestIsNow(requestId, "rejected"))
+      ? c.json({ message: "Request rejected" })
+      : c.json({ error: ALREADY_PROCESSED }, 409);
   }
 
   const pickerEmail = await findUserEmail(request.pickerId);
@@ -279,6 +305,10 @@ requestRoutes.post("/:id/cancel", async (c) => {
     return c.json({ error: "You can only cancel your own requests" }, 403);
   }
 
+  if (request.status === "cancelled") {
+    return c.json({ message: "Request cancelled" });
+  }
+
   if (request.status !== "pending") {
     return c.json({ error: ALREADY[request.status] ?? ALREADY_PROCESSED }, 409);
   }
@@ -308,7 +338,9 @@ requestRoutes.post("/:id/cancel", async (c) => {
     });
 
   if (!cancelled) {
-    return c.json({ error: ALREADY_PROCESSED }, 409);
+    return (await requestIsNow(requestId, "cancelled"))
+      ? c.json({ message: "Request cancelled" })
+      : c.json({ error: ALREADY_PROCESSED }, 409);
   }
 
   // The cancel has already gone through; the post only decides who to tell.

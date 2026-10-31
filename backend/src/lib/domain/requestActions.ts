@@ -16,30 +16,34 @@ type CreateRequestInput = {
 // Atomically claims an open post and inserts the pickup request row — shared
 // by the real create-request route and demo provisioning (lib/demo.ts),
 // which calls this directly instead of re-entering HTTP with a fake session.
-// Returns null if the post was no longer open (lost the claim race).
+// Returns null if the post was no longer open (lost the claim race). One
+// transaction, so a failed insert can't leave the post claimed with no
+// request behind it.
 export async function createRequestRow(input: CreateRequestInput) {
-  const [claimedPost] = await db
-    .update(foodPosts)
-    .set({ status: "pending_approval" })
-    .where(and(eq(foodPosts.id, input.postId), eq(foodPosts.status, "open")))
-    .returning({ id: foodPosts.id });
+  return db.transaction(async (tx) => {
+    const [claimedPost] = await tx
+      .update(foodPosts)
+      .set({ status: "pending_approval" })
+      .where(and(eq(foodPosts.id, input.postId), eq(foodPosts.status, "open")))
+      .returning({ id: foodPosts.id });
 
-  if (!claimedPost) return null;
+    if (!claimedPost) return null;
 
-  const [request] = await db
-    .insert(pickupRequests)
-    .values({
-      postId: input.postId,
-      pickerId: input.pickerId,
-      pickerName: input.pickerName,
-      selfieUrl: input.selfieUrl,
-      etaMinutes: input.etaMinutes,
-      isDemo: input.isDemo ?? false,
-      demoExpiresAt: input.demoExpiresAt ?? null,
-    })
-    .returning();
+    const [request] = await tx
+      .insert(pickupRequests)
+      .values({
+        postId: input.postId,
+        pickerId: input.pickerId,
+        pickerName: input.pickerName,
+        selfieUrl: input.selfieUrl,
+        etaMinutes: input.etaMinutes,
+        isDemo: input.isDemo ?? false,
+        demoExpiresAt: input.demoExpiresAt ?? null,
+      })
+      .returning();
 
-  return request;
+    return request;
+  });
 }
 
 // Approves a pending request and closes its post together in one

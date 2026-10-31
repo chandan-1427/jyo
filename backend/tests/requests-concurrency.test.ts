@@ -9,8 +9,9 @@ vi.mock("../src/lib/mailer.js", () => ({
 
 import { createApp } from "../src/app.js";
 import { db } from "../src/db/index.js";
-import { foodPosts, pickupRequests } from "../src/db/schema.js";
-import { eq } from "drizzle-orm";
+import { foodPosts, notifications, pickupRequests } from "../src/db/schema.js";
+import { and, eq } from "drizzle-orm";
+import { notifyPicker, notifyPoster } from "../src/lib/mailer.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
 
@@ -53,6 +54,12 @@ async function createRequest(cookie: string, postId: string) {
   return body.request as { id: string };
 }
 
+// Notifications are created without being awaited by the route.
+async function notificationsOfType(userId: string, type: "request_approved" | "request_rejected" | "request_cancelled") {
+  await new Promise((r) => setTimeout(r, 100));
+  return db.select().from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.type, type)));
+}
+
 async function setUpPendingRequest() {
   const poster = await createVerifiedUser(app, { email: `poster-${Math.random()}@example.com` });
   const picker = await createVerifiedUser(app, { email: `picker-${Math.random()}@example.com` });
@@ -62,16 +69,17 @@ async function setUpPendingRequest() {
 }
 
 describe("concurrent approve", () => {
-  it("only one of two simultaneous approve calls succeeds", async () => {
-    const { poster, request, post } = await setUpPendingRequest();
+  // A double tap: both answer "approved", and it happens (and the picker is
+  // told) exactly once.
+  it("approves once when two approve calls arrive together", async () => {
+    const { poster, picker, request, post } = await setUpPendingRequest();
 
     const [a, b] = await Promise.all([
       authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" }),
       authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" }),
     ]);
 
-    const statuses = [a.status, b.status].sort();
-    expect(statuses).toEqual([200, 409]);
+    expect([a.status, b.status]).toEqual([200, 200]);
 
     const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
     expect(finalPost.status).toBe("closed");
@@ -79,46 +87,89 @@ describe("concurrent approve", () => {
 
     const [finalRequest] = await db.select().from(pickupRequests).where(eq(pickupRequests.id, request.id));
     expect(finalRequest.status).toBe("approved");
+
+    expect(await notificationsOfType(picker.userId, "request_approved")).toHaveLength(1);
+    expect(vi.mocked(notifyPicker)).toHaveBeenCalledTimes(1);
+  });
+
+  // The first answer was lost on the way; asking again is not an error.
+  it("answers a repeated approve with success, changing nothing", async () => {
+    const { poster, picker, request } = await setUpPendingRequest();
+    await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
+
+    const again = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
+    expect(again.status).toBe(200);
+    expect((await again.json()).message).toBe("Request approved");
+    expect(await notificationsOfType(picker.userId, "request_approved")).toHaveLength(1);
+  });
+
+  it("still refuses to approve a request that was declined", async () => {
+    const { poster, request } = await setUpPendingRequest();
+    await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" });
+
+    const res = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
+    expect(res.status).toBe(409);
   });
 });
 
 describe("concurrent reject", () => {
-  it("only one of two simultaneous reject calls succeeds", async () => {
-    const { poster, request, post } = await setUpPendingRequest();
+  it("declines once when two reject calls arrive together", async () => {
+    const { poster, picker, request, post } = await setUpPendingRequest();
 
     const [a, b] = await Promise.all([
       authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" }),
       authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" }),
     ]);
 
-    const statuses = [a.status, b.status].sort();
-    expect(statuses).toEqual([200, 409]);
+    expect([a.status, b.status]).toEqual([200, 200]);
 
     const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
     expect(finalPost.status).toBe("open");
 
     const [finalRequest] = await db.select().from(pickupRequests).where(eq(pickupRequests.id, request.id));
     expect(finalRequest.status).toBe("rejected");
+
+    expect(await notificationsOfType(picker.userId, "request_rejected")).toHaveLength(1);
+    expect(vi.mocked(notifyPicker)).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers a repeated reject with success", async () => {
+    const { poster, request } = await setUpPendingRequest();
+    await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" });
+
+    const again = await authedRequest(app, `/requests/${request.id}/reject`, poster.cookie, { method: "POST" });
+    expect(again.status).toBe(200);
   });
 });
 
 describe("concurrent cancel", () => {
-  it("only one of two simultaneous cancel calls succeeds", async () => {
-    const { picker, request, post } = await setUpPendingRequest();
+  it("cancels once when two cancel calls arrive together", async () => {
+    const { poster, picker, request, post } = await setUpPendingRequest();
 
     const [a, b] = await Promise.all([
       authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" }),
       authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" }),
     ]);
 
-    const statuses = [a.status, b.status].sort();
-    expect(statuses).toEqual([200, 409]);
+    expect([a.status, b.status]).toEqual([200, 200]);
 
     const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
     expect(finalPost.status).toBe("open");
 
     const [finalRequest] = await db.select().from(pickupRequests).where(eq(pickupRequests.id, request.id));
     expect(finalRequest.status).toBe("cancelled");
+
+    expect(await notificationsOfType(poster.userId, "request_cancelled")).toHaveLength(1);
+    expect(vi.mocked(notifyPoster).mock.calls.filter(([, kind]) => kind === "request_cancelled")).toHaveLength(1);
+  });
+
+  it("answers a repeated cancel with success", async () => {
+    const { picker, request } = await setUpPendingRequest();
+    await authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" });
+
+    const again = await authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" });
+    expect(again.status).toBe(200);
+    expect((await again.json()).message).toBe("Request cancelled");
   });
 
   it("cannot cancel a request that's already been approved", async () => {
@@ -144,7 +195,7 @@ describe("concurrent cancel", () => {
 });
 
 describe("concurrent complete", () => {
-  it("only one of two simultaneous complete calls succeeds", async () => {
+  it("completes once when two complete calls arrive together", async () => {
     const { poster, request, post } = await setUpPendingRequest();
 
     const approveRes = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
@@ -155,11 +206,13 @@ describe("concurrent complete", () => {
       authedRequest(app, `/posts/${post.id}/complete`, poster.cookie, { method: "POST" }),
     ]);
 
-    const statuses = [a.status, b.status].sort();
-    expect(statuses).toEqual([200, 409]);
+    expect([a.status, b.status]).toEqual([200, 200]);
 
     const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
     expect(finalPost.status).toBe("completed");
+
+    const again = await authedRequest(app, `/posts/${post.id}/complete`, poster.cookie, { method: "POST" });
+    expect(again.status).toBe(200);
   });
 });
 
