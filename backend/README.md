@@ -73,19 +73,29 @@ The test suite runs against `.env.test` (committed — it's all dummy/test-only 
 
 ## Database Backups
 
-Supabase's free tier does not include automatic backups — a bad migration or an accidental delete has no way back without one. `.github/workflows/backup.yml` runs a `pg_dump` against the database every night at 03:00 UTC and stores the result as a GitHub Actions artifact (kept for 30 days). You can also trigger it on demand from the Actions tab (`Database Backup` → `Run workflow`).
+Supabase's free tier does not include automatic backups — a bad migration or an accidental delete has no way back without one. `.github/workflows/backup.yml` runs a `pg_dump` against the database every night at 03:00 UTC, **encrypts it**, and stores the encrypted file as a GitHub Actions artifact (kept for 30 days). You can also trigger it on demand from the Actions tab (`Database Backup` → `Run workflow`).
+
+**Why encrypted:** this repository is public, and so are its workflow artifacts — any logged-in GitHub user can download them. Unencrypted, each backup would hand out every user's email, phone, password hash and location. The dump is encrypted with [age](https://github.com/FiloSottile/age) to a public key, and only the matching private key, which never leaves the owner's hands, can open it. Without the key configured, the workflow fails instead of uploading anything readable.
 
 ### One-time setup
 
 1. In Supabase: **Settings → Database → Connection string**, copy the **Session pooler** string — not "Direct connection". Supabase's direct connection is IPv6-only, and GitHub Actions runners are IPv4-only, so `pg_dump` fails with "Network is unreachable" against it. The session pooler supports the session-level operations `pg_dump` needs and works over IPv4.
-2. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**, name it `BACKUP_DATABASE_URL`, paste that connection string.
-
-That's it — the workflow picks it up automatically on its next scheduled run.
+2. In GitHub: **Settings → Secrets and variables → Actions → Secrets → New repository secret**, name it `BACKUP_DATABASE_URL`, paste that connection string.
+3. Make an encryption key pair on your own machine (install age with `winget install FiloSottile.age` on Windows, `brew install age` on macOS, or your Linux package manager):
+   ```bash
+   age-keygen -o jyo-backup-key.txt
+   ```
+   It prints the public key (`Public key: age1...`). Store `jyo-backup-key.txt` somewhere safe and private — a password manager, not this repo, not the cloud folder next to it. **Lose it and the backups can't be opened by anyone, including you.**
+4. In GitHub: **Settings → Secrets and variables → Actions → Variables → New repository variable**, name it `BACKUP_AGE_RECIPIENT`, paste the public key (`age1...`). It's a variable, not a secret: a public key is safe to show.
 
 ### Restoring from a backup
 
-1. Download the `.dump` file from the relevant workflow run's Artifacts section (Actions tab → the run → scroll to Artifacts).
-2. Restore it into a database with `pg_restore`:
+1. Download the backup from the relevant workflow run's Artifacts section (Actions tab → the run → scroll to Artifacts) and unzip it to get `backup.dump.age`.
+2. Decrypt it with your private key:
+   ```bash
+   age --decrypt --identity jyo-backup-key.txt --output backup.dump backup.dump.age
+   ```
+3. Restore it into a database with `pg_restore`:
    ```bash
    pg_restore --no-owner --clean --if-exists -d "<connection-string>" backup.dump
    ```

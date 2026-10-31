@@ -25,6 +25,23 @@ jobs:
       # string, not "Direct connection" — direct connections are IPv6-only
       # and this runner is IPv4-only, so pg_dump fails with "Network is
       # unreachable" against it.
+      #
+      # The repository is public, and so are its workflow artifacts: any
+      # logged-in GitHub user can download them. So the dump is never
+      # uploaded as is. It's encrypted with age to the public key in the
+      # BACKUP_AGE_RECIPIENT repository variable; only the matching private
+      # key, kept offline by the owner, can open it (see backend/README.md).
+      # With no key configured the job fails before dumping anything,
+      # rather than upload a readable copy of every user's data.
+      - name: Require an encryption key
+        run: |
+          if [ -z "$RECIPIENT" ]; then
+            echo "::error::BACKUP_AGE_RECIPIENT is not set; refusing to back up without encryption."
+            exit 1
+          fi
+        env:
+          RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+
       - name: Dump database
         run: |
           docker run --rm -v "$PWD:/backup" postgres:18 \
@@ -32,9 +49,18 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
 
-      - name: Upload backup artifact
+      - name: Encrypt dump
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends age >/dev/null
+          age --recipient "$RECIPIENT" --output backup.dump.age backup.dump
+          rm -f backup.dump
+        env:
+          RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+
+      - name: Upload encrypted backup
         uses: actions/upload-artifact@v7
         with:
           name: db-backup-${{ github.run_id }}
-          path: backup.dump
+          path: backup.dump.age
+          if-no-files-found: error
           retention-days: 30
