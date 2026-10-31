@@ -5,6 +5,14 @@ import type { SSEStreamingApi } from "hono/streaming";
 // fan-out to worry about.
 const streamsByUserId = new Map<string, Set<SSEStreamingApi>>();
 
+// Each open connection holds memory for as long as it lasts. A few tabs and
+// devices per person is normal; more than this is a script or a leak.
+export const MAX_STREAMS_PER_USER = 10;
+
+export function openStreamCount(userId: string): number {
+  return streamsByUserId.get(userId)?.size ?? 0;
+}
+
 export function subscribe(userId: string, stream: SSEStreamingApi) {
   let streams = streamsByUserId.get(userId);
   if (!streams) {

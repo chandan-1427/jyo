@@ -6,7 +6,7 @@ import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
 import { deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE } from "../lib/storage.js";
 import { isValidUuid, findPostById, findPostByClientKey } from "../lib/domain/finders.js";
-import { createPostLimiter, uploadLimiter } from "../middleware/limiters.js";
+import { createPostLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/domain/demo.js";
@@ -24,7 +24,7 @@ const NOT_YOUR_POST = "You can only change your own posts";
 // Most feed posts it will return; see the feed handler.
 const FEED_LIMIT = 200;
 
-postRoutes.use("*", authMiddleware);
+postRoutes.use("*", authMiddleware, userLimiter);
 
 // --- Create post ---
 postRoutes.post("/", createPostLimiter, async (c) => {

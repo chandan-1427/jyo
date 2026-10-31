@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { foodPosts, pickupRequests, users } from "../../db/schema.js";
 
@@ -41,6 +41,24 @@ export async function findOwnActiveRequest(postId: string, pickerId: string) {
     .orderBy(desc(pickupRequests.createdAt))
     .limit(1);
   return request ?? null;
+}
+
+// Whether this picker asked for the post before (other than `exceptId`)
+// since `since`, whatever became of that request.
+export async function hasEarlierRequestSince(postId: string, pickerId: string, exceptId: string, since: Date) {
+  const [row] = await db
+    .select({ id: pickupRequests.id })
+    .from(pickupRequests)
+    .where(
+      and(
+        eq(pickupRequests.postId, postId),
+        eq(pickupRequests.pickerId, pickerId),
+        ne(pickupRequests.id, exceptId),
+        gt(pickupRequests.createdAt, since)
+      )
+    )
+    .limit(1);
+  return !!row;
 }
 
 export async function findUserEmail(userId: string): Promise<string | null> {

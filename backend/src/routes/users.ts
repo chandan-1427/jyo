@@ -4,7 +4,7 @@ import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { and, eq, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { deleteFile } from "../lib/storage.js";
-import { uploadLimiter } from "../middleware/limiters.js";
+import { uploadLimiter, userLimiter } from "../middleware/limiters.js";
 import { updateProfileSchema } from "../lib/validation.js";
 import { parseJsonBody, uploadFromForm } from "../lib/http.js";
 
@@ -26,7 +26,7 @@ const profileColumns = {
 };
 
 // Apply auth middleware to all user routes
-userRoutes.use("*", authMiddleware);
+userRoutes.use("*", authMiddleware, userLimiter);
 
 // --- Get own profile ---
 userRoutes.get("/me", async (c) => {
