@@ -142,6 +142,9 @@ export const createPostSchema = z
     ...postFields,
     pickupLat: z.number().min(-90).max(90),
     pickupLng: z.number().min(-180).max(180),
+    // Made once per visit to the post form, so a retried submit can be
+    // recognised. Optional: a page loaded before it existed doesn't send one.
+    clientKey: z.uuid().optional(),
   })
   .refine(endAfterStart, { message: "End time must be after start time", path: ["pickupWindowEnd"] })
   .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] })

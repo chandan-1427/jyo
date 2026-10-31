@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { foodPosts, pickupRequests, users } from "../../db/schema.js";
 
@@ -14,6 +14,32 @@ export async function findPostById(postId: string) {
 
 export async function findRequestById(requestId: string) {
   const [request] = await db.select().from(pickupRequests).where(eq(pickupRequests.id, requestId)).limit(1);
+  return request ?? null;
+}
+
+export async function findPostByClientKey(posterId: string, clientKey: string) {
+  const [post] = await db
+    .select()
+    .from(foodPosts)
+    .where(and(eq(foodPosts.posterId, posterId), eq(foodPosts.clientKey, clientKey)))
+    .limit(1);
+  return post ?? null;
+}
+
+// This picker's request still holding the post (waiting or approved), if any.
+export async function findOwnActiveRequest(postId: string, pickerId: string) {
+  const [request] = await db
+    .select()
+    .from(pickupRequests)
+    .where(
+      and(
+        eq(pickupRequests.postId, postId),
+        eq(pickupRequests.pickerId, pickerId),
+        inArray(pickupRequests.status, ["pending", "approved"])
+      )
+    )
+    .orderBy(desc(pickupRequests.createdAt))
+    .limit(1);
   return request ?? null;
 }
 

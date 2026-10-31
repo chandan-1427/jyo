@@ -1,5 +1,8 @@
+import { useCallback, useRef } from "react";
 import type { Profile } from "@/lib/api/queries/auth";
 import { apiFetch } from "@/lib/api/api";
+
+type Bucket = "food-photos" | "selfies";
 
 function formWith(file: File) {
   const form = new FormData();
@@ -7,10 +10,25 @@ function formWith(file: File) {
   return form;
 }
 
-export async function uploadImage(file: File, bucket: "food-photos" | "selfies"): Promise<string> {
+export async function uploadImage(file: File, bucket: Bucket): Promise<string> {
   const path = bucket === "food-photos" ? "/posts/photos" : "/requests/selfies";
   const data = await apiFetch(path, { method: "POST", body: formWith(file) });
   return data.url;
+}
+
+// For a form's photo: retrying a failed submit reuses the image already
+// stored for that same file instead of uploading another copy.
+export function useImageUpload(bucket: Bucket) {
+  const last = useRef<{ file: File; url: string } | null>(null);
+  return useCallback(
+    async (file: File) => {
+      if (last.current?.file === file) return last.current.url;
+      const url = await uploadImage(file, bucket);
+      last.current = { file, url };
+      return url;
+    },
+    [bucket]
+  );
 }
 
 export async function uploadAvatar(file: File): Promise<Profile> {

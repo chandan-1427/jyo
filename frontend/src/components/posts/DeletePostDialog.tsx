@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { apiFetch } from "@/lib/api/api";
+import { apiFetch, ApiError } from "@/lib/api/api";
 import { Dialog } from "../ui/Dialog";
 import { Button } from "../ui/Button";
 import { Notice } from "../ui/Notice";
@@ -25,7 +25,16 @@ export function DeletePostDialog({ postIds, onClose, onDeleted, description }: D
   const remove = useMutation({
     mutationFn: async () => {
       const results = await Promise.allSettled(
-        postIds.map((id) => apiFetch(`/posts/${id}`, { method: "DELETE" }).then(() => id))
+        postIds.map((id) =>
+          apiFetch(`/posts/${id}`, { method: "DELETE" }).then(
+            () => id,
+            // Already gone (deleted in another tab, or a retry): that's done.
+            (err) => {
+              if (err instanceof ApiError && err.status === 404) return id;
+              throw err;
+            }
+          )
+        )
       );
       const failed = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
       for (const r of results) if (r.status === "fulfilled") queryClient.removeQueries({ queryKey: ["posts", r.value] });

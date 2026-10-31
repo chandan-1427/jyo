@@ -7,7 +7,8 @@ import {
   doublePrecision,
   integer,
   boolean,
-  index
+  index,
+  uniqueIndex
 } from "drizzle-orm/pg-core";
 
 // --- Enums ---
@@ -72,12 +73,17 @@ export const foodPosts = pgTable("food_posts", {
   seededForUserId:   uuid("seeded_for_user_id").references(() => users.id),
   isDemo:            boolean("is_demo").notNull().default(false),
   demoExpiresAt:     timestamp("demo_expires_at"),
+  clientKey:         uuid("client_key"),                      // from the post form, see below
   createdAt:         timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   // Feed query (posts.ts) and the expiry cron (jobs/expiry.ts) both filter
   // on exactly this pair.
   index("food_posts_status_window_end_idx").on(table.status, table.pickupWindowEnd),
   index("food_posts_poster_id_idx").on(table.posterId),
+  // One post per submission of the form: a retried submit finds the post it
+  // already made instead of creating a duplicate. Posts without a key (made
+  // before it existed) don't conflict, since NULLs are never equal.
+  uniqueIndex("food_posts_poster_client_key_idx").on(table.posterId, table.clientKey),
 ]);
 
 // --- Pickup Requests ---

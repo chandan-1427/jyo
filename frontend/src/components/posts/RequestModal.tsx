@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Camera, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api/api";
-import { uploadImage } from "@/lib/uploads";
+import { useImageUpload } from "@/lib/uploads";
 import { getCurrentLocation } from "@/lib/location/location";
 import { requestSchema } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
@@ -27,10 +27,11 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   const { register, handleSubmit, setValue, setError, formState: { errors } } = useZodForm(requestSchema, {
     pickerName: user?.name ?? "",
   });
+  const uploadSelfie = useImageUpload("selfies");
   const requestMutation = useMutation({
     mutationFn: async ({ pickerName, etaMinutes, selfie }: RequestValues) => {
       const coords = await getCurrentLocation();
-      const selfieUrl = await uploadImage(selfie, "selfies");
+      const selfieUrl = await uploadSelfie(selfie);
 
       return apiFetch("/requests", {
         method: "POST",

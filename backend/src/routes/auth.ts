@@ -224,14 +224,18 @@ authRoutes.post("/verify-email", async (c) => {
     return c.json({ error: "Invalid or expired verification link" }, 400);
   }
 
+  // The link opened again (a second click, another tab): still a success.
+  // That's why the token is kept after use: only its hash is stored, and all
+  // it can do now is confirm an email that is already confirmed.
+  if (user.emailVerified) {
+    return c.json({ message: "Your email is already verified. You can log in." });
+  }
+
   if (!user.verificationTokenExpiry || user.verificationTokenExpiry < new Date()) {
     return c.json({ error: "Verification link has expired. Please request a new one." }, 400);
   }
 
-  await db
-    .update(users)
-    .set({ emailVerified: true, verificationToken: null, verificationTokenExpiry: null })
-    .where(eq(users.id, user.id));
+  await db.update(users).set({ emailVerified: true }).where(eq(users.id, user.id));
 
   return c.json({ message: "Email verified successfully. You can now log in." });
 });
@@ -292,10 +296,17 @@ authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
   // Bumping tokenVersion ends every session signed before, on every device:
   // if the password was reset because someone else had the account, their
   // login stops working too, not just in 7 days when the cookie expires.
-  await db
+  // Only while the token is still on the row: of two submits at once, one
+  // sets the password and the other finds the link used.
+  const [reset] = await db
     .update(users)
     .set({ passwordHash, resetToken: null, resetTokenExpiry: null, tokenVersion: sql`${users.tokenVersion} + 1` })
-    .where(eq(users.id, user.id));
+    .where(and(eq(users.id, user.id), eq(users.resetToken, user.resetToken!)))
+    .returning({ id: users.id });
+
+  if (!reset) {
+    return c.json({ error: "Invalid or expired reset link" }, 400);
+  }
 
   return c.json({ message: "Password reset successfully. You can now log in." });
 });
