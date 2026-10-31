@@ -88,12 +88,54 @@ jobs:
       - name: Type-check and build
         run: pnpm run build
 
+  # Migrates the live database, then redeploys Render. Migrations used to be
+  # applied by hand, and one (0010, indexes) went unapplied for two months
+  # unnoticed. Running them here, before the deploy hook, means new code
+  # never starts against a database that isn't ready for it, and a failed
+  # migration stops the deploy. They run while the old code is still
+  # serving, so every migration must work with both the old and the new
+  # code (add first, remove in a later release).
+  #
+  # One deploy at a time, so two quick merges can't migrate at once.
+  #
+  # The connection string is the backup job's BACKUP_DATABASE_URL (the
+  # session pooler, which allows the DDL migrations need), so the database
+  # password stays in the same two places it already was (this secret and
+  # Render's DATABASE_URL), not three.
   deploy-backend:
     name: Deploy backend (Render)
     needs: backend
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-backend
+      cancel-in-progress: false
+
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply database migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+
       - name: Trigger Render deploy hook
         run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
 
