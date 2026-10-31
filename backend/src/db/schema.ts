@@ -50,6 +50,9 @@ export const users = pgTable("users", {
   resetTokenExpiry:   timestamp("reset_token_expiry"),
   isDemo:       boolean("is_demo").notNull().default(false),
   demoExpiresAt: timestamp("demo_expires_at"),
+  // Carried in every session token and checked on each request: bumping it
+  // (a password reset) ends every session signed before. See middleware/auth.ts.
+  tokenVersion: integer("token_version").notNull().default(0),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 });
 

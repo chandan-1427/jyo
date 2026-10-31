@@ -1,17 +1,14 @@
 import { Hono, type Context } from "hono";
-import { setCookie, deleteCookie } from "hono/cookie";
-import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { forgotPasswordLimiter, resetPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "../lib/mailer.js";
-import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { findUserByEmail } from "../lib/domain/finders.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -25,10 +22,9 @@ import {
   verifyEmailSchema,
 } from "../lib/validation.js";
 import { parseJsonBody } from "../lib/http.js";
+import { endSession, startSession } from "../lib/session.js";
 
 export const authRoutes = new Hono();
-
-const secret = new TextEncoder().encode(env.JWT_SECRET);
 
 // Precomputed bcrypt hash of a random value that will never match any real
 // password — compared against on a login attempt for an unknown email so
@@ -36,20 +32,10 @@ const secret = new TextEncoder().encode(env.JWT_SECRET);
 // instead of returning early and leaking account existence via timing.
 const DUMMY_PASSWORD_HASH = "$2a$10$CwTycUXWue0Thq9StjUM0uJ8O9YtbnHUb.z35p1SICtjy0G1kGGxq";
 
-const isProd = env.APP_ENV === "production";
-
 // Matches the 24-hour expiry the frontend already tells users about on the
 // verification-failed screen — previously there was no actual expiry check,
 // so an old or leaked verification link worked forever.
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
-
-const cookieOptions = {
-  httpOnly: true,
-  secure: isProd,
-  sameSite: isProd ? "None" as const : "Lax" as const,
-  path: "/",
-  maxAge: 60 * 60 * 24 * 7,
-};
 
 // --- Register ---
 authRoutes.post("/register", registerLimiter, async (c) => {
@@ -157,14 +143,7 @@ authRoutes.post("/login", loginLimiter, async (c) => {
     return c.json({ error: "Please verify your email before logging in. Check your inbox for the verification link." }, 403);
   }
 
-  // Create JWT
-  const token = await new SignJWT({ userId: user.id, email: user.email, isDemo: user.isDemo })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
-    .sign(secret);
-
-  // Set cookie
-  setCookie(c, "token", token, cookieOptions);
+  await startSession(c, user);
 
   return c.json({
     message: "Logged in successfully",
@@ -174,22 +153,23 @@ authRoutes.post("/login", loginLimiter, async (c) => {
 
 // --- Logout ---
 authRoutes.post("/logout", (c) => {
-  deleteCookie(c, "token", cookieOptions);
+  endSession(c);
   return c.json({ message: "Logged out successfully" });
 });
 
-// A still-valid cookie whose account has since been removed: log it out
-// rather than crash re-signing a token for no one.
+// Demo mode lives on the account row, which authMiddleware reads on every
+// request, so starting or ending it takes effect at once on every device,
+// with no new cookie. The account can't vanish between authMiddleware's
+// check and these updates in practice, but if it does, that's a 401.
 const accountGone = (c: Context) => {
-  deleteCookie(c, "token", cookieOptions);
-  return c.json({ error: "Your account no longer exists" }, 401);
+  endSession(c);
+  return c.json({ error: "Your session has ended. Please log in again." }, 401);
 };
 
 // --- Start demo mode ---
 // Anyone can opt in — visitors outside Tirupati who hit a dead end at the
 // feed, and Tirupati locals exploring the app while there are few real
-// posts to see (see docs/demo-mode-plan.md). Re-signs the session cookie
-// so isDemo is immediately visible to every route without a fresh login.
+// posts to see (see docs/demo-mode-plan.md).
 authRoutes.post("/demo/start", authMiddleware, async (c) => {
   const { userId } = c.get("user");
   const demoExpiresAt = new Date(Date.now() + DEMO_SESSION_MS);
@@ -201,13 +181,6 @@ authRoutes.post("/demo/start", authMiddleware, async (c) => {
     .returning({ id: users.id, name: users.name, email: users.email, isDemo: users.isDemo });
 
   if (!updated) return accountGone(c);
-
-  const token = await new SignJWT({ userId: updated.id, email: updated.email, isDemo: true })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
-    .sign(secret);
-
-  setCookie(c, "token", token, cookieOptions);
 
   return c.json({ message: "Demo mode started", demoExpiresAt, user: updated });
 });
@@ -226,13 +199,6 @@ authRoutes.post("/demo/stop", authMiddleware, async (c) => {
     .returning({ id: users.id, name: users.name, email: users.email, isDemo: users.isDemo });
 
   if (!updated) return accountGone(c);
-
-  const token = await new SignJWT({ userId: updated.id, email: updated.email, isDemo: false })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
-    .sign(secret);
-
-  setCookie(c, "token", token, cookieOptions);
 
   return c.json({ message: "Demo mode ended", user: updated });
 });
@@ -320,9 +286,12 @@ authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  // Bumping tokenVersion ends every session signed before, on every device:
+  // if the password was reset because someone else had the account, their
+  // login stops working too, not just in 7 days when the cookie expires.
   await db
     .update(users)
-    .set({ passwordHash, resetToken: null, resetTokenExpiry: null })
+    .set({ passwordHash, resetToken: null, resetTokenExpiry: null, tokenVersion: sql`${users.tokenVersion} + 1` })
     .where(eq(users.id, user.id));
 
   return c.json({ message: "Password reset successfully. You can now log in." });

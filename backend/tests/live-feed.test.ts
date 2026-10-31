@@ -77,10 +77,10 @@ describe("live feed updates", () => {
 
   it("stays quiet for a demo visitor's own post", async () => {
     const visitor = await createVerifiedUser(app, { email: "live-demo@example.com" });
-    const start = await authedRequest(app, "/auth/demo/start", visitor.cookie, { method: "POST" });
-    const demoCookie = start.headers.get("set-cookie")!.split(";")[0];
+    // Demo mode is on the account, so the same cookie is now a demo session.
+    await authedRequest(app, "/auth/demo/start", visitor.cookie, { method: "POST" });
 
-    const res = await createPost(demoCookie);
+    const res = await createPost(visitor.cookie);
     expect(res.status).toBe(201);
     expect(feedPings()).toBe(0);
   });
