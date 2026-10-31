@@ -1,9 +1,7 @@
 import { Hono, type Context } from "hono";
-import bcrypt from "bcryptjs";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { eq, and, lt, sql } from "drizzle-orm";
-import crypto from "crypto";
 import { forgotPasswordLimiter, resetPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
 import {
   sendVerificationEmail,
@@ -23,14 +21,10 @@ import {
 } from "../lib/validation.js";
 import { parseJsonBody } from "../lib/http.js";
 import { endSession, startSession } from "../lib/session.js";
+import { hashLinkToken, newLinkToken } from "../lib/linkTokens.js";
+import { burnTimeForUnknownAccount, hashPassword, needsRehash, verifyPassword } from "../lib/passwords.js";
 
 export const authRoutes = new Hono();
-
-// Precomputed bcrypt hash of a random value that will never match any real
-// password — compared against on a login attempt for an unknown email so
-// the response takes the same time as a real "wrong password" attempt,
-// instead of returning early and leaking account existence via timing.
-const DUMMY_PASSWORD_HASH = "$2a$10$CwTycUXWue0Thq9StjUM0uJ8O9YtbnHUb.z35p1SICtjy0G1kGGxq";
 
 // Matches the 24-hour expiry the frontend already tells users about on the
 // verification-failed screen — previously there was no actual expiry check,
@@ -59,8 +53,9 @@ authRoutes.post("/register", registerLimiter, async (c) => {
     return c.json({ error: "Email already registered" }, 409);
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const verificationToken = crypto.randomBytes(32).toString("hex");
+  const passwordHash = await hashPassword(password);
+  // The email gets the token; the database keeps only its hash.
+  const { token: verificationLinkToken, hash: verificationToken } = newLinkToken();
   const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
 
   let newUser;
@@ -105,7 +100,7 @@ authRoutes.post("/register", registerLimiter, async (c) => {
   }
 
   // Send verification email — fire and forget
-  sendVerificationEmail(email, verificationToken)
+  sendVerificationEmail(email, verificationLinkToken)
     .catch((err) => logger.error({ err, userId: newUser.id }, "Verification email failed"));
 
   return c.json({
@@ -128,12 +123,12 @@ authRoutes.post("/login", loginLimiter, async (c) => {
     // Still run a bcrypt comparison so the response takes roughly the same
     // time as a real login attempt — otherwise an attacker could tell
     // "no such account" apart from "wrong password" just by timing.
-    await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+    await burnTimeForUnknownAccount(password);
     return c.json({ error: "Invalid email or password" }, 401);
   }
 
   // Verify password
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  const valid = await verifyPassword(password, user.passwordHash);
 
   if (!valid) {
     return c.json({ error: "Invalid email or password" }, 401);
@@ -141,6 +136,12 @@ authRoutes.post("/login", loginLimiter, async (c) => {
 
   if (!user.emailVerified) {
     return c.json({ error: "Please verify your email before logging in. Check your inbox for the verification link." }, 403);
+  }
+
+  // A hash from before the cost went up is redone now, while the password
+  // is at hand, so older accounts catch up one login at a time.
+  if (needsRehash(user.passwordHash)) {
+    await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
   }
 
   await startSession(c, user);
@@ -212,10 +213,11 @@ authRoutes.post("/verify-email", async (c) => {
 
   const { token } = parsed.data;
 
+  // Only the token's hash is stored (lib/linkTokens.ts).
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.verificationToken, token))
+    .where(eq(users.verificationToken, hashLinkToken(token)))
     .limit(1);
 
   if (!user) {
@@ -248,7 +250,8 @@ authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
     return c.json({ message: "If that email is registered you will receive a reset link." });
   }
 
-  const resetToken = crypto.randomBytes(32).toString("hex");
+  // The email gets the token; the database keeps only its hash.
+  const { token: resetLinkToken, hash: resetToken } = newLinkToken();
   const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
   await db
@@ -256,7 +259,7 @@ authRoutes.post("/forgot-password", forgotPasswordLimiter, async (c) => {
     .set({ resetToken, resetTokenExpiry })
     .where(eq(users.id, user.id));
 
-  sendPasswordResetEmail(email, resetToken)
+  sendPasswordResetEmail(email, resetLinkToken)
     .catch((err) => logger.error({ err, userId: user.id }, "Reset email failed"));
 
   return c.json({ message: "If that email is registered you will receive a reset link." });
@@ -272,7 +275,7 @@ authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.resetToken, token))
+    .where(eq(users.resetToken, hashLinkToken(token)))
     .limit(1);
 
   if (!user) {
@@ -284,7 +287,7 @@ authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
     return c.json({ error: "Reset link has expired. Please request a new one." }, 400);
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await hashPassword(password);
 
   // Bumping tokenVersion ends every session signed before, on every device:
   // if the password was reset because someone else had the account, their
@@ -314,8 +317,8 @@ authRoutes.post("/resend-verification", resendVerificationLimiter, async (c) => 
     return c.json({ message: RESEND_MESSAGE });
   }
 
-  // Generate new token
-  const verificationToken = crypto.randomBytes(32).toString("hex");
+  // A new token; the email gets it, the database keeps only its hash.
+  const { token: verificationLinkToken, hash: verificationToken } = newLinkToken();
   const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
 
   await db
@@ -323,7 +326,7 @@ authRoutes.post("/resend-verification", resendVerificationLimiter, async (c) => 
     .set({ verificationToken, verificationTokenExpiry })
     .where(eq(users.id, user.id));
 
-  sendVerificationEmail(email, verificationToken)
+  sendVerificationEmail(email, verificationLinkToken)
     .catch((err) => logger.error({ err, userId: user.id }, "Resend verification failed"));
 
   return c.json({ message: RESEND_MESSAGE });

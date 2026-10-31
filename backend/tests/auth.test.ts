@@ -121,7 +121,7 @@ describe("POST /auth/verify-email", () => {
     await db
       .update(users)
       .set({ verificationTokenExpiry: new Date(Date.now() - 1000) })
-      .where(eq(users.verificationToken, token));
+      .where(eq(users.email, "expired@example.com"));
 
     const res = await verifyEmail(app, token);
     expect(res.status).toBe(400);
