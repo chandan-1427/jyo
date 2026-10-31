@@ -192,4 +192,31 @@ describe("emails to the poster", () => {
     expect(received).toHaveLength(2);
     expect(vi.mocked(notifyPoster).mock.calls.filter(([, kind]) => kind === "request_received")).toHaveLength(1);
   });
+
+  it("still emails a new request after the poster declined the last one", async () => {
+    const poster = await createVerifiedUser(app, { email: "declining-poster@example.com" });
+    const picker = await createVerifiedUser(app, { email: "hopeful-picker@example.com" });
+    const created = await authedRequest(app, "/posts", poster.cookie, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Rice",
+        pickupLat: 13.63,
+        pickupLng: 79.42,
+        pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
+        pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+      }),
+    });
+    const postId = (await created.json()).post.id;
+    const ask = () =>
+      authedRequest(app, "/requests", picker.cookie, {
+        method: "POST",
+        body: JSON.stringify({ postId, pickerName: "Picker", etaMinutes: 10, lat: 13.63, lng: 79.42 }),
+      });
+
+    const first = (await (await ask()).json()).request;
+    await authedRequest(app, `/requests/${first.id}/reject`, poster.cookie, { method: "POST" });
+    expect((await ask()).status).toBe(201);
+
+    expect(vi.mocked(notifyPoster).mock.calls.filter(([, kind]) => kind === "request_received")).toHaveLength(2);
+  });
 });
