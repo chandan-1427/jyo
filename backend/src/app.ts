@@ -5,6 +5,7 @@ import { logger } from "./lib/logger.js";
 
 import { requestLogger } from "./middleware/requestLogger.js";
 import { sameOrigin } from "./middleware/sameOrigin.js";
+import { limitBodySize } from "./lib/http.js";
 
 import { authRoutes } from "./routes/auth.js";
 import { userRoutes } from "./routes/users.js";
@@ -42,6 +43,9 @@ export function createApp() {
       allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     })
   );
+
+  // After CORS, so a 413 carries CORS headers and the app can show its message.
+  app.use("*", limitBodySize);
 
   app.onError((err, c) => {
     const requestId = c.get("requestId");

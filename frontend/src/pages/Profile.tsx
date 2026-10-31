@@ -26,7 +26,7 @@ import { FaGithub, FaInstagram } from "react-icons/fa";
 import { apiFetch } from "@/lib/api/api";
 import { authMeKey, fetchAuthMe } from "@/lib/api/queries/auth";
 import { useAuth } from "@/context/AuthContext";
-import { uploadAvatar, removeAvatar } from "@/lib/supabase";
+import { uploadAvatar, removeAvatar } from "@/lib/uploads";
 import { profileSchema } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { useV2Theme } from "@/lib/theme";

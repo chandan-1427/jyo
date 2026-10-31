@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/api/api";
 import { createPostSchema, MAX_PICKUP_DAYS_AHEAD } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { toDateTimeInput } from "@/lib/format";
-import { uploadImage } from "@/lib/supabase";
+import { uploadImage } from "@/lib/uploads";
 import { useV2Theme } from "@/lib/theme";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
 import { Button } from "@/components/ui/Button";
