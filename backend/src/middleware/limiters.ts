@@ -1,84 +1,125 @@
+import type { Context, MiddlewareHandler } from "hono";
 import { createMiddleware } from "hono/factory";
+import { every } from "hono/combine";
 import { rateLimiter } from "hono-rate-limiter";
-import { getClientIp } from "../lib/clientIp.js";
+import { getClientIp, rateLimitAddress } from "../lib/clientIp.js";
 import { env } from "../env.js";
 
-// Render sits in front of this app as a reverse proxy (with Cloudflare in
-// front of that), so the raw socket address only ever sees Render's own
-// internal connection to the container — never the real client. That
-// made every IP-keyed limiter below a single global bucket shared by
-// every user of the app: one person's failed logins locked out everyone
-// else too. getClientIp() reads the real client IP from X-Forwarded-For
-// instead — see lib/clientIp.ts for why that's trustworthy here.
-const ipKey = (c: any) => getClientIp(c);
-const userKey = (c: any) => c.get("user")?.userId ?? ipKey(c); // falls back to IP if no auth
+const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
 
-const tooMany = { error: "Too many attempts. Please try again later." };
+// Many people can share one address: a hostel or college Wi-Fi, or a mobile
+// carrier's NAT (Jio and Airtel put large numbers of phones behind each IPv4
+// address). So limits keyed only by address are kept high, and the tight
+// ones are keyed by the account or email address they protect.
+const byAddress = (c: Context) => rateLimitAddress(getClientIp(c));
+const byUser = (c: Context) => c.get("user")?.userId ?? byAddress(c);
 
-// Tests call the app directly with no real socket behind them, so
-// getConnInfo has nothing to read — and even if it did, every test request
-// would share one "unknown" IP bucket, causing unrelated tests to 429 each
-// other. Rate limiting itself isn't what these tests are meant to verify,
-// so it's a no-op in the test env; the limiters' actual window/limit
-// values aren't otherwise exercised by the suite.
+// The email a login, sign-up or reset is for. Hono keeps the parsed body, so
+// the route reads it again for free; a body that isn't JSON gets a 400 there.
+async function byEmail(c: Context) {
+  try {
+    const body = await c.req.json();
+    return typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  } catch {
+    return "";
+  }
+}
+const byEmailAndAddress = async (c: Context) => `${await byEmail(c)}|${byAddress(c)}`;
+
+export const limitKeys = { byAddress, byUser, byEmail, byEmailAndAddress };
+
+type LimitOptions = {
+  windowMs: number;
+  limit: number;
+  key: (c: Context) => string | Promise<string>;
+  message: string;
+  // Count only requests that fail (a wrong password), not every request.
+  onlyFailures?: boolean;
+};
+
+// Answers a 429 in the app's usual { error } shape, with Retry-After.
+export function buildLimiter({ windowMs, limit, key, message, onlyFailures = false }: LimitOptions): MiddlewareHandler {
+  return rateLimiter({
+    windowMs,
+    limit,
+    keyGenerator: key,
+    skipSuccessfulRequests: onlyFailures,
+    message: { error: message },
+  });
+}
+
+// Tests call the app directly with no real socket behind them, so every
+// request would share one address and unrelated tests would 429 each other.
+// Limits are off there; tests/rate-limits.test.ts exercises buildLimiter.
 const passthrough = createMiddleware(async (_c, next) => next());
-const isTest = env.APP_ENV === "test";
-const guarded = (limiter: ReturnType<typeof rateLimiter>) => (isTest ? passthrough : limiter);
+const limiter = (options: LimitOptions) => (env.APP_ENV === "test" ? passthrough : buildLimiter(options));
 
-// Auth limiters (IP-based)
-export const forgotPasswordLimiter = guarded(rateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  limit: 3,
-  keyGenerator: ipKey,
-  message: tooMany,
-}));
+// --- Whole app ---
+// Far above what anyone using the app sends; stops a script hammering it.
+export const addressLimiter = limiter({
+  windowMs: MINUTE,
+  limit: 600,
+  key: byAddress,
+  message: "Too many requests. Please wait a minute and try again.",
+});
 
-export const resetPasswordLimiter = guarded(rateLimiter({
-  windowMs: 60 * 60 * 1000,
-  limit: 3,
-  keyGenerator: ipKey,
-  message: tooMany,
-}));
+export const userLimiter = limiter({
+  windowMs: MINUTE,
+  limit: 300,
+  key: byUser,
+  message: "Too many requests. Please wait a minute and try again.",
+});
 
-export const resendVerificationLimiter = guarded(rateLimiter({
-  windowMs: 60 * 60 * 1000,
-  limit: 3,
-  keyGenerator: ipKey,
-  message: tooMany,
-}));
+// --- Login ---
+// Only wrong passwords count, so logging in normally never uses any up.
+// Per account from one network for typos; per account from anywhere for
+// guessing spread across many addresses; per network for trying many
+// accounts at once.
+const LOGIN_MESSAGE = "Too many failed logins. Please wait 15 minutes and try again.";
+export const loginLimiter = every(
+  limiter({ windowMs: 15 * MINUTE, limit: 10, key: byEmailAndAddress, message: LOGIN_MESSAGE, onlyFailures: true }),
+  limiter({ windowMs: HOUR, limit: 30, key: byEmail, message: LOGIN_MESSAGE, onlyFailures: true }),
+  limiter({ windowMs: 15 * MINUTE, limit: 100, key: byAddress, message: LOGIN_MESSAGE, onlyFailures: true })
+);
 
-export const loginLimiter = guarded(rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 5,
-  keyGenerator: ipKey,
-  message: tooMany,
-}));
+// --- Endpoints that send an email ---
+// Limited by the address emailed too, so nobody can flood someone's inbox
+// through Jyo (or use up the sending quota real users' emails need) by
+// spreading the requests over many networks.
+const EMAIL_MESSAGE = "Too many emails asked for this address. Please wait an hour and try again.";
+const NETWORK_MESSAGE = "Too many tries from your network. Please wait an hour and try again.";
+const emailLimiter = (perAddressEmailed: number) =>
+  every(
+    limiter({ windowMs: HOUR, limit: 20, key: byAddress, message: NETWORK_MESSAGE }),
+    limiter({ windowMs: HOUR, limit: perAddressEmailed, key: byEmail, message: EMAIL_MESSAGE })
+  );
 
-export const registerLimiter = guarded(rateLimiter({
-  windowMs: 60 * 60 * 1000,
-  limit: 5,
-  keyGenerator: ipKey,
-  message: tooMany,
-}));
+export const registerLimiter = emailLimiter(5);
+export const forgotPasswordLimiter = emailLimiter(3);
+export const resendVerificationLimiter = emailLimiter(3);
 
-// Feature limiters (user-based)
-export const createPostLimiter = guarded(rateLimiter({
-  windowMs: 60 * 60 * 1000,
+export const resetPasswordLimiter = limiter({ windowMs: HOUR, limit: 20, key: byAddress, message: NETWORK_MESSAGE });
+
+// --- Creating things ---
+export const createPostLimiter = limiter({
+  windowMs: HOUR,
   limit: 10,
-  keyGenerator: userKey,
-  message: tooMany,
-}));
+  key: byUser,
+  message: "You can share food up to 10 times an hour. Please try again later.",
+});
 
-export const uploadLimiter = guarded(rateLimiter({
-  windowMs: 60 * 60 * 1000,
-  limit: 10,
-  keyGenerator: userKey,
-  message: tooMany,
-}));
+// Shared by food photos, selfies and profile photos.
+export const uploadLimiter = limiter({
+  windowMs: HOUR,
+  limit: 20,
+  key: byUser,
+  message: "Too many photos uploaded in the last hour. Please try again later.",
+});
 
-export const createRequestLimiter = guarded(rateLimiter({
-  windowMs: 10 * 60 * 1000, // 10 minutes
+export const createRequestLimiter = limiter({
+  windowMs: 10 * MINUTE,
   limit: 5,
-  keyGenerator: userKey,
-  message: tooMany,
-}));
+  key: byUser,
+  message: "You've asked for food 5 times in 10 minutes. Please wait a few minutes and try again.",
+});

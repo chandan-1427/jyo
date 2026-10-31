@@ -6,12 +6,19 @@ import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/geo/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
 import { isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE } from "../lib/storage.js";
-import { createRequestLimiter, uploadLimiter } from "../middleware/limiters.js";
+import { createRequestLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
 import { createNotification } from "../lib/notifications/notify.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { ConflictError } from "../lib/errors.js";
-import { isValidUuid, findPostById, findRequestById, findOwnActiveRequest, findUserEmail } from "../lib/domain/finders.js";
+import {
+  isValidUuid,
+  findPostById,
+  findRequestById,
+  findOwnActiveRequest,
+  findUserEmail,
+  hasEarlierRequestSince,
+} from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
 import { createRequestSchema, myRequestsQuerySchema } from "../lib/validation.js";
@@ -21,7 +28,7 @@ import { PAGE_SIZE, afterCursor, matchesSearch, micros, toPage } from "../lib/pa
 
 export const requestRoutes = new Hono();
 
-requestRoutes.use("*", authMiddleware);
+requestRoutes.use("*", authMiddleware, userLimiter);
 
 // Someone else claimed the post first, or it closed: the request itself was
 // fine, it just conflicts with where the post is now (409).
@@ -117,7 +124,11 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     demoExpiresAt
   ).catch((err) => logger.error({ err, postId, pickupRequestId: request.id }, "Failed to create request_received notification"));
 
-  if (posterEmail && !isSyntheticEmail(posterEmail)) notifyPoster(posterEmail, "request_received");
+  // Asking, cancelling and asking again would email the poster each time.
+  // The notification above still shows every request; the email goes once
+  // an hour per picker and post.
+  const askedRecently = await hasEarlierRequestSince(postId, userId, request.id, new Date(Date.now() - 60 * 60 * 1000));
+  if (posterEmail && !isSyntheticEmail(posterEmail) && !askedRecently) notifyPoster(posterEmail, "request_received");
 
   // The post now shows as "Requested" in everyone's feed.
   if (!post.isDemo) broadcastFeedChange();

@@ -4,12 +4,13 @@ import { db } from "../db/index.js";
 import { notifications } from "../db/schema.js";
 import { eq, desc, and } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
-import { subscribe, unsubscribe } from "../lib/notifications/notificationStream.js";
+import { userLimiter } from "../middleware/limiters.js";
+import { MAX_STREAMS_PER_USER, openStreamCount, subscribe, unsubscribe } from "../lib/notifications/notificationStream.js";
 import { isValidUuid } from "../lib/domain/finders.js";
 
 export const notificationRoutes = new Hono();
 
-notificationRoutes.use("*", authMiddleware);
+notificationRoutes.use("*", authMiddleware, userLimiter);
 
 const HEARTBEAT_MS = 20_000;
 
@@ -20,6 +21,13 @@ const HEARTBEAT_MS = 20_000;
 // middleware as every other route, so no separate credential is needed.
 notificationRoutes.get("/stream", (c) => {
   const { userId } = c.get("user");
+
+  // Refused rather than closing the oldest one: the browser reconnects a
+  // dropped connection by itself, so closing one would just make two tabs
+  // keep knocking each other off. A refused one stays closed.
+  if (openStreamCount(userId) >= MAX_STREAMS_PER_USER) {
+    return c.json({ error: "Too many Jyo tabs are open. Close some and reload this one." }, 429);
+  }
 
   return streamSSE(c, async (stream) => {
     subscribe(userId, stream);

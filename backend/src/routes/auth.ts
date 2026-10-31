@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { eq, and, lt, sql } from "drizzle-orm";
-import { forgotPasswordLimiter, resetPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter } from "../middleware/limiters.js";
+import { forgotPasswordLimiter, resetPasswordLimiter, resendVerificationLimiter, loginLimiter, registerLimiter, userLimiter } from "../middleware/limiters.js";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -171,7 +171,7 @@ const accountGone = (c: Context) => {
 // Anyone can opt in — visitors outside Tirupati who hit a dead end at the
 // feed, and Tirupati locals exploring the app while there are few real
 // posts to see (see docs/demo-mode-plan.md).
-authRoutes.post("/demo/start", authMiddleware, async (c) => {
+authRoutes.post("/demo/start", authMiddleware, userLimiter, async (c) => {
   const { userId } = c.get("user");
   const demoExpiresAt = new Date(Date.now() + DEMO_SESSION_MS);
 
@@ -190,7 +190,7 @@ authRoutes.post("/demo/start", authMiddleware, async (c) => {
 // Lets a user leave early instead of waiting out the full session — demo
 // content they created keeps its own expiry and is swept up by the usual
 // cleanup cron regardless of when they exit.
-authRoutes.post("/demo/stop", authMiddleware, async (c) => {
+authRoutes.post("/demo/stop", authMiddleware, userLimiter, async (c) => {
   const { userId } = c.get("user");
 
   const [updated] = await db
