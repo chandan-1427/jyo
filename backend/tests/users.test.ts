@@ -72,7 +72,7 @@ describe("PATCH /users/me", () => {
     expect(res.status).toBe(400);
   });
 
-  it("is a 404, not an empty success, when the account no longer exists", async () => {
+  it("ends the session, not an empty success, when the account no longer exists", async () => {
     const user = await createVerifiedUser(app, { email: "gone-update@example.com" });
     await db.delete(users).where(eq(users.id, user.userId));
 
@@ -80,7 +80,7 @@ describe("PATCH /users/me", () => {
       method: "PATCH",
       body: JSON.stringify({ name: "Someone" }),
     });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
   });
 
   it("rejects an invalid field value", async () => {

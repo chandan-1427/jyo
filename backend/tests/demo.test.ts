@@ -24,15 +24,14 @@ beforeEach(async () => {
   vi.clearAllMocks();
 });
 
-// Calls the real POST /auth/demo/start endpoint and returns a session
-// cookie whose JWT already carries isDemo:true — mirrors exactly what a
-// user clicking "Start Demo" in the app gets.
+// Calls the real POST /auth/demo/start endpoint, as clicking "Start Demo"
+// in the app does. Demo mode is on the account, read on every request, so
+// the same cookie carries on.
 async function startDemo(cookie: string) {
   const res = await authedRequest(app, "/auth/demo/start", cookie, { method: "POST" });
   expect(res.status).toBe(200);
   const body = await res.json();
-  const setCookie = res.headers.get("set-cookie")!;
-  return { cookie: setCookie.split(";")[0], demoExpiresAt: body.demoExpiresAt as string };
+  return { cookie, demoExpiresAt: body.demoExpiresAt as string };
 }
 
 async function makeDemoUser(email: string) {
@@ -142,8 +141,10 @@ describe("POST /auth/demo/start and /stop", () => {
       expect(rows.some((n) => n.isDemo)).toBe(true);
     });
 
+    // Demo mode is on the account, so the same cookie is a normal session again.
     const stopRes = await authedRequest(app, "/auth/demo/stop", visitor.cookie, { method: "POST" });
-    const realCookie = stopRes.headers.get("set-cookie")!.split(";")[0];
+    expect(stopRes.status).toBe(200);
+    const realCookie = visitor.cookie;
 
     const feed = await (await authedRequest(app, feedUrl, realCookie)).json();
     expect(feed.posts.some((p: { isDemo?: boolean }) => p.isDemo)).toBe(false);

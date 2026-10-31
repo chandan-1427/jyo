@@ -103,11 +103,15 @@ export default function Navbar() {
     const refreshFeed = () => queryClient.invalidateQueries({ queryKey: ["posts"] });
     source.addEventListener("feed", refreshFeed);
 
-    // EventSource reconnects on its own after a drop; catch up on anything
-    // missed while disconnected (skipping the very first connect).
+    // EventSource reconnects on its own after a drop (every backend deploy
+    // drops it); catch up on anything missed while disconnected, posts and
+    // notifications alike (skipping the very first connect).
     let connectedBefore = false;
     source.addEventListener("open", () => {
-      if (connectedBefore) refreshFeed();
+      if (connectedBefore) {
+        refreshFeed();
+        queryClient.invalidateQueries({ queryKey: notificationsKey });
+      }
       connectedBefore = true;
     });
 
