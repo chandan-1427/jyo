@@ -14,7 +14,7 @@ const SAMPLES: Record<keyof typeof backend.fields, unknown[]> = {
   name: ["", "a", " a ", "Al", "  Ravi Kumar  ", "x".repeat(100), "x".repeat(101), 123],
   email: ["", "ravi", "ravi@", "ravi@gmail.com", "  Ravi@Gmail.COM  ", "a@b", null],
   phone: ["", "98765", "9876543210", " 9876543210 ", "98765432101", "abcdefghij", "+919876543210", "98765 43210"],
-  newPassword: ["", "short", "12345678", "x".repeat(100), "x".repeat(101)],
+  newPassword: ["", "short", "12345678", "x".repeat(72), "x".repeat(73), "త".repeat(24), "త".repeat(25), "x".repeat(100)],
   loginPassword: ["", "x", "correct horse"],
   locationText: ["", "Balaji Nagar", " Alipiri ", "x".repeat(200), "x".repeat(201)],
   about: ["", "Student at SVU", "x".repeat(500), "x".repeat(501)],

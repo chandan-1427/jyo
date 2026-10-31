@@ -17,6 +17,14 @@ for (const key of REQUIRED_ENV_VARS) {
   }
 }
 
+// Sessions are HMAC-signed with JWT_SECRET; a short one could be guessed
+// offline from any one token, letting anyone sign in as anyone. 32
+// characters is the floor for HS256 (generate one with
+// `openssl rand -base64 48`).
+if (process.env.JWT_SECRET!.length < 32) {
+  throw new Error("JWT_SECRET must be at least 32 characters");
+}
+
 export const env = {
   DATABASE_URL: process.env.DATABASE_URL!,
   JWT_SECRET: process.env.JWT_SECRET!,

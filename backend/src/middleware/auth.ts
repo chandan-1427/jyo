@@ -40,7 +40,8 @@ export const authMiddleware = createMiddleware(async (c, next) => {
   let userId: string;
   let version: number;
   try {
-    const { payload } = await jwtVerify(token, SESSION_SECRET);
+    // Only the algorithm sessions are signed with is accepted.
+    const { payload } = await jwtVerify(token, SESSION_SECRET, { algorithms: ["HS256"] });
     userId = String(payload.userId);
     version = typeof payload.ver === "number" ? payload.ver : 0;
   } catch {
