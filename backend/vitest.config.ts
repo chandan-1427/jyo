@@ -18,5 +18,15 @@ export default defineConfig({
     // truncate tables between tests — running test files in parallel
     // workers would let two files stomp on each other's rows.
     fileParallelism: false,
+    // `pnpm test --coverage`: which lines of src/ no test runs. A map for
+    // finding blind spots, not a target to chase.
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.ts"],
+      // Server start-up and Sentry wiring: run only by the real server.
+      exclude: ["src/**/*.test.ts", "src/index.ts", "src/instrument.ts"],
+      reporter: ["text-summary", "text", "html"],
+      reportsDirectory: "coverage",
+    },
   },
 });

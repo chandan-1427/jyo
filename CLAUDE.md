@@ -15,6 +15,7 @@ pnpm dev              # dev server, auto-reload (tsx watch)
 pnpm build            # tsc -> dist/
 pnpm start            # run compiled dist/index.js
 pnpm test             # full lifecycle: docker-up test DB -> migrate -> vitest run -> docker-down
+pnpm test --coverage  # same, plus which lines of src/ no test runs (table in the terminal, HTML in coverage/)
 pnpm test:watch       # vitest watch mode — bring the test DB up first (see below), doesn't manage it for you
 pnpm db:generate      # generate a Drizzle migration from schema.ts changes
 pnpm db:migrate       # apply migrations to DATABASE_URL
