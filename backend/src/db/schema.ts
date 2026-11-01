@@ -117,3 +117,13 @@ export const notifications = pgTable("notifications", {
 }, (table) => [
   index("notifications_user_id_idx").on(table.userId),
 ]);
+// --- Revoked sessions ---
+// Session tokens logged out before they expired, by the token's id (its
+// jti claim): authMiddleware refuses them. A row is only needed until the
+// token would have expired anyway; a nightly job removes it then.
+export const revokedSessions = pgTable("revoked_sessions", {
+  jti:       uuid("jti").primaryKey(),
+  expiresAt: timestamp("expires_at").notNull(),
+}, (table) => [
+  index("revoked_sessions_expires_at_idx").on(table.expiresAt),
+]);

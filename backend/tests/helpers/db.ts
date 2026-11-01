@@ -9,7 +9,8 @@ export async function resetDb() {
       notifications,
       pickup_requests,
       food_posts,
-      users
+      users,
+      revoked_sessions
     RESTART IDENTITY CASCADE
   `);
 }
