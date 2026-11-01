@@ -14,6 +14,7 @@ import { startUnverifiedUserCleanupJob } from "./jobs/unverifiedUserCleanup.js";
 import { startDemoCleanupJob } from "./jobs/demoCleanup.js";
 import { startOrphanedUploadCleanupJob } from "./jobs/orphanedUploadCleanup.js";
 import { startRevokedSessionCleanupJob } from "./jobs/revokedSessionCleanup.js";
+import { startDeletedAccountPurgeJob } from "./jobs/deletedAccountPurge.js";
 
 process.on("unhandledRejection", (reason) => {
   logger.fatal({ err: reason }, "Unhandled promise rejection");
@@ -37,6 +38,7 @@ const unverifiedUserCleanupJob = startUnverifiedUserCleanupJob();
 const demoCleanupJob = startDemoCleanupJob();
 const orphanedUploadCleanupJob = startOrphanedUploadCleanupJob();
 const revokedSessionCleanupJob = startRevokedSessionCleanupJob();
+const deletedAccountPurgeJob = startDeletedAccountPurgeJob();
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   logger.info(
@@ -45,7 +47,7 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
       env: env.APP_ENV,
       cors: env.APP_ENV === "production" ? "jyo.co.in only" : "localhost allowed",
       routes: ["/auth", "/users", "/posts", "/requests", "/notifications"],
-      jobs: ["expiry", "notificationCleanup", "unverifiedUserCleanup", "demoCleanup", "orphanedUploadCleanup", "revokedSessionCleanup"],
+      jobs: ["expiry", "notificationCleanup", "unverifiedUserCleanup", "demoCleanup", "orphanedUploadCleanup", "revokedSessionCleanup", "deletedAccountPurge"],
     },
     "JYO backend started"
   );
@@ -79,6 +81,7 @@ async function shutdown(signal: string) {
       demoCleanupJob.stop(),
       orphanedUploadCleanupJob.stop(),
       revokedSessionCleanupJob.stop(),
+      deletedAccountPurgeJob.stop(),
     ]);
 
     // Open SSE connections (notifications) never end on their own, so

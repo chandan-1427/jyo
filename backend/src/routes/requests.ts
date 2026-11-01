@@ -18,6 +18,7 @@ import {
   findOwnActiveRequest,
   findUserEmail,
   hasCancelledRequestSince,
+  posterNotDeleted,
 } from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
@@ -412,7 +413,12 @@ requestRoutes.get("/mine", async (c) => {
   const { status, search, cursor, limit = PAGE_SIZE } = query.data;
 
   // Outside demo mode, requests made during a demo stay hidden.
-  const mine = and(eq(pickupRequests.pickerId, userId), isDemo ? undefined : eq(pickupRequests.isDemo, false));
+  // Not requests on a deleted account's posts: that post is hidden from everyone.
+  const mine = and(
+    eq(pickupRequests.pickerId, userId),
+    isDemo ? undefined : eq(pickupRequests.isDemo, false),
+    posterNotDeleted
+  );
   const matching = matchesSearch(sql`(${foodPosts.title} || ' ' || coalesce(${foodPosts.description}, ''))`, search);
   const inGroup = (group: keyof typeof MY_REQUEST_GROUPS) => sql`${myRequestRank} = ${MY_REQUEST_GROUPS[group]}`;
   const countIn = (group: keyof typeof MY_REQUEST_GROUPS) =>

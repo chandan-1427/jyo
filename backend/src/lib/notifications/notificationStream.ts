@@ -53,6 +53,13 @@ export function broadcastFeedChange() {
   }
 }
 
+// A deleted account's open tabs stop getting updates at once. Aborted, not
+// just closed: the stream route then runs its own cleanup (heartbeat,
+// unsubscribe) and ends the response.
+export function closeUserStreams(userId: string) {
+  for (const stream of streamsByUserId.get(userId) ?? []) stream.abort();
+}
+
 // Called during graceful shutdown so open SSE connections don't block
 // server.close() from resolving (Node waits for in-flight connections to
 // end, and a long-lived stream never ends on its own).

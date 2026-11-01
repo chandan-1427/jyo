@@ -29,6 +29,7 @@ The app asks people to share where they live and a photo of their face, so most 
 - **Nothing identifies people across posts.** API responses list their fields explicitly, so internal account IDs never reach other users.
 - **Accounts are hard to take over.** Sessions are httpOnly cookies, protected against cross-site requests, and revoked on the server at logout. Passwords use bcrypt. Email-link tokens are stored only as hashes. A password reset signs out every device.
 - **Abuse is limited without locking out real people.** Many people here share one IP address, behind college Wi-Fi or mobile carriers, so tight limits are counted per account and per email address, not just per IP.
+- **People can leave.** Deleting an account from the profile (after entering the password again) closes it at once: every session ends, its posts and requests disappear for everyone, and its photos and selfies are deleted. The rest is erased for good after 30 days. The same email can sign up again as a new account. It waits while someone is on their way to a pickup.
 - **Unused data doesn't pile up.** Images nothing refers to any more, old notifications, revoked sessions and abandoned sign-ups are cleaned up automatically.
 
 ## Engineering highlights

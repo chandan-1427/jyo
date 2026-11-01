@@ -7,8 +7,13 @@ export function isValidUuid(value: string): boolean {
   return z.uuid().safeParse(value).success;
 }
 
+// A deleted account's posts are kept for 30 days but shown to nobody: as if
+// they weren't there, in the feed, on their page, in anyone's history, and
+// to every action on them. Used wherever posts are listed or looked up.
+export const posterNotDeleted = sql<boolean>`not exists (select 1 from ${users} where ${users.id} = ${foodPosts.posterId} and ${users.isDeleted})`;
+
 export async function findPostById(postId: string) {
-  const [post] = await db.select().from(foodPosts).where(eq(foodPosts.id, postId)).limit(1);
+  const [post] = await db.select().from(foodPosts).where(and(eq(foodPosts.id, postId), posterNotDeleted)).limit(1);
   return post ?? null;
 }
 
@@ -74,7 +79,9 @@ export async function findUserByEmail(email: string) {
   const [user] = await db
     .select()
     .from(users)
-    .where(sql`lower(${users.email}) = lower(${email})`)
+    // A deleted account's email belongs to nobody: signing up with it makes
+    // a new account, and logging in with it finds none.
+    .where(and(sql`lower(${users.email}) = lower(${email})`, eq(users.isDeleted, false)))
     .limit(1);
   return user ?? null;
 }

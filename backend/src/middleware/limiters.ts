@@ -101,6 +101,16 @@ export const resendVerificationLimiter = emailLimiter(3);
 
 export const resetPasswordLimiter = limiter({ windowMs: HOUR, limit: 20, key: byAddress, message: NETWORK_MESSAGE });
 
+// Wrong passwords when deleting an account: someone holding a stolen session
+// can't use it to guess the password.
+export const deleteAccountLimiter = limiter({
+  windowMs: 15 * MINUTE,
+  limit: 5,
+  key: byUser,
+  message: "Too many tries. Please wait 15 minutes and try again.",
+  onlyFailures: true,
+});
+
 // --- Creating things ---
 export const createPostLimiter = limiter({
   windowMs: HOUR,
