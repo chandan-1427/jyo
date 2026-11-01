@@ -34,10 +34,9 @@ export function ConfirmDialog({
   const action = useMutation({ mutationFn: onConfirm, onSuccess: onClose });
 
   return (
-    <Dialog title={title} onClose={onClose}>
-      <div className="leading-relaxed text-fg-muted">{description}</div>
-      {action.error && <Notice tone="error" className="mt-4">{action.error.message}</Notice>}
-      <div className="mt-6 grid grid-cols-2 gap-3">
+    <Dialog title={title} description={description} onClose={onClose}>
+      {action.error && <Notice tone="error" className="mb-4">{action.error.message}</Notice>}
+      <div className="grid grid-cols-2 gap-3">
         <Button variant="outline" onClick={onClose} disabled={action.isPending}>
           {cancelLabel}
         </Button>

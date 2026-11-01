@@ -57,13 +57,12 @@ export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
   const generalError = remove.error && !fieldError ? remove.error.message : "";
 
   return (
-    <Dialog title="Delete your account?" onClose={onClose}>
-      <p className="leading-relaxed text-fg-muted">
-        Your account, posts and photos will be removed right away and permanently erased within 30 days. This can't
-        be undone.
-      </p>
-
-      <form onSubmit={handleSubmit(({ password }) => remove.mutate(password))} noValidate className="mt-5">
+    <Dialog
+      title="Delete your account?"
+      description="Your account, posts and photos will be removed right away and permanently erased within 30 days. This can't be undone."
+      onClose={onClose}
+    >
+      <form onSubmit={handleSubmit(({ password }) => remove.mutate(password))} noValidate>
         <TextField
           label="Your password"
           type="password"

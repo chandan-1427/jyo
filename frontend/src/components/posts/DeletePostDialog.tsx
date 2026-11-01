@@ -54,12 +54,13 @@ export function DeletePostDialog({ postIds, onClose, onDeleted, description }: D
   const label = many ? `Delete ${postIds.length}` : "Delete";
 
   return (
-    <Dialog title={many ? `Delete ${postIds.length} posts?` : "Delete this post?"} onClose={onClose}>
-      <p className="leading-relaxed text-fg-muted">
-        {description ?? (many ? "They're removed for good. This can't be undone." : "It comes off the feed straight away. This can't be undone.")}
-      </p>
-      {remove.error && <Notice tone="error" className="mt-4">{remove.error.message}</Notice>}
-      <div className="mt-6 grid grid-cols-2 gap-3">
+    <Dialog
+      title={many ? `Delete ${postIds.length} posts?` : "Delete this post?"}
+      description={description ?? (many ? "They're removed for good. This can't be undone." : "It comes off the feed straight away. This can't be undone.")}
+      onClose={onClose}
+    >
+      {remove.error && <Notice tone="error" className="mb-4">{remove.error.message}</Notice>}
+      <div className="grid grid-cols-2 gap-3">
         <Button variant="outline" onClick={onClose} disabled={remove.isPending}>
           Keep {many ? "them" : "it"}
         </Button>
