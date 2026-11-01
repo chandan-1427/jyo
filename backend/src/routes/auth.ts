@@ -20,7 +20,7 @@ import {
   verifyEmailSchema,
 } from "../lib/validation.js";
 import { parseJsonBody } from "../lib/http.js";
-import { endSession, startSession } from "../lib/session.js";
+import { endSession, revokeSession, startSession } from "../lib/session.js";
 import { hashLinkToken, newLinkToken } from "../lib/linkTokens.js";
 import { burnTimeForUnknownAccount, hashPassword, needsRehash, verifyPassword } from "../lib/passwords.js";
 
@@ -153,8 +153,8 @@ authRoutes.post("/login", loginLimiter, async (c) => {
 });
 
 // --- Logout ---
-authRoutes.post("/logout", (c) => {
-  endSession(c);
+authRoutes.post("/logout", async (c) => {
+  await revokeSession(c);
   return c.json({ message: "Logged out successfully" });
 });
 
