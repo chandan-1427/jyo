@@ -1,30 +1,53 @@
 import { createClient } from "@supabase/supabase-js";
 import { fileTypeFromBuffer } from "file-type";
+import sharp from "sharp";
 import crypto from "crypto";
 import { env } from "../env.js";
 import { logger } from "./logger.js";
 import { UploadRejectedError } from "./errors.js";
+
+export type Bucket = "food-photos" | "selfies" | "avatars";
 
 const supabase = createClient(
   env.SUPABASE_URL,
   env.SUPABASE_SERVICE_ROLE_KEY // bypasses RLS
 );
 
-// Only known-safe image types are allowed — uploads are served back from a
-// public URL with this same content type, so accepting arbitrary types
-// (e.g. image/svg+xml, text/html) would let someone host a stored-XSS
-// payload. Detected from the file's actual magic bytes via `file-type`
-// rather than trusting the client-supplied Content-Type/filename, which is
-// just multipart metadata anyone can spoof — a renamed .html file claiming
-// to be "image/jpeg" would otherwise sail through unchecked. The extension
-// used for storage also comes from this detected type, so it can never
-// smuggle anything unexpected.
-const ALLOWED_MIME_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/heic": "heic",
-  "image/heic-sequence": "heic",
+// Only known-safe image types are accepted (an SVG or HTML file served back
+// from our storage would be a stored-XSS payload). The type is detected from
+// the file's own bytes via `file-type`, never from the client's
+// Content-Type or filename, which anyone can set.
+const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+// HEIC ("high efficiency" photos on iPhones and some Android phones) can't be
+// decoded by sharp's prebuilt build, and most browsers can't display it
+// either. iPhone Safari converts it to JPEG on upload by itself.
+const HEIC_MIME_TYPES = new Set(["image/heic", "image/heic-sequence", "image/heif", "image/heif-sequence"]);
+
+// Every image is re-encoded before it's stored:
+// - Phone cameras embed metadata, often including the GPS position where the
+//   photo was taken. Stored as sent, a food photo would tell anyone who opens
+//   the feed exactly where the poster lives, which the app otherwise hides
+//   until a request is approved. Re-encoding keeps none of it.
+// - Phone photos are several megabytes; the app shows them at most a few
+//   hundred pixels wide. 1600px WebP is plenty and a fraction of the size.
+const MAX_DIMENSION = 1600;
+// Refuses images whose pixel count would take far more memory to decode than
+// their file size suggests.
+const MAX_INPUT_PIXELS = 50_000_000;
+
+// Every upload is a different image, so sharp's operation cache would only
+// hold memory on a small instance.
+sharp.cache(false);
+
+// How long browsers and the CDN may keep each upload. Files are never changed
+// (each has a new random name), so food photos, seen again and again in the
+// feed, keep for a year. Selfies and profile photos are faces: once deleted,
+// a cached copy should stop being reachable soon, and they're seen rarely.
+const CACHE_SECONDS: Record<Bucket, string> = {
+  "food-photos": String(365 * 24 * 60 * 60),
+  selfies: "3600",
+  avatars: "3600",
 };
 
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -35,30 +58,47 @@ export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 // below on the decoded buffer.
 export const MAX_UPLOAD_REQUEST_BYTES = MAX_FILE_SIZE_BYTES + 1024 * 1024; // 6 MB
 
-export async function uploadFile(
-  buffer: Buffer,
-  bucket: "food-photos" | "selfies" | "avatars"
-): Promise<string> {
+export async function uploadFile(buffer: Buffer, bucket: Bucket): Promise<string> {
   if (buffer.length > MAX_FILE_SIZE_BYTES) {
     throw new UploadRejectedError("File is too large. Maximum size is 5MB.", 413);
   }
 
   const detected = await fileTypeFromBuffer(buffer);
-  const ext = detected && ALLOWED_MIME_TYPES[detected.mime];
 
-  if (!ext) {
+  if (detected && HEIC_MIME_TYPES.has(detected.mime)) {
     throw new UploadRejectedError(
-      "Unsupported or unrecognized file type. Only JPEG, PNG, WEBP, and HEIC images are allowed.",
+      "High-efficiency (HEIC) photos can't be used yet. Please choose a JPEG or PNG photo, or switch your camera to the most compatible format.",
       400
     );
   }
 
-  const filename = `${crypto.randomUUID()}.${ext}`;
+  if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
+    throw new UploadRejectedError(
+      "Unsupported or unrecognized file type. Only JPEG, PNG and WEBP images are allowed.",
+      400
+    );
+  }
+
+  let image: Buffer;
+  try {
+    image = await sharp(buffer, { limitInputPixels: MAX_INPUT_PIXELS, failOn: "error" })
+      // Turn the photo upright first: the orientation is metadata too, and is
+      // dropped with the rest.
+      .rotate()
+      .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+  } catch {
+    throw new UploadRejectedError("This image couldn't be read. Please try a different photo.", 400);
+  }
+
+  const filename = `${crypto.randomUUID()}.webp`;
 
   const { error } = await supabase.storage
     .from(bucket)
-    .upload(filename, buffer, {
-      contentType: detected.mime,
+    .upload(filename, image, {
+      contentType: "image/webp",
+      cacheControl: CACHE_SECONDS[bucket],
       upsert: false,
     });
 
@@ -72,8 +112,6 @@ export async function uploadFile(
 
   return data.publicUrl;
 }
-
-export type Bucket = "food-photos" | "selfies" | "avatars";
 
 // Uploads only ever get a random UUID name with an allowed extension (above).
 const UPLOADED_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|heic)$/;
