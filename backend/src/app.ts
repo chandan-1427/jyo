@@ -1,10 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 import * as Sentry from "@sentry/node";
 import { logger } from "./lib/logger.js";
 
 import { requestLogger } from "./middleware/requestLogger.js";
 import { sameOrigin } from "./middleware/sameOrigin.js";
+import { env } from "./env.js";
 import { limitBodySize } from "./lib/http.js";
 import { addressLimiter } from "./middleware/limiters.js";
 
@@ -14,19 +16,39 @@ import { postRoutes } from "./routes/posts.js";
 import { requestRoutes } from "./routes/requests.js";
 import { notificationRoutes } from "./routes/notifications.js";
 
+// The local dev server only outside production: allowed on the live API, any
+// page served on someone's machine at that address (Vite's default port, so
+// any local project) could act as them while they're logged in to Jyo.
+export function allowedOriginsFor(appEnv: string) {
+  return appEnv === "production"
+    ? ["https://jyo.co.in", "https://www.jyo.co.in"]
+    : ["https://jyo.co.in", "https://www.jyo.co.in", "http://localhost:5173"];
+}
+
 // Extracted from index.ts so tests can exercise the exact same route
 // wiring/middleware/error handling as production, instead of a hand-
 // maintained copy that could silently drift out of sync.
 export function createApp() {
   const app = new Hono();
 
-  const allowedOrigins = [
-    "https://jyo.co.in",
-    "https://www.jyo.co.in",
-    "http://localhost:5173",
-  ];
+  const allowedOrigins = allowedOriginsFor(env.APP_ENV);
 
   app.use("*", requestLogger);
+
+  // On every response, errors included. The API only ever answers with JSON
+  // (and the notification stream), so nothing may load or frame it, and
+  // browsers are told to use HTTPS for it from now on, as www already does.
+  // Same-site, not same-origin: www.jyo.co.in reads it.
+  app.use(
+    "*",
+    secureHeaders({
+      strictTransportSecurity: "max-age=63072000; includeSubDomains",
+      xFrameOptions: "DENY",
+      referrerPolicy: "no-referrer",
+      crossOriginResourcePolicy: "same-site",
+      contentSecurityPolicy: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] },
+    })
+  );
 
   // Before CORS and the routes: an action sent from another website's page
   // is refused outright (see middleware/sameOrigin.ts).

@@ -63,11 +63,9 @@ function describe(r: MyRequest): { group: Group; text: string; attention?: boole
   return { group: "declined", text: r.postStatus === "expired" ? "Ran out of time before an answer" : "Declined" };
 }
 
-// The request's post in the shape PostCard takes. posterId isn't sent, and
-// the card doesn't need it.
+// The request's post in the shape PostCard takes.
 const asPost = (r: MyRequest): FoodPost => ({
   id: r.postId,
-  posterId: "",
   title: r.postTitle,
   description: r.postDescription,
   photoUrl: r.postPhotoUrl,
