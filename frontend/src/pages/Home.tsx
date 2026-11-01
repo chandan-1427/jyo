@@ -8,14 +8,15 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { PickupPreview } from "@/components/home/PickupPreview";
 import { CoverageMap } from "@/components/home/CoverageMap";
+import { ApproveArt, AskArt, CollectArt, PostArt, TiffinArt } from "@/components/home/Illustrations";
 
 // Each card's body leads with one bright phrase and continues dimmed, so a
 // reader skimming only the bright text still gets the whole story.
 const STEPS = [
-  { time: "6:40 pm", title: "Anjali posts food", body: "She adds a photo, a short note, and the pickup time: 7 to 9 pm." },
-  { time: "6:52 pm", title: "Rahul asks for it", body: "Anjali sees his name, his selfie, and when he will come." },
-  { time: "6:55 pm", title: "Anjali says yes", body: "Now only Rahul can see her location. Nobody else on Jyo can." },
-  { time: "7:12 pm", title: "Rahul picks it up", body: "Anjali marks it as collected. Her location is hidden again." },
+  { time: "6:40 pm", title: "Anjali posts food", body: "She adds a photo, a short note, and the pickup time: 7 to 9 pm.", Art: PostArt },
+  { time: "6:52 pm", title: "Rahul asks for it", body: "Anjali sees his name, his selfie, and when he will come.", Art: AskArt },
+  { time: "6:55 pm", title: "Anjali says yes", body: "Now only Rahul can see her location. Nobody else on Jyo can.", Art: ApproveArt },
+  { time: "7:12 pm", title: "Rahul picks it up", body: "Anjali marks it as collected. Her location is hidden again.", Art: CollectArt },
 ];
 
 const SAFEGUARDS = [
@@ -205,12 +206,14 @@ export default function Home() {
             No delivery and no money. Someone near you comes to your home to pick up the food, at a
             time you choose.
           </SectionHeading>
-          {/* Each card is a subgrid spanning the list's two rows (title with
-              time, then text), so descriptions start on the same line across
-              cards side by side, even when one title wraps. */}
+          {/* Each card is a subgrid spanning the list's three rows (picture,
+              title with time, then text), so titles and descriptions start on
+              the same line across cards side by side, even when one title
+              wraps. */}
           <ol className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map(({ time, title, body }) => (
-              <li key={time} className={cn(CARD, "row-span-2 grid grid-rows-subgrid gap-y-0")}>
+            {STEPS.map(({ time, title, body, Art }) => (
+              <li key={time} className={cn(CARD, "row-span-3 grid grid-rows-subgrid gap-y-0")}>
+                <Art className="mb-5 size-14" />
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="font-display text-lg font-semibold leading-snug">{title}</h3>
                   <span className="shrink-0 text-[13px] font-medium text-fg-subtle tabular-nums">{time}</span>
@@ -278,6 +281,7 @@ export default function Home() {
 
         <Section>
           <div className="text-center">
+            <TiffinArt className="mx-auto mb-8 size-28 sm:size-32" />
             <p lang="te" className="font-display text-3xl font-semibold leading-[1.3] sm:text-5xl">
               మీ దగ్గరలో ఎవరో ఆకలితో ఉన్నారు.
             </p>
