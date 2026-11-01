@@ -217,7 +217,7 @@ authRoutes.post("/verify-email", async (c) => {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.verificationToken, hashLinkToken(token)))
+    .where(and(eq(users.verificationToken, hashLinkToken(token)), eq(users.isDeleted, false)))
     .limit(1);
 
   if (!user) {
@@ -279,7 +279,7 @@ authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.resetToken, hashLinkToken(token)))
+    .where(and(eq(users.resetToken, hashLinkToken(token)), eq(users.isDeleted, false)))
     .limit(1);
 
   if (!user) {

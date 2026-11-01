@@ -5,7 +5,7 @@ import { eq, or, and, gte, asc, desc, inArray, sql, getTableColumns } from "driz
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
 import { deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE } from "../lib/storage.js";
-import { isValidUuid, findPostById, findPostByClientKey } from "../lib/domain/finders.js";
+import { isValidUuid, findPostById, findPostByClientKey, posterNotDeleted } from "../lib/domain/finders.js";
 import { createPostLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
@@ -139,7 +139,8 @@ postRoutes.get("/", async (c) => {
         // left demo mode (the rows outlive the session until cleanup).
         isDemo
           ? or(eq(foodPosts.isDemo, false), eq(foodPosts.seededForUserId, userId))
-          : eq(foodPosts.isDemo, false)
+          : eq(foodPosts.isDemo, false),
+        posterNotDeleted
       )
     )
     // Posts someone can still request come first, and within each group the
@@ -245,7 +246,7 @@ postRoutes.get("/:id", async (c) => {
     })
     .from(foodPosts)
     .innerJoin(users, eq(foodPosts.posterId, users.id))
-    .where(eq(foodPosts.id, postId))
+    .where(and(eq(foodPosts.id, postId), eq(users.isDeleted, false)))
     .limit(1);
 
   if (!result) {

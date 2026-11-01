@@ -28,10 +28,13 @@ import { eq, or } from "drizzle-orm";
 import { createApp } from "../src/app.js";
 import { db } from "../src/db/index.js";
 import { foodPosts, notifications, pickupRequests, users } from "../src/db/schema.js";
+import { sendPasswordResetEmail } from "../src/lib/mailer.js";
+import { runDeletedAccountPurge } from "../src/jobs/deletedAccountPurge.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
 
 const app = createApp();
+const DAY = 24 * 60 * 60 * 1000;
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
@@ -41,10 +44,12 @@ const PNG = Buffer.from(
 beforeEach(async () => {
   await resetDb();
   removed.mockReset();
+  vi.clearAllMocks();
 });
 
 const settle = () => new Promise((r) => setTimeout(r, 100));
 const nameOf = (url: string) => url.split("/").pop()!;
+const later = (ms: number) => new Date(Date.now() + ms);
 
 async function upload(path: string, cookie: string) {
   const form = new FormData();
@@ -77,71 +82,92 @@ async function askFor(cookie: string, postId: string, selfieUrl?: string) {
 }
 
 const act = (cookie: string, path: string) => authedRequest(app, path, cookie, { method: "POST" });
+const postJson = (path: string, body: unknown) =>
+  app.request(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 const deleteAccount = (cookie: string, password = "password123") =>
   authedRequest(app, "/users/me", cookie, { method: "DELETE", body: JSON.stringify({ password }) });
 
+// A person with a profile photo and a post with a photo that a neighbour
+// asked for (with a selfie) and was declined, who also collected the
+// neighbour's food (with a selfie of their own).
+async function someoneWithHistory() {
+  const leaving = await createVerifiedUser(app, { email: `leaving-${Math.random()}@example.com`, name: "Leaving Person" });
+  const neighbour = await createVerifiedUser(app, { email: `neighbour-${Math.random()}@example.com` });
+
+  const avatar = await upload("/users/me/avatar", leaving.cookie);
+  const photo = await upload("/posts/photos", leaving.cookie);
+  const theirPost = await newPost(leaving.cookie, photo);
+  const neighbourSelfie = await upload("/requests/selfies", neighbour.cookie);
+  const declined = await askFor(neighbour.cookie, theirPost.id, neighbourSelfie);
+  await act(leaving.cookie, `/requests/${declined.id}/reject`);
+
+  const neighbourPost = await newPost(neighbour.cookie);
+  const theirSelfie = await upload("/requests/selfies", leaving.cookie);
+  const collected = await askFor(leaving.cookie, neighbourPost.id, theirSelfie);
+  await act(neighbour.cookie, `/requests/${collected.id}/approve`);
+  await act(neighbour.cookie, `/posts/${neighbourPost.id}/complete`);
+  await settle();
+  removed.mockReset();
+
+  return { leaving, neighbour, avatar, photo, theirPost, neighbourSelfie, declined, neighbourPost, theirSelfie, collected };
+}
+
 describe("deleting your account", () => {
-  it("removes the account and everything that belongs to it, and nobody else's", async () => {
-    const leaving = await createVerifiedUser(app, { email: "leaving@example.com" });
-    const neighbour = await createVerifiedUser(app, { email: "neighbour@example.com" });
+  it("keeps the account, hidden, with its details, and deletes its photos now", async () => {
+    const s = await someoneWithHistory();
 
-    // Their profile photo, an open post with a photo that the neighbour asked
-    // for and was declined, and an old pickup of the neighbour's food.
-    const avatar = await upload("/users/me/avatar", leaving.cookie);
-    const photo = await upload("/posts/photos", leaving.cookie);
-    const theirPost = await newPost(leaving.cookie, photo);
-    const neighbourSelfie = await upload("/requests/selfies", neighbour.cookie);
-    const declined = await askFor(neighbour.cookie, theirPost.id, neighbourSelfie);
-    await act(leaving.cookie, `/requests/${declined.id}/reject`);
-
-    const neighbourPost = await newPost(neighbour.cookie);
-    const theirSelfie = await upload("/requests/selfies", leaving.cookie);
-    const collected = await askFor(leaving.cookie, neighbourPost.id, theirSelfie);
-    await act(neighbour.cookie, `/requests/${collected.id}/approve`);
-    await act(neighbour.cookie, `/posts/${neighbourPost.id}/complete`);
-    await settle();
-
-    const res = await deleteAccount(leaving.cookie);
+    const res = await deleteAccount(s.leaving.cookie);
     expect(res.status).toBe(200);
     expect(res.headers.get("set-cookie")).toMatch(/token=;.*Max-Age=0/);
     await settle();
 
-    // Gone: the account, its post, every request on its post and its own requests, its notifications.
-    expect(await db.select().from(users).where(eq(users.id, leaving.userId))).toHaveLength(0);
-    expect(await db.select().from(foodPosts).where(eq(foodPosts.posterId, leaving.userId))).toHaveLength(0);
-    expect(
-      await db
-        .select()
-        .from(pickupRequests)
-        .where(or(eq(pickupRequests.pickerId, leaving.userId), eq(pickupRequests.postId, theirPost.id)))
-    ).toHaveLength(0);
-    expect(await db.select().from(notifications).where(eq(notifications.userId, leaving.userId))).toHaveLength(0);
+    const [row] = await db.select().from(users).where(eq(users.id, s.leaving.userId));
+    expect(row).toMatchObject({ isDeleted: true, name: "Leaving Person", email: s.leaving.email, avatarUrl: null });
+    expect(row.deletedAt).toBeInstanceOf(Date);
 
-    // And its files.
-    expect(removed).toHaveBeenCalledWith("avatars", [nameOf(avatar)]);
-    expect(removed).toHaveBeenCalledWith("food-photos", [nameOf(photo)]);
-    expect(removed).toHaveBeenCalledWith("selfies", [nameOf(theirSelfie)]);
-    expect(removed).toHaveBeenCalledWith("selfies", [nameOf(neighbourSelfie)]);
+    // Its posts and requests are kept, without their pictures.
+    const [post] = await db.select().from(foodPosts).where(eq(foodPosts.id, s.theirPost.id));
+    expect(post.photoUrl).toBeNull();
+    const [mine] = await db.select().from(pickupRequests).where(eq(pickupRequests.id, s.collected.id));
+    expect(mine.selfieUrl).toBeNull();
+    expect(await db.select().from(notifications).where(eq(notifications.userId, s.leaving.userId))).not.toHaveLength(0);
 
-    // The neighbour keeps their account, their post (now without a pointer
-    // to the deleted request) and their notifications, minus links to the
-    // deleted post.
-    const [kept] = await db.select().from(foodPosts).where(eq(foodPosts.id, neighbourPost.id));
-    expect(kept).toMatchObject({ status: "completed", approvedRequestId: null });
-    const theirNotes = await db.select().from(notifications).where(eq(notifications.userId, neighbour.userId));
-    expect(theirNotes.length).toBeGreaterThan(0);
-    expect(theirNotes.every((n) => n.postId !== theirPost.id)).toBe(true);
-    expect((await authedRequest(app, "/users/me", neighbour.cookie)).status).toBe(200);
+    // Its own photos are gone from storage; the neighbour's selfie isn't theirs to remove.
+    expect(removed).toHaveBeenCalledWith("avatars", [nameOf(s.avatar)]);
+    expect(removed).toHaveBeenCalledWith("food-photos", [nameOf(s.photo)]);
+    expect(removed).toHaveBeenCalledWith("selfies", [nameOf(s.theirSelfie)]);
+    expect(removed).not.toHaveBeenCalledWith("selfies", [nameOf(s.neighbourSelfie)]);
   });
 
-  it("ends every session of the account, on every device", async () => {
-    const user = await createVerifiedUser(app, { email: "all-devices@example.com" });
-    const login = await app.request("/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: user.email, password: "password123" }),
-    });
+  it("hides the account's posts from everyone and every action", async () => {
+    const s = await someoneWithHistory();
+    const viewer = await createVerifiedUser(app, { email: "viewer@example.com" });
+    const open = await newPost(s.leaving.cookie);
+
+    await deleteAccount(s.leaving.cookie);
+
+    const feed = await (await authedRequest(app, "/posts?lat=13.63&lng=79.42", viewer.cookie)).json();
+    expect(feed.posts.map((p: { id: string }) => p.id)).not.toContain(open.id);
+    expect((await authedRequest(app, `/posts/${open.id}`, viewer.cookie)).status).toBe(404);
+    expect(
+      (
+        await authedRequest(app, "/requests", viewer.cookie, {
+          method: "POST",
+          body: JSON.stringify({ postId: open.id, pickerName: "Picker", etaMinutes: 15, lat: 13.63, lng: 79.42 }),
+        })
+      ).status
+    ).toBe(404);
+
+    // The neighbour's declined request on that post leaves their history; their own post and pickup stay.
+    const history = await (await authedRequest(app, "/requests/mine", s.neighbour.cookie)).json();
+    expect(history.requests.map((r: { id: string }) => r.id)).not.toContain(s.declined.id);
+    expect((await authedRequest(app, `/posts/${s.neighbourPost.id}`, s.neighbour.cookie)).status).toBe(200);
+  });
+
+  it("ends every session, and the account can't be logged into or reset", async () => {
+    const user = await createVerifiedUser(app, { email: "gone@example.com" });
+    const login = await postJson("/auth/login", { email: user.email, password: "password123" });
     const otherDevice = login.headers.get("set-cookie")!.split(";")[0];
 
     await deleteAccount(user.cookie);
@@ -149,40 +175,94 @@ describe("deleting your account", () => {
     for (const cookie of [user.cookie, otherDevice]) {
       expect((await authedRequest(app, "/users/me", cookie)).status).toBe(401);
     }
+    const again = await postJson("/auth/login", { email: user.email, password: "password123" });
+    expect(again.status).toBe(401);
+    expect((await again.json()).error).toBe("Invalid email or password");
+
+    await postJson("/auth/forgot-password", { email: user.email });
+    expect(vi.mocked(sendPasswordResetEmail)).not.toHaveBeenCalled();
   });
 
-  it("frees the email address for a new sign-up", async () => {
-    const user = await createVerifiedUser(app, { email: "come-back@example.com" });
-    await deleteAccount(user.cookie);
-    const again = await createVerifiedUser(app, { email: "come-back@example.com" });
-    expect(again.userId).not.toBe(user.userId);
+  // Same email, new account: nothing from the deleted one comes back.
+  it("lets the same person sign up again as a fresh account", async () => {
+    const before = await createVerifiedUser(app, { email: "come-back@example.com", name: "First Time" });
+    const oldPost = await newPost(before.cookie);
+    await deleteAccount(before.cookie);
+
+    const after = await createVerifiedUser(app, { email: "come-back@example.com", name: "Second Time" });
+    expect(after.userId).not.toBe(before.userId);
+
+    const me = await (await authedRequest(app, "/users/me", after.cookie)).json();
+    expect(me.user).toMatchObject({ name: "Second Time", avatarUrl: null, isDemo: false });
+    const posts = await (await authedRequest(app, "/posts/mine", after.cookie)).json();
+    expect(posts.posts.map((p: { id: string }) => p.id)).not.toContain(oldPost.id);
+    expect((await authedRequest(app, `/posts/${oldPost.id}`, after.cookie)).status).toBe(404);
+
+    // The old account is still kept, deleted, alongside.
+    const rows = await db.select().from(users).where(eq(users.email, "come-back@example.com"));
+    expect(rows.map((r) => r.isDeleted).sort()).toEqual([false, true]);
   });
 
-  it("takes the account's open posts out of the feed", async () => {
-    const leaving = await createVerifiedUser(app, { email: "feed-leaving@example.com" });
-    const viewer = await createVerifiedUser(app, { email: "feed-viewer@example.com" });
-    const post = await newPost(leaving.cookie);
-
-    await deleteAccount(leaving.cookie);
-
-    const feed = await (await authedRequest(app, "/posts?lat=13.63&lng=79.42", viewer.cookie)).json();
-    expect(feed.posts.map((p: { id: string }) => p.id)).not.toContain(post.id);
-    expect((await authedRequest(app, `/posts/${post.id}`, viewer.cookie)).status).toBe(404);
+  it("still allows only one live account per email", async () => {
+    await createVerifiedUser(app, { email: "taken@example.com" });
+    const res = await postJson("/auth/register", { name: "Copy Cat", email: "taken@example.com", password: "password123", phone: "9876543210" });
+    expect(res.status).toBe(409);
   });
 
-  it("removes a demo visitor's seeded demo posts too", async () => {
+  it("works for a demo visitor too", async () => {
     const visitor = await createVerifiedUser(app, { email: "demo-leaving@example.com" });
     await act(visitor.cookie, "/auth/demo/start");
     await authedRequest(app, "/posts?lat=13.63&lng=79.42", visitor.cookie);
-    expect(await db.select().from(foodPosts).where(eq(foodPosts.seededForUserId, visitor.userId))).toHaveLength(1);
-
     expect((await deleteAccount(visitor.cookie)).status).toBe(200);
-    expect(await db.select().from(foodPosts).where(eq(foodPosts.seededForUserId, visitor.userId))).toHaveLength(0);
+  });
+});
+
+describe("erasing deleted accounts after 30 days", () => {
+  it("erases the account and everything that was its, and nothing else", async () => {
+    const s = await someoneWithHistory();
+    await deleteAccount(s.leaving.cookie);
+    await settle();
+    removed.mockReset();
+
+    // Kept for 30 days...
+    expect(await runDeletedAccountPurge(later(29 * DAY))).toEqual([]);
+    expect(await db.select().from(users).where(eq(users.id, s.leaving.userId))).toHaveLength(1);
+
+    // ...then gone, with its posts, every request on them and its own requests.
+    expect(await runDeletedAccountPurge(later(31 * DAY))).toEqual([s.leaving.userId]);
+    expect(await db.select().from(users).where(eq(users.id, s.leaving.userId))).toHaveLength(0);
+    expect(await db.select().from(foodPosts).where(eq(foodPosts.posterId, s.leaving.userId))).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(pickupRequests)
+        .where(or(eq(pickupRequests.pickerId, s.leaving.userId), eq(pickupRequests.postId, s.theirPost.id)))
+    ).toHaveLength(0);
+    expect(await db.select().from(notifications).where(eq(notifications.userId, s.leaving.userId))).toHaveLength(0);
+    // The neighbour's selfie went with the post it was attached to.
+    expect(removed).toHaveBeenCalledWith("selfies", [nameOf(s.neighbourSelfie)]);
+
+    // The neighbour keeps everything of theirs.
+    const [kept] = await db.select().from(foodPosts).where(eq(foodPosts.id, s.neighbourPost.id));
+    expect(kept).toMatchObject({ status: "completed", approvedRequestId: null });
+    expect((await authedRequest(app, "/users/me", s.neighbour.cookie)).status).toBe(200);
+  });
+
+  it("leaves a new account with the same email alone", async () => {
+    const before = await createVerifiedUser(app, { email: "twice@example.com" });
+    await deleteAccount(before.cookie);
+    const after = await createVerifiedUser(app, { email: "twice@example.com" });
+    await newPost(after.cookie);
+
+    await runDeletedAccountPurge(later(31 * DAY));
+
+    expect(await db.select().from(users).where(eq(users.email, "twice@example.com"))).toHaveLength(1);
+    expect((await authedRequest(app, "/users/me", after.cookie)).status).toBe(200);
   });
 });
 
 describe("what deleting your account requires", () => {
-  it("refuses a wrong password, deleting nothing", async () => {
+  it("refuses a wrong password, changing nothing", async () => {
     const user = await createVerifiedUser(app, { email: "wrong-password@example.com" });
 
     const res = await deleteAccount(user.cookie, "not-my-password");
@@ -244,8 +324,8 @@ describe("while a pickup is in progress", () => {
   });
 
   // A request arriving at the same moment either lands first (and the
-  // deletion is refused) or finds the post gone; never a half-deleted mix.
-  it("never leaves a request on a deleted post when one arrives at the same moment", async () => {
+  // deletion is refused) or finds the post gone; never both.
+  it("never lets a request land on a deleted account's post at the same moment", async () => {
     for (let i = 0; i < 5; i++) {
       const leaving = await createVerifiedUser(app, { email: `race-leaving-${i}@example.com` });
       const picker = await createVerifiedUser(app, { email: `race-picker-${i}@example.com` });
@@ -259,16 +339,13 @@ describe("while a pickup is in progress", () => {
         }),
       ]);
 
-      const posts = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
       const requests = await db.select().from(pickupRequests).where(eq(pickupRequests.postId, post.id));
       if (deleted.status === 200) {
         expect([404, 409]).toContain(asked.status);
-        expect(posts).toHaveLength(0);
         expect(requests).toHaveLength(0);
       } else {
         expect(deleted.status).toBe(409);
         expect(asked.status).toBe(201);
-        expect(posts).toHaveLength(1);
         expect(requests).toHaveLength(1);
       }
     }

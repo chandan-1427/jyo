@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
 import { TextField } from "@/components/ui/TextField";
 
-// Deleting an account asks for the password again, says what goes and when
+// Deleting an account asks for the password again, says what happens and when
 // (backups included), and confirms once it's done, in the same place. Then
 // everything this browser kept about the account is dropped, not just the
 // login: on a shared phone, the next person mustn't see their posts.
@@ -45,7 +45,7 @@ export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
   if (deleted) {
     return (
       <Dialog title="Account deleted" onClose={finish}>
-        <Notice tone="success">Your account and everything you shared on Jyo have been deleted.</Notice>
+        <Notice tone="success">Your account has been deleted. Everything else is erased for good within 30 days.</Notice>
         <Button size="lg" fullWidth className="mt-6" onClick={finish}>
           Done
         </Button>
@@ -60,10 +60,13 @@ export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
     <Dialog title="Delete your account?" onClose={onClose}>
       <div className="space-y-3 leading-relaxed text-fg-muted">
         <p>
-          This can't be undone. Your account, your posts and their photos, your requests and selfies, and your
-          notifications are deleted straight away.
+          This can't be undone. Your account closes straight away: you're logged out everywhere, and nobody can see
+          your profile, posts or requests any more. Your photos and selfies are deleted now.
         </p>
-        <p>Copies in our encrypted backups are gone within 30 days.</p>
+        <p>
+          Everything else is erased for good after 30 days, and from our encrypted backups within 30 days after
+          that. You can sign up again with the same email at any time, as a new account.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit(({ password }) => remove.mutate(password))} noValidate className="mt-5">

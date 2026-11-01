@@ -172,10 +172,11 @@ userRoutes.delete("/me/avatar", async (c) => {
   return c.json({ message: "Avatar removed", user: updatedUser });
 });
 // --- Delete own account ---
-// Everything goes: see lib/domain/deleteAccount.ts. The password is asked for
-// again (a session left open on someone else's phone mustn't be enough), and
-// wrong guesses are rate-limited. Every session of the account ends at once:
-// the middleware finds no account behind them.
+// Hidden at once and erased after 30 days, photos deleted now: see
+// lib/domain/deleteAccount.ts. The password is asked for again (a session
+// left open on someone else's phone mustn't be enough), and wrong guesses are
+// rate-limited. Every session ends at once: the middleware refuses a deleted
+// account.
 userRoutes.delete("/me", deleteAccountLimiter, async (c) => {
   const { userId } = c.get("user");
   const parsed = await parseJsonBody(c, deleteAccountSchema);

@@ -27,8 +27,8 @@ declare module "hono" {
 //   were saved as demo posts that nobody else could see.)
 // - a session from before the account's tokenVersion was bumped (password
 //   reset) is over, as is one that was logged out (revoked_sessions, checked
-//   in the same query) and one for an account that no longer exists. All
-//   three clear the cookie and answer 401.
+//   in the same query) and one for an account that was deleted or no longer
+//   exists. All of these clear the cookie and answer 401.
 // Tokens signed before `ver` existed count as version 0, the starting value,
 // so existing sessions carry on until something bumps it.
 export const authMiddleware = createMiddleware(async (c, next) => {
@@ -61,6 +61,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
       tokenVersion: users.tokenVersion,
       isDemo: users.isDemo,
       demoExpiresAt: users.demoExpiresAt,
+      isDeleted: users.isDeleted,
       revoked: jti
         ? sql<boolean>`exists (select 1 from ${revokedSessions} where ${revokedSessions.jti} = ${jti})`
         : sql<boolean>`false`,
@@ -69,7 +70,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     .where(eq(users.id, userId))
     .limit(1);
 
-  if (!account || account.tokenVersion !== version || account.revoked) {
+  if (!account || account.isDeleted || account.tokenVersion !== version || account.revoked) {
     endSession(c);
     return c.json({ error: "Your session has ended. Please log in again." }, 401);
   }

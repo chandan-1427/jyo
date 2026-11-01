@@ -10,6 +10,7 @@ import {
   index,
   uniqueIndex
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // --- Enums ---
 export const postStatusEnum = pgEnum("post_status", [
@@ -38,7 +39,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
 export const users = pgTable("users", {
   id:           uuid("id").primaryKey().defaultRandom(),
   name:         text("name").notNull(),
-  email:        text("email").notNull().unique(),
+  email:        text("email").notNull(),
   passwordHash: text("password_hash").notNull(),
   phone:        text("phone").notNull(),
   locationText: text("location_text"),
@@ -54,8 +55,16 @@ export const users = pgTable("users", {
   // Carried in every session token and checked on each request: bumping it
   // (a password reset) ends every session signed before. See middleware/auth.ts.
   tokenVersion: integer("token_version").notNull().default(0),
+  // A deleted account is kept, hidden, for 30 days (jobs/deletedAccountPurge.ts
+  // then erases it); see lib/domain/deleteAccount.ts.
+  isDeleted:    boolean("is_deleted").notNull().default(false),
+  deletedAt:    timestamp("deleted_at"),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // One live account per email. A deleted account keeps its email, so the
+  // same person can sign up again as a new account straight away.
+  uniqueIndex("users_email_active_idx").on(table.email).where(sql`${table.isDeleted} = false`),
+]);
 
 // --- Food Posts ---
 export const foodPosts = pgTable("food_posts", {
