@@ -1,6 +1,5 @@
 export type FoodPost = {
   id: string;
-  posterId: string;
   // Only sent to the poster and, once approved, the picker.
   posterName?: string | null;
   title: string;
@@ -16,7 +15,6 @@ export type FoodPost = {
 export type PickupRequest = {
   id: string;
   postId: string;
-  pickerId: string;
   pickerName: string;
   selfieUrl: string | null;
   etaMinutes: number;

@@ -115,7 +115,6 @@ postRoutes.get("/", async (c) => {
   const posts = await db
     .select({
       id: foodPosts.id,
-      posterId: foodPosts.posterId,
       title: foodPosts.title,
       description: foodPosts.description,
       photoUrl: foodPosts.photoUrl,
@@ -256,6 +255,12 @@ postRoutes.get("/:id", async (c) => {
   const { post, posterName } = result;
   const isPoster = post.posterId === userId;
 
+  // A demo post seeded for one visitor's session: to anyone else it's as if
+  // it isn't there, as in the feed and when requesting it.
+  if (post.isDemo && !isPoster && post.seededForUserId !== userId) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
   // Check if requester is the approved picker
   let isApprovedPicker = false;
   if (post.approvedRequestId) {
@@ -271,7 +276,14 @@ postRoutes.get("/:id", async (c) => {
   let pendingRequest = null;
   if (isPoster && post.status === "pending_approval") {
     const [req] = await db
-      .select()
+      .select({
+        id: pickupRequests.id,
+        pickerName: pickupRequests.pickerName,
+        selfieUrl: pickupRequests.selfieUrl,
+        etaMinutes: pickupRequests.etaMinutes,
+        status: pickupRequests.status,
+        createdAt: pickupRequests.createdAt,
+      })
       .from(pickupRequests)
       .where(
         and(
@@ -300,11 +312,26 @@ postRoutes.get("/:id", async (c) => {
 
   const showLocation = (isPoster || isApprovedPicker) && post.status === "closed";
 
-  // The poster's name follows the same rule as the location: only the poster
-  // and the picker they approved get it, so the picker knows who to meet.
-  const safePost = showLocation
-    ? { ...post, posterName }
-    : { ...post, posterName: isPoster ? posterName : null, pickupLat: null, pickupLng: null };
+  // Only what the page shows, listed rather than the whole row, so a column
+  // added later isn't sent to everyone by default. Account ids in particular
+  // stay out: the poster's would let anyone link all of one household's
+  // posts, which the app otherwise keeps apart. The poster's name follows the
+  // same rule as the location: only the poster and the picker they approved
+  // get it, so the picker knows who to meet.
+  const safePost = {
+    id: post.id,
+    title: post.title,
+    description: post.description,
+    photoUrl: post.photoUrl,
+    pickupWindowStart: post.pickupWindowStart,
+    pickupWindowEnd: post.pickupWindowEnd,
+    status: post.status,
+    isDemo: post.isDemo,
+    createdAt: post.createdAt,
+    posterName: showLocation || isPoster ? posterName : null,
+    pickupLat: showLocation ? post.pickupLat : null,
+    pickupLng: showLocation ? post.pickupLng : null,
+  };
 
   return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest, myRequest });
 });
