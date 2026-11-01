@@ -134,8 +134,14 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-canvas">
-        <div className="flex h-14 items-center justify-between gap-6 px-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:px-6 lg:px-10">
+      {/* On phones a plain bar, since the tab bar at the bottom is the glass
+          layer there. From sm up the same frosted glass as that tab bar, as
+          a pill floating 12px below the top: the page scrolls on underneath
+          it, and its edges sit on the page's side gutters so it lines up
+          with the content. */}
+      <header className="sticky top-0 z-40 bg-canvas sm:bg-transparent sm:px-6 sm:pt-3 lg:px-10">
+        <div className="relative flex h-14 items-center justify-between gap-6 px-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:rounded-full sm:bg-canvas/70 sm:pr-2.5 sm:pl-6 sm:shadow-lift sm:ring-1 sm:ring-inset sm:ring-fg/[0.08] sm:backdrop-blur-lg sm:backdrop-saturate-150 sm:supports-[not(backdrop-filter:blur(0))]:bg-canvas/95 sm:[@media(prefers-reduced-transparency:reduce)]:bg-canvas/95">
+          <span aria-hidden="true" className="pointer-events-none absolute inset-0 hidden rounded-full shadow-[inset_0_1px_0_rgb(255_255_255/0.08)] sm:block" />
           <Logo to="/feed" className="justify-self-start font-display text-2xl text-fg [&>span]:text-leaf" />
 
           <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
@@ -256,11 +262,12 @@ export default function Navbar() {
       {/* Mobile tab bar: a pill of frosted glass floating above the page, which
           scrolls on underneath it. Glass is kept to this navigation layer and
           not used on content; the tint is dark enough that the labels stay
-          legible over bright food photos. Without backdrop-filter support it
-          falls back to a near-solid fill. */}
+          legible over bright food photos. Without backdrop-filter support, or
+          when the system asks for less transparency, it falls back to a
+          near-solid fill. */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-4 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-full bg-canvas/70 shadow-lift ring-1 ring-inset ring-fg/[0.08] backdrop-blur-lg backdrop-saturate-150 supports-[not(backdrop-filter:blur(0))]:bg-canvas/95 sm:hidden"
+        className="fixed inset-x-4 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-full bg-canvas/70 shadow-lift ring-1 ring-inset ring-fg/[0.08] backdrop-blur-lg backdrop-saturate-150 supports-[not(backdrop-filter:blur(0))]:bg-canvas/95 [@media(prefers-reduced-transparency:reduce)]:bg-canvas/95 sm:hidden"
       >
         {/* A faint highlight along the top edge, where light would catch glass. */}
         <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]" />
