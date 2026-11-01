@@ -136,13 +136,14 @@ export default function Navbar() {
     <>
       {/* On phones a plain bar, since the tab bar at the bottom is the glass
           layer there. From sm up the same frosted glass as that tab bar, as
-          a pill floating 12px below the top: the page scrolls on underneath
-          it, and its edges sit on the page's side gutters so it lines up
-          with the content. */}
+          a pill floating 12px below the top, only as wide as what's in it:
+          logo, links and account controls read as one group rather than
+          three islands spread across a wide screen. The page scrolls on
+          underneath it. */}
       <header className="sticky top-0 z-40 bg-canvas sm:bg-transparent sm:px-6 sm:pt-3 lg:px-10">
-        <div className="relative flex h-14 items-center justify-between gap-6 px-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:rounded-full sm:bg-canvas/70 sm:pr-2.5 sm:pl-6 sm:shadow-lift sm:ring-1 sm:ring-inset sm:ring-fg/[0.08] sm:backdrop-blur-lg sm:backdrop-saturate-150 sm:supports-[not(backdrop-filter:blur(0))]:bg-canvas/95 sm:[@media(prefers-reduced-transparency:reduce)]:bg-canvas/95">
+        <div className="relative flex h-14 items-center justify-between gap-6 px-4 sm:mx-auto sm:gap-8 sm:w-fit sm:rounded-full sm:bg-canvas/70 sm:pr-2.5 sm:pl-6 sm:shadow-lift sm:ring-1 sm:ring-inset sm:ring-fg/[0.08] sm:backdrop-blur-lg sm:backdrop-saturate-150 sm:supports-[not(backdrop-filter:blur(0))]:bg-canvas/95 sm:[@media(prefers-reduced-transparency:reduce)]:bg-canvas/95">
           <span aria-hidden="true" className="pointer-events-none absolute inset-0 hidden rounded-full shadow-[inset_0_1px_0_rgb(255_255_255/0.08)] sm:block" />
-          <Logo to="/feed" className="justify-self-start font-display text-2xl text-fg [&>span]:text-leaf" />
+          <Logo to="/feed" className="font-display text-2xl text-fg [&>span]:text-leaf" />
 
           <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
             {NAV_LINKS.map((link) => (
@@ -150,14 +151,14 @@ export default function Navbar() {
                 key={link.path}
                 to={link.path}
                 aria-current={current(link.path)}
-                className="rounded-md px-3 py-1.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg aria-[current=page]:text-fg focus-visible:outline-2 focus-visible:outline-leaf"
+                className="rounded-md px-3 py-1.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg aria-[current=page]:text-leaf focus-visible:outline-2 focus-visible:outline-leaf"
               >
                 {link.label}
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 justify-self-end">
+          <div className="flex items-center gap-2">
             {/* Notifications */}
             <div className="relative" ref={menuRef}>
               <button
@@ -251,7 +252,7 @@ export default function Navbar() {
               to="/profile"
               aria-current={current("/profile")}
               aria-label="Your profile"
-              className="hidden rounded-full ring-2 ring-fg/0 ring-offset-2 ring-offset-canvas transition-shadow duration-200 ease-out hover:ring-fg/20 aria-[current=page]:ring-fg/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf sm:block"
+              className="hidden rounded-full ring-2 ring-fg/0 ring-offset-2 ring-offset-canvas transition-shadow duration-200 ease-out hover:ring-leaf/40 aria-[current=page]:ring-leaf focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf sm:block"
             >
               <Avatar name={user?.name} src={user?.avatarUrl} className="size-9 text-sm" />
             </Link>

@@ -5,9 +5,8 @@ import Navbar from "./Navbar";
 import DemoIndicator from "./DemoIndicator";
 
 // Shell for every logged-in page. Full width with the same side gutters as
-// the navbar, so content lines up with it (under the logo on phones, with the
-// floating bar's edges from sm up); each page arranges its own columns rather
-// than being boxed into a narrow centre. --header-h is the navbar's height
+// the phone navbar, so content lines up under the logo there; each page
+// arranges its own columns rather than being boxed into a narrow centre. --header-h is the navbar's height
 // (56px, plus the 12px it floats below the top from sm up), for `fill-screen`. Bottom padding on
 // phones clears the floating tab bar (56px, sitting 12px up or just above
 // the home indicator, plus 16px of air); while the demo indicator is
