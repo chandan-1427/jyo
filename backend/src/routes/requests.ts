@@ -182,8 +182,13 @@ requestRoutes.post("/:id/approve", async (c) => {
     return c.json({ message: "Request approved" });
   }
 
+  // The request was read first, then the post: the same action arriving at
+  // the same moment can finish in between, leaving the post no longer
+  // waiting. That's still the outcome asked for, not a conflict.
   if (post.status !== "pending_approval") {
-    return c.json({ error: "This post is not awaiting approval" }, 409);
+    return (await requestIsNow(requestId, "approved"))
+      ? c.json({ message: "Request approved" })
+      : c.json({ error: "This post is not awaiting approval" }, 409);
   }
 
   // Two concurrent approve calls (e.g. a double-click) could both pass the
@@ -246,8 +251,13 @@ requestRoutes.post("/:id/reject", async (c) => {
     return c.json({ message: "Request rejected" });
   }
 
+  // The request was read first, then the post: the same action arriving at
+  // the same moment can finish in between, leaving the post no longer
+  // waiting. That's still the outcome asked for, not a conflict.
   if (post.status !== "pending_approval") {
-    return c.json({ error: "This post is not awaiting approval" }, 409);
+    return (await requestIsNow(requestId, "rejected"))
+      ? c.json({ message: "Request rejected" })
+      : c.json({ error: "This post is not awaiting approval" }, 409);
   }
 
   const rejected = await db
