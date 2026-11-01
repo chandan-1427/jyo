@@ -1,147 +1,124 @@
-# Jyo - Food Sharing
+# Jyo
 
-Free community food sharing for Tirupati, India.
+Free, neighbour-to-neighbour food sharing for Tirupati, India.
 
 [![Live](https://img.shields.io/badge/Live-jyo.co.in-2D6A4F?style=flat-square)](https://www.jyo.co.in)
 [![CI](https://github.com/chandan-1427/jyo/actions/workflows/ci.yml/badge.svg)](https://github.com/chandan-1427/jyo/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
-[![Built for Tirupati](https://img.shields.io/badge/Built%20for-Tirupati%20%F0%9F%87%AE%F0%9F%87%B3-orange?style=flat-square)](https://www.jyo.co.in)
 
 <p align="center">
-  <img src="frontend/public/og-image.png" alt="Jyo — Community food sharing for Tirupati" width="100%" />
+  <img src="frontend/public/og-image.png" alt="Jyo: community food sharing for Tirupati" width="100%" />
 </p>
 
-## What is Jyo
+Households often cook more than they eat, while students and neighbours a few streets away could use a meal. Jyo connects them: someone posts the food they can't finish, someone nearby asks to pick it up, and the poster says yes or no. No delivery, no payment, no middleman. It's a non-commercial project, live at **[jyo.co.in](https://www.jyo.co.in)**.
 
-Jyo is a web app that connects households with leftover food to students and neighbours nearby in Tirupati. Someone posts food they can't finish, someone close by requests to pick it up, and the poster approves or rejects. No delivery, no payment, no middleman — just neighbours helping neighbours. It was built as a social service with no commercial motive by a recent SVCE graduate who wanted to do something useful for the city.
+## How it works
 
-## Features
+1. **Share.** A household posts what they have, with a photo and a pickup time. Their location is taken from their phone.
+2. **Ask.** People within 20 km see it in their feed. They don't see where it is or who posted it. One person asks for it, with their name, how soon they can get there, and a selfie.
+3. **Meet.** The poster sees who asked and approves or declines. Only after approval does the picker see the pickup spot and the poster's name. The poster marks it collected afterwards, and unclaimed posts expire on their own.
 
-- GPS-based feed — shows only food posts within 20 km of your location
-- Privacy-preserving location — exact coordinates are hidden from the feed; only the approved picker sees the location after approval
-- Selfie verification — pickers submit a selfie photo when requesting a pickup, so the poster knows who is coming
-- Post status lifecycle — posts move through a defined set of states from open to completed (or expired)
-- Automatic expiry — a cron job runs every 5 minutes and marks posts as expired once their pickup window ends
-- In-app notifications — both posters and pickers are notified when request status changes
-- Email notifications — transactional emails for account verification, password reset, request received, approved, and rejected via Resend
-- Tirupati boundary enforcement — posting and requesting is restricted to within 20 km of Tirupati center in production
+Both sides get in-app notifications and email at each step. A demo mode lets anyone outside Tirupati try the whole flow with sample data.
 
-## Tech Stack
+## Built to be trusted with people's locations and photos
 
-### Frontend
+The app asks people to share where they live and a photo of their face, so most of the engineering is about not mishandling that.
 
-| Package | Version | Purpose |
-|---|---|---|
-| React | ^19.2.5 | UI framework |
-| React Router DOM | ^7.15.0 | Client-side routing |
-| TanStack Query | ^5.101.4 | Server-state caching and mutations |
-| Tailwind CSS | ^4.3.0 | Styling |
-| @supabase/supabase-js | ^2.105.4 | Auth session (Supabase client) |
-| @sentry/react | ^10.68.0 | Error tracking (optional) |
-| lucide-react | ^1.14.0 | Icons |
-| clsx | ^2.1.1 | Conditional classnames |
-| tailwind-merge | ^3.6.0 | Tailwind class merging |
-| Vite | ^8.0.10 | Build tool |
-| TypeScript | ~6.0.2 | Type safety |
+- **Location stays hidden until it's needed.** The feed only shows distance, and the requests that load it carry coordinates rounded to about 1 km. The exact pickup spot and the poster's name go only to the poster and the one person they approved, and only until the food is collected.
+- **Photos give nothing away.** Every upload is re-encoded on the server before it's stored, which drops the metadata phone cameras embed, including the GPS position a photo was taken at. A picker's selfie is shown to no one but the poster deciding on their request.
+- **Nothing identifies people across posts.** API responses list their fields explicitly, so internal account IDs never reach other users.
+- **Accounts are hard to take over.** Sessions are httpOnly cookies, protected against cross-site requests, and revoked on the server at logout. Passwords use bcrypt. Email-link tokens are stored only as hashes. A password reset signs out every device.
+- **Abuse is limited without locking out real people.** Many people here share one IP address, behind college Wi-Fi or mobile carriers, so tight limits are counted per account and per email address, not just per IP.
+- **Unused data doesn't pile up.** Images nothing refers to any more, old notifications, revoked sessions and abandoned sign-ups are cleaned up automatically.
 
-### Backend
+## Engineering highlights
 
-| Package | Version | Purpose |
-|---|---|---|
-| Hono | ^4.12.32 | HTTP framework |
-| @hono/node-server | ^1.19.14 | Node.js adapter for Hono |
-| Drizzle ORM | ^0.45.2 | Database ORM |
-| postgres | ^3.4.9 | PostgreSQL driver |
-| @supabase/supabase-js | ^2.105.4 | File storage (Supabase client) |
-| bcryptjs | ^3.0.3 | Password hashing |
-| jose | ^6.2.3 | JWT signing and verification |
-| resend | ^6.12.3 | Transactional email |
-| node-cron | ^4.2.1 | Post expiry and notification-cleanup schedulers |
-| @sentry/node | ^10.68.0 | Error tracking (optional) |
-| vitest | ^4.1.10 | Test runner |
-| TypeScript | ^5.8.3 | Type safety |
-| tsx | ^4.7.1 | Dev server runner |
+For engineers and reviewers, the parts that took the most care:
 
-## Architecture Overview
+- **Correct under concurrency and retries.** Every status change (approve, decline, cancel, collect) is a conditional update inside a transaction, so two simultaneous taps change the data once and notify once. Repeating an action that already happened returns the original success, so a retry after a lost response on mobile data isn't shown as an error. A re-submitted post form returns the post it already made.
+- **Stable pagination.** Personal lists use keyset (cursor) pagination with integer microsecond keys. Float keys were rounded by the hosted database and repeated items at page boundaries.
+- **Consistent API.** Every error is `{ error, details? }` with one status-code scheme. Input is validated with Zod at every boundary, and request bodies are size-limited before anything reads them.
+- **Fast where users are.** The API runs in the same region as the database. A request that touches the database answers in about 0.2 s, down from about 1 s when they were on opposite sides of the Pacific.
+- **Tested against a real database.** About 235 backend integration tests run each request through the real app and a real Postgres. They cover concurrency, idempotency, permissions (nobody can act on another user's things), CSRF, rate limits, scheduled jobs and the production-only rules. Coverage is reported in CI (about 88% of lines). The frontend has unit tests for the shared request and upload helpers.
 
-The frontend is a React SPA deployed on Vercel, talking to a Hono REST API deployed on Render. The database is a PostgreSQL instance hosted on Supabase, accessed through Drizzle ORM. File uploads (food photos and selfie verifications) go directly to Supabase Storage buckets. Transactional and notification emails are sent through Resend. Authentication is handled with HTTP-only cookies carrying a JWT signed with `jose`. Errors on both sides are reported to Sentry (optional — no-op if unconfigured). DNS is managed on Cloudflare, with the live domain at `jyo.co.in`.
+## Architecture
 
-## Local Development Setup
-
-### Prerequisites
-
-- Node.js 20+
-- pnpm
-- Docker (only needed to run the backend test suite)
-
-### Clone
-
-```bash
-git clone https://github.com/chandan-1427/jyo.git
-cd jyo
+```mermaid
+flowchart LR
+  U[Browser] -->|HTTPS| V[Vercel<br/>React SPA<br/>www.jyo.co.in]
+  U -->|HTTPS, cookie| R[Render, Singapore<br/>Hono API<br/>api.jyo.co.in]
+  U -.->|images| S[(Supabase Storage)]
+  R --> D[(Supabase Postgres<br/>Singapore)]
+  R -->|re-encoded uploads| S
+  R --> E[Resend<br/>email]
+  R --> X[Sentry]
+  R -. live updates, SSE .-> U
 ```
 
-Backend and frontend each have their own setup, scripts, and environment variable reference in their own README:
+- **Frontend:** React 19, React Router, TanStack Query for all server state, Tailwind CSS 4, Vite. Deployed on Vercel.
+- **Backend:** Hono on Node.js, Drizzle ORM, PostgreSQL, Zod, jose (JWT), bcrypt, sharp (image processing), node-cron. One instance on Render.
+- **Services:** Supabase (Postgres and Storage), Resend (email), Sentry (errors), Cloudflare (DNS), UptimeRobot (uptime).
+- **Live updates:** server-sent events push new notifications and tell open feeds to refresh.
 
-- [backend/README.md](./backend/README.md) — setup, scripts, tests, env vars
-- [frontend/README.md](./frontend/README.md) — setup, scripts, env vars
+## Delivery and operations
 
-## Project Structure
+- **Deploys only after tests pass.** GitHub Actions runs the backend tests (against a fresh Postgres) and the frontend lint, unit tests and build on every pull request. Merges to `main` then deploy automatically. The hosting platforms' own git deploys are turned off, so CI is the only way to ship.
+- **Migrations run in the pipeline,** before the new code goes live. Each one must work with both the old and the new code.
+- **Nightly database backups** are encrypted before they're stored, since this repository is public.
+- **Monitoring:** Sentry reports unexpected errors only, never routine 4xx responses. Uptime is checked externally.
+- **Supply chain:** Dependabot and CodeQL run on the repository. Advisories are checked for whether the vulnerable code is actually reachable before upgrading.
+
+## Running it locally
+
+You need Node.js 20+, pnpm and Docker (for the backend tests). Backend and frontend are separate packages, each with its own setup guide:
+
+- [backend/README.md](./backend/README.md): setup, scripts, tests, environment variables
+- [frontend/README.md](./frontend/README.md): setup, scripts, environment variables
 
 ```
 jyo/
-├── backend/   # Hono REST API — see backend/README.md for its internal structure
-├── frontend/  # React SPA — see frontend/README.md for its internal structure
-└── .github/   # CI/CD workflow (test, build, gated deploy to Render/Vercel)
+├── backend/   Hono API, database schema and migrations, scheduled jobs, tests
+├── frontend/  React app
+└── .github/   CI/CD, backups, Dependabot, CodeQL
 ```
 
-## Post Status Lifecycle
+## Post lifecycle
 
 | Status | Meaning |
 |---|---|
-| `open` | Post is active and visible in the feed. Anyone nearby can request it. |
-| `pending_approval` | A picker has submitted a request. The poster is reviewing it. The post is no longer available to others. |
-| `closed` | The poster approved a request. The exact pickup location is now shared with the approved picker. |
-| `completed` | The poster confirmed the food was picked up successfully. |
-| `expired` | The pickup window passed before the post was closed or completed. Set automatically by the expiry cron job. |
+| `open` | In the feed; anyone nearby can ask for it. |
+| `pending_approval` | Someone asked; the poster is deciding. Nobody else can ask meanwhile. |
+| `closed` | Approved; the picker now sees where to go. |
+| `completed` | The poster confirmed it was collected. |
+| `expired` | The pickup time passed with nobody approved. Any waiting request is declined and the picker is told. |
 
-## Deployment
+## Running it for your own city
 
-Deploys are driven entirely by CI, not by Render/Vercel's own git integrations — a broken build or failing test blocks the deploy instead of shipping anyway.
+The app is city-agnostic apart from one service area:
 
-- **CI/CD**: `.github/workflows/ci.yml` runs on every push/PR to `main`. The `backend` job spins up a disposable Postgres container, builds, migrates, and runs the full test suite; the `frontend` job lints and builds. Only on an actual push to `main`, and only if its corresponding job passed, `deploy-backend` and `deploy-frontend` jobs run.
-- **Backend**: hosted on Render as a web service in the Singapore region, next to the Supabase database (start command `node dist/index.js`, built with `tsc`). `deploy-backend` triggers Render's deploy hook (`RENDER_DEPLOY_HOOK_URL` secret) — Render then pulls the latest commit and builds/deploys on its own infrastructure. Auto-deploy-on-push is disabled in the Render dashboard so this hook is the only trigger.
-- **Frontend**: hosted on Vercel. `deploy-frontend` runs `vercel deploy --prod` using `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` secrets, which uploads the source and builds it on Vercel's own infrastructure — functionally the same as the old git-integration auto-deploy, just triggered by CI passing instead of a raw push. The GitHub integration in Vercel is disconnected so it can't double-deploy independently of CI.
-- **Database and Storage**: both on Supabase. Create a project, run migrations with `pnpm db:migrate`, and create two storage buckets named `food-photos` and `selfies` with public access.
-
-## Adapting for Your City
-
-If you want to run this for your own city, fork the repo and make these changes:
-
-1. In `backend/src/lib/haversine.ts`, update `TIRUPATI_CENTER` to the coordinates of your city and adjust `TIRUPATI_RADIUS_KM` to cover the area you want to serve.
-2. Update the `APP_URL` and `CLIENT_URL` environment variables to your deployment URLs.
-3. Update the allowed CORS origins in `backend/src/app.ts` to match your domain.
-4. Replace the branding (app name, email sender, etc.) as needed.
-
-That is essentially it. The rest of the app is city-agnostic.
+1. Set `TIRUPATI_CENTER` and `TIRUPATI_RADIUS_KM` in `backend/src/lib/geo/haversine.ts` and `frontend/src/lib/location/geofence.ts` to your city.
+2. Set your domains in `allowedOriginsFor` (`backend/src/app.ts`) and `APP_URL`.
+3. Create a Supabase project with public `food-photos`, `selfies` and `avatars` buckets, and apply the migrations.
+4. Change the branding and the email sender in `backend/src/lib/mailer.ts`.
 
 ## Roadmap
 
-- Phone OTP verification as an alternative to email
-- In-app chat between poster and picker after approval
-- Food category filters in the feed
-- Trust scores for repeat users
-- Multi-city expansion
-- Admin dashboard for moderation
+- A staging environment, and end-to-end browser tests against it
+- Phone OTP sign-in as an alternative to email
+- Chat between poster and picker after approval
+- Food categories in the feed
+- Trust signals for regular sharers and pickers
+- A moderation dashboard
+- More cities
 
 ## Contributing
 
-Feedback and bug reports are welcome via [GitHub Issues](https://github.com/chandan-1427/jyo/issues). Not actively seeking code contributions at this time, but forks are encouraged.
+Bug reports and feedback are welcome in [GitHub Issues](https://github.com/chandan-1427/jyo/issues). Code contributions aren't being taken right now, but forks are encouraged.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE).
 
 ## Author
 
-Built by Chandan — [GitHub](https://github.com/chandan-1427) · [jyo.co.in](https://www.jyo.co.in)
+Built by Chandan ([GitHub](https://github.com/chandan-1427)), a recent SVCE graduate who wanted to do something useful for Tirupati. Live at [jyo.co.in](https://www.jyo.co.in).
