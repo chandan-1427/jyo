@@ -38,10 +38,11 @@ Tests run against `.env.test` (committed, dummy values only) on a disposable Pos
 pnpm dev       # Vite dev server
 pnpm build     # tsc -b && vite build
 pnpm lint      # eslint .
+pnpm test      # vitest unit tests (jsdom), next to the code as *.test.ts(x)
 pnpm preview   # serve the production build locally
 ```
 
-No frontend test suite exists.
+Frontend tests are unit tests of the shared helpers every screen relies on (`apiFetch`, `applyServerFieldErrors`, `useImageUpload`, `randomUuid`, `useDebouncedValue`, `useLinkToken`), with `fetch` stubbed; `vitest.config.ts` fixes `VITE_API_URL` to `https://api.test`. No component or end-to-end tests yet.
 
 ## Architecture
 
