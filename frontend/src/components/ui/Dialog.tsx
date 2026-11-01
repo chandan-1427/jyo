@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 
 interface DialogProps {
   title: string;
+  // A line or two explaining the title, set close under it: they read as one
+  // unit, with the larger gap before what follows [23 Layout].
+  description?: ReactNode;
   onClose: () => void;
   children: ReactNode;
   // Width on larger screens: md for short messages and small forms, lg for
@@ -24,9 +27,10 @@ const WIDTHS = { md: "sm:max-w-md", lg: "sm:max-w-xl" };
 // [08]. The page behind is dimmed and slightly blurred so it reads as out of
 // play [06]. Entry is a transition from @starting-style; closing unmounts it
 // at once, with no exit animation.
-export function Dialog({ title, onClose, children, size = "md", className }: DialogProps) {
+export function Dialog({ title, description, onClose, children, size = "md", className }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const descriptionId = useId();
   const lenis = useLenis();
 
   useEffect(() => {
@@ -44,6 +48,7 @@ export function Dialog({ title, onClose, children, size = "md", className }: Dia
     <dialog
       ref={ref}
       aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
       onClose={onClose}
       // A click on the dialog element itself can only be on the backdrop,
       // since the inner panel covers the whole box.
@@ -59,15 +64,23 @@ export function Dialog({ title, onClose, children, size = "md", className }: Dia
       )}
     >
       <div className="p-6">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 id={titleId} className="font-display text-xl font-semibold">
-            {title}
-          </h2>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 id={titleId} className="font-display text-xl font-semibold">
+              {title}
+            </h2>
+            {description && (
+              <div id={descriptionId} className="mt-1.5 leading-relaxed text-fg-muted">
+                {description}
+              </div>
+            )}
+          </div>
+          {/* -mt-1 centres the 36px button on the title's 28px line. */}
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="-mr-2 grid size-9 cursor-pointer place-items-center rounded-lg text-fg-muted transition-colors hover:bg-lifted hover:text-fg focus-visible:outline-2 focus-visible:outline-leaf"
+            className="-mr-2 -mt-1 grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-fg-muted transition-colors hover:bg-lifted hover:text-fg focus-visible:outline-2 focus-visible:outline-leaf"
           >
             <X className="size-5" aria-hidden="true" />
           </button>
