@@ -41,6 +41,7 @@ Runs on `http://localhost:3000` by default.
 | `pnpm db:generate` | Generate a new Drizzle migration from schema changes |
 | `pnpm db:migrate` | Apply migrations to the database in `DATABASE_URL` |
 | `pnpm db:push` | Push schema changes directly without a migration file (dev convenience only) |
+| `pnpm test --coverage` | Run the tests and report which lines of `src/` no test runs (HTML in `coverage/`) |
 | `pnpm db:studio` | Open Drizzle Studio to browse the database |
 | `pnpm uploads:check` | Show what the nightly unused-upload cleanup would delete, without deleting anything (uses `.env`) |
 

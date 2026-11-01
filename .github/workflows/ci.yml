@@ -56,7 +56,8 @@ jobs:
         # Bypasses the docker-compose-based pretest/posttest lifecycle in
         # package.json's "test" script — the postgres service above already
         # provides the test DB, no need to spin up docker-in-docker here.
-        run: pnpm exec vitest run
+        # With a coverage summary in the log: which lines no test runs.
+        run: pnpm exec vitest run --coverage
 
   frontend:
     name: Frontend (build + lint)
