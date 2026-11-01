@@ -38,13 +38,14 @@ const SIZES: Record<Size, string> = {
 // step reads on any of the v2 surfaces. Ghost has no surface, so it gets no
 // ledge; its hover shows a quiet fill.
 const VARIANTS: Record<Variant, string> = {
-  primary: cn(DEPTH, "bg-linear-to-b from-cta-top to-cta text-canvas [--ledge:var(--color-cta-deep)]"),
+  primary: cn(DEPTH, "bg-linear-to-b from-cta-top to-cta text-white [--ledge:var(--color-cta-deep)]"),
   secondary: cn(DEPTH, "bg-linear-to-b from-lifted-top to-lifted text-fg [--ledge:var(--color-raised)]"),
   // Outlined, no fill or ledge: for the quieter half of a pair (Cancel).
   outline: "text-fg ring-1 ring-inset ring-fg/15 hover:bg-fg/5 hover:opacity-100",
   ghost: "text-fg-muted hover:bg-raised hover:text-fg hover:opacity-100",
-  // Outlined in red rather than filled: destructive actions (Log out) should
-  // be findable without being the loudest thing on screen.
+  // Outlined in red rather than filled: a destructive action that should be
+  // findable without being the loudest thing on screen. Red only ever marks
+  // removing something, so leaving (Log out) isn't red [23 Color].
   danger: "text-danger ring-1 ring-inset ring-danger/50 hover:bg-danger/10 hover:opacity-100",
   // Solid red with the same ledge as primary and secondary, for removing
   // something the person made (Delete post).

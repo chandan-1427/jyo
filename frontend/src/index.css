@@ -39,14 +39,17 @@
   --color-fg-muted:  #A3AFA9; /*  8.6:1, body copy */
   --color-fg-subtle: #7E8B84; /*  5.4:1, metadata; 4.9:1 on raised */
   --color-leaf:      #5CC791; /*  9.2:1, the one accent; canvas text on it is 9.2:1 too */
-  /* Primary button. Deeper than the leaf accent, same hue. Canvas text on the
-     fill is 6.5:1 (above the 4.5:1 minimum); much darker and it drops under. */
-  --color-cta:      #45A876;
-  --color-cta-deep: #2A6747; /* its ledge */
+  /* Primary button, with white text. A deep forest green, the leaf accent's
+     hue: white on it is 5.7:1 (4.7:1 at the gradient's lighter top), above
+     the 4.5:1 minimum for its 15px label [23 Accessibility]. The old lighter
+     green took white at only 2.5-3:1, so it carried canvas text instead. The
+     fill is still 3.4:1 against the canvas, so the button reads as a shape. */
+  --color-cta:      oklch(0.5 0.115 158);
+  --color-cta-deep: oklch(0.38 0.09 158); /* its ledge */
 
   /* Top stops for the buttons' slight vertical gradient. Same hue as the fill
      below, only lighter, so the blend can't drift in hue. */
-  --color-cta-top:    oklch(0.7 0.115 158);
+  --color-cta-top:    oklch(0.55 0.115 158);
   --color-lifted-top: oklch(0.26 0.006 165);
   --color-danger:    #EF7C8E; /*  7.4:1, destructive actions only */
   /* Solid destructive buttons (Delete post): a deeper red than danger, which

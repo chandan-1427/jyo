@@ -662,22 +662,26 @@ export default function Profile() {
             </>
           }
           footer={
-            <>
-              <span className="max-sm:hidden" />
-              <LogoutButton className="max-sm:w-full" />
-            </>
+            // The same pair as the delete dialog: neutral on the left, red on
+            // the right, both 44px [23 Accessibility]. Stacked on phones with
+            // Log out first, so the everyday action is the one under the thumb
+            // and deleting is a deliberate second reach. Red only for
+            // deleting [23 Color]; it opens a confirmation that asks for the
+            // password, so it can't remove anything by itself [24 Feedback].
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+              <LogoutButton className="w-full" />
+              <Button
+                variant="dangerSolid"
+                size="lg"
+                className="w-full"
+                onClick={() => setDeletingAccount(true)}
+                iconLeft={<Trash2 className="size-4" aria-hidden="true" />}
+              >
+                Delete account
+              </Button>
+            </div>
           }
-        >
-          {/* Easy to find, but apart from Log out, which people use often. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-            <p className="min-w-0 flex-1 basis-56 text-sm leading-relaxed text-fg-muted">
-              Delete your account and everything you've shared on Jyo.
-            </p>
-            <Button variant="danger" size="sm" onClick={() => setDeletingAccount(true)}>
-              Delete account
-            </Button>
-          </div>
-        </Card>
+        />
         {deletingAccount && <DeleteAccountDialog onClose={() => setDeletingAccount(false)} />}
       </div>
     </div>
