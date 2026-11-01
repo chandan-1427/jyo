@@ -47,6 +47,12 @@ export const loginSchema = z.object({
   password: fields.loginPassword,
 });
 
+// Deleting your account asks for your password again, so a session left
+// open on someone else's phone can't be used to do it.
+export const deleteAccountSchema = z.object({
+  password: fields.loginPassword,
+});
+
 export const forgotPasswordSchema = z.object({
   email: fields.email,
 });

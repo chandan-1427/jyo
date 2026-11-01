@@ -60,6 +60,7 @@ describe("frontend and backend validation stay in sync", () => {
       ["email", "email", "email"], ["password", "password", "loginPassword"],
     ]],
     ["forgot password", frontend.forgotPasswordSchema, backend.forgotPasswordSchema, [["email", "email", "email"]]],
+    ["delete account", frontend.deleteAccountSchema, backend.deleteAccountSchema, [["password", "password", "loginPassword"]]],
     ["reset password", frontend.resetPasswordSchema, backend.resetPasswordSchema, [["password", "password", "newPassword"]]],
     ["profile", frontend.profileSchema, backend.updateProfileSchema, [
       ["name", "name", "name"], ["phone", "phone", "phone"],

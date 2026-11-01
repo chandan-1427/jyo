@@ -3,9 +3,14 @@ import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { and, eq, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
-import { deleteFile } from "../lib/storage.js";
-import { uploadLimiter, userLimiter } from "../middleware/limiters.js";
-import { updateProfileSchema } from "../lib/validation.js";
+import { deleteFile, type Bucket } from "../lib/storage.js";
+import { deleteAccountLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
+import { deleteAccountSchema, updateProfileSchema } from "../lib/validation.js";
+import { verifyPassword } from "../lib/passwords.js";
+import { endSession } from "../lib/session.js";
+import { deleteAccount, PICKUP_IN_PROGRESS } from "../lib/domain/deleteAccount.js";
+import { broadcastFeedChange, closeUserStreams } from "../lib/notifications/notificationStream.js";
+import { logger } from "../lib/logger.js";
 import { parseJsonBody, uploadFromForm } from "../lib/http.js";
 
 export const userRoutes = new Hono();
@@ -165,4 +170,41 @@ userRoutes.delete("/me/avatar", async (c) => {
   }
 
   return c.json({ message: "Avatar removed", user: updatedUser });
+});
+// --- Delete own account ---
+// Everything goes: see lib/domain/deleteAccount.ts. The password is asked for
+// again (a session left open on someone else's phone mustn't be enough), and
+// wrong guesses are rate-limited. Every session of the account ends at once:
+// the middleware finds no account behind them.
+userRoutes.delete("/me", deleteAccountLimiter, async (c) => {
+  const { userId } = c.get("user");
+  const parsed = await parseJsonBody(c, deleteAccountSchema);
+  if (!parsed.ok) return parsed.response;
+
+  const [account] = await db.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!account) return userGone(c);
+
+  if (!(await verifyPassword(parsed.data.password, account.passwordHash))) {
+    return c.json({ error: "That password isn't right." }, 403);
+  }
+
+  const result = await deleteAccount(userId);
+  if (result.status === "pickup_in_progress") {
+    return c.json({ error: PICKUP_IN_PROGRESS }, 409);
+  }
+
+  endSession(c);
+  closeUserStreams(userId);
+  if (result.feedChanged) broadcastFeedChange();
+
+  const files: [string, Bucket][] = [
+    ...(result.avatarUrl ? [[result.avatarUrl, "avatars"] as [string, Bucket]] : []),
+    ...result.photoUrls.map((url): [string, Bucket] => [url, "food-photos"]),
+    ...result.selfieUrls.map((url): [string, Bucket] => [url, "selfies"]),
+  ];
+  for (const [url, bucket] of files) {
+    deleteFile(url, bucket).catch((err) => logger.error({ err, bucket }, "Failed to delete a deleted account's file"));
+  }
+
+  return c.json({ message: "Your account has been deleted." });
 });

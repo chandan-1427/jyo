@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
 import { TextAreaField, TextField } from "@/components/ui/TextField";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { DeleteAccountDialog } from "@/components/auth/DeleteAccountDialog";
 import { BannerPattern } from "@/components/profile/BannerPattern";
 
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5MB — matches the backend's hard limit
@@ -183,6 +184,7 @@ export default function Profile() {
   useV2Theme();
   const queryClient = useQueryClient();
   const { startDemo, stopDemo } = useAuth();
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const { data: profile, isLoading: loading } = useQuery({
     queryKey: authMeKey,
@@ -665,7 +667,18 @@ export default function Profile() {
               <LogoutButton className="max-sm:w-full" />
             </>
           }
-        />
+        >
+          {/* Easy to find, but apart from Log out, which people use often. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <p className="min-w-0 flex-1 basis-56 text-sm leading-relaxed text-fg-muted">
+              Delete your account and everything you've shared on Jyo.
+            </p>
+            <Button variant="danger" size="sm" onClick={() => setDeletingAccount(true)}>
+              Delete account
+            </Button>
+          </div>
+        </Card>
+        {deletingAccount && <DeleteAccountDialog onClose={() => setDeletingAccount(false)} />}
       </div>
     </div>
   );
