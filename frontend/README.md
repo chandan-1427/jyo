@@ -33,6 +33,7 @@ Runs on `http://localhost:5173` by default.
 | `pnpm dev` | Start the Vite dev server |
 | `pnpm build` | Type-check (`tsc -b`) and build for production |
 | `pnpm lint` | Run eslint |
+| `pnpm test` | Run the unit tests (Vitest, jsdom) |
 | `pnpm preview` | Serve the production build locally |
 
 ## Environment Variables
