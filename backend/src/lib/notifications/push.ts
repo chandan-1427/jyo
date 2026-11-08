@@ -4,6 +4,7 @@ import { db } from "../../db/index.js";
 import { pushSubscriptions } from "../../db/schema.js";
 import { env } from "../../env.js";
 import { logger } from "../logger.js";
+import { inBackground } from "../background.js";
 
 export const MAX_SUBSCRIPTIONS_PER_USER = 10;
 
@@ -72,7 +73,7 @@ export type PushMessage = { body: string; url: string };
 // Fire and forget, like the notification emails. The text shows on a lock
 // screen, which in a shared household anyone may see, so it carries only the
 // generic notification message: never a name, a number or a place.
-export async function sendPush(userId: string, message: PushMessage) {
+async function sendPushNow(userId: string, message: PushMessage) {
   if (!pushEnabled) return;
 
   const subs = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
@@ -98,3 +99,5 @@ export async function sendPush(userId: string, message: PushMessage) {
 
   if (gone.length) await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone));
 }
+
+export const sendPush = (...args: Parameters<typeof sendPushNow>) => inBackground(sendPushNow(...args));

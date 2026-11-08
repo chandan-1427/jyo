@@ -16,6 +16,7 @@ import { runRequestTimeout } from "../src/jobs/requestTimeout.js";
 import { REQUEST_TIMEOUT_MS } from "../src/lib/domain/requestActions.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 const HOUR = 60 * 60 * 1000;
@@ -63,7 +64,7 @@ const requestStatus = async (id: string) =>
   (await db.select().from(pickupRequests).where(eq(pickupRequests.id, id)))[0].status;
 
 async function timedOutNotices(userId: string) {
-  await new Promise((r) => setTimeout(r, 100));
+  await backgroundSettled();
   return db
     .select()
     .from(notifications)

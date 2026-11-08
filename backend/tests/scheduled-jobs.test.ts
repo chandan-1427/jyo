@@ -17,6 +17,7 @@ import { runUnverifiedUserCleanup } from "../src/jobs/unverifiedUserCleanup.js";
 import { runNotificationCleanup, RETENTION_DAYS } from "../src/jobs/notificationCleanup.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 const HOUR = 60 * 60 * 1000;
@@ -59,7 +60,7 @@ const requestStatus = async (id: string) =>
 
 // Notifications are created without being awaited.
 async function notificationsFor(userId: string, type: "request_timed_out") {
-  await new Promise((r) => setTimeout(r, 100));
+  await backgroundSettled();
   return db.select().from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.type, type)));
 }
 

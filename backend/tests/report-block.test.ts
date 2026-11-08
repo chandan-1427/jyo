@@ -28,6 +28,7 @@ import { notifyPicker, sendReportEmail } from "../src/lib/mailer.js";
 import { purgeAccount } from "../src/lib/domain/deleteAccount.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 
@@ -179,7 +180,7 @@ describe("blocking", () => {
 
     expect((await db.select().from(pickupRequests).where(eq(pickupRequests.id, requestId)))[0].status).toBe("rejected");
     expect((await db.select().from(foodPosts).where(eq(foodPosts.id, postId)))[0].status).toBe("open");
-    await new Promise((r) => setTimeout(r, 100));
+    await backgroundSettled();
     expect(await db.select().from(notifications).where(eq(notifications.userId, picker.userId))).toHaveLength(0);
     expect(vi.mocked(notifyPicker)).not.toHaveBeenCalled();
     expect((await ask(picker.cookie, postId)).status).toBe(404);
@@ -200,7 +201,7 @@ describe("blocking", () => {
     expect(after.status).toBe("open");
     expect(after.approvedRequestId).toBeNull();
     expect((await authedRequest(app, `/posts/${postId}`, picker.cookie)).status).toBe(404);
-    await new Promise((r) => setTimeout(r, 100));
+    await backgroundSettled();
     expect(await db.select().from(notifications).where(eq(notifications.userId, picker.userId))).toHaveLength(1);
   });
 

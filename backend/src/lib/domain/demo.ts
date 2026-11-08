@@ -5,6 +5,7 @@ import { users, foodPosts } from "../../db/schema.js";
 import { createRequestRow, approveRequestTx } from "./requestActions.js";
 import { createNotification } from "../notifications/notify.js";
 import { logger } from "../logger.js";
+import { inBackground } from "../background.js";
 
 // A demo session — the seeded post, the pending request on the visitor's
 // own post, and any synthetic counterparty accounts — all disappear this
@@ -109,7 +110,7 @@ export async function provisionSeededPost(visitorId: string, lat: number, lng: n
 // and approves/rejects a request. Bypasses the real POST /requests route
 // (no session to act as the synthetic picker with), so it also creates the
 // "someone wants your food" notification that route would normally send.
-export async function seedRequestOnOwnPost(postId: string, posterId: string, demoExpiresAt: Date) {
+async function seedRequestOnOwnPostNow(postId: string, posterId: string, demoExpiresAt: Date) {
   const picker = await createSyntheticUser("Priya Sharma", demoExpiresAt);
 
   const request = await createRequestRow({
@@ -139,3 +140,5 @@ export async function seedRequestOnOwnPost(postId: string, posterId: string, dem
 export async function autoApproveIfDemo(requestId: string, postId: string): Promise<boolean> {
   return approveRequestTx(requestId, postId);
 }
+
+export const seedRequestOnOwnPost = (...args: Parameters<typeof seedRequestOnOwnPostNow>) => inBackground(seedRequestOnOwnPostNow(...args));

@@ -20,6 +20,7 @@ import { MAX_STREAMS_PER_USER, subscribe, unsubscribe } from "../src/lib/notific
 import type { SSEStreamingApi } from "hono/streaming";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 
@@ -185,7 +186,7 @@ describe("emails to the poster", () => {
     await authedRequest(app, `/requests/${first.id}/cancel`, picker.cookie, { method: "POST" });
     expect((await ask()).status).toBe(201);
 
-    await new Promise((r) => setTimeout(r, 100));
+    await backgroundSettled();
     const received = await db
       .select()
       .from(notifications)
