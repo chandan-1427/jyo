@@ -158,6 +158,9 @@ export default function Feed() {
       {heading}
       <div className="mb-6 flex flex-wrap items-center justify-end gap-2">
         {demoButton}
+        <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
+          Post food
+        </Button>
         <SelectMenu
           label="Show food"
           icon={<ListFilter />}
@@ -167,9 +170,6 @@ export default function Feed() {
           compact
           className="shrink-0 sm:w-48"
         />
-        <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
-          Post food
-        </Button>
       </div>
 
       {/* A failed update keeps showing the posts already loaded. */}
