@@ -11,6 +11,7 @@ import * as frontend from "../../../frontend/src/lib/validation.ts";
 
 // Inputs chosen to sit on every rule's edges.
 const SAMPLES: Record<keyof typeof backend.fields, unknown[]> = {
+  acceptTerms: [true, false, "true", 1, null],
   name: ["", "a", " a ", "Al", "  Ravi Kumar  ", "x".repeat(100), "x".repeat(101), 123],
   email: ["", "ravi", "ravi@", "ravi@gmail.com", "  Ravi@Gmail.COM  ", "a@b", null],
   phone: ["", "98765", "9876543210", " 9876543210 ", "98765432101", "abcdefghij", "+919876543210", "98765 43210"],
@@ -55,6 +56,7 @@ describe("frontend and backend validation stay in sync", () => {
   const FORMS: [string, Schema, Schema, [string, string, keyof typeof SAMPLES][]][] = [
     ["sign up", frontend.registerSchema, backend.registerSchema, [
       ["name", "name", "name"], ["email", "email", "email"], ["phone", "phone", "phone"], ["password", "password", "newPassword"],
+      ["acceptTerms", "acceptTerms", "acceptTerms"],
     ]],
     ["log in", frontend.loginSchema, backend.loginSchema, [
       ["email", "email", "email"], ["password", "password", "loginPassword"],

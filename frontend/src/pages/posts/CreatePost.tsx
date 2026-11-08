@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
-import { Loader2, MapPin, MapPinOff, Send } from "lucide-react";
+import { Loader2, MapPin, MapPinOff, Send, ShieldCheck } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { createPostSchema, MAX_PICKUP_DAYS_AHEAD } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/Button";
 import { DateTimeField } from "@/components/ui/DateTimeField";
 import { ImagePickerField } from "@/components/ui/ImagePickerField";
 import { Notice } from "@/components/ui/Notice";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { FOOD_SAFETY_RULES } from "@/lib/legal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TextAreaField, TextField } from "@/components/ui/TextField";
 
@@ -24,6 +26,7 @@ type PostValues = {
   photo: File;
   pickupWindowStart: string;
   pickupWindowEnd: string;
+  safeToEat: true;
 };
 
 const HOUR = 3_600_000;
@@ -168,6 +171,30 @@ export default function CreatePost() {
                 />
               )}
             />
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-xl bg-raised px-4 py-4 ring-1 ring-inset ring-fg/[0.06]">
+            <p className="flex items-center gap-2 text-sm font-medium text-fg">
+              <ShieldCheck className="size-4 shrink-0 text-leaf" aria-hidden="true" />
+              Before you share
+            </p>
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm leading-relaxed text-fg-muted">
+              {FOOD_SAFETY_RULES.map((rule) => <li key={rule}>{rule}</li>)}
+            </ul>
+            <div>
+              <Checkbox
+                {...register("safeToEat")}
+                aria-invalid={errors.safeToEat ? true : undefined}
+                aria-describedby={errors.safeToEat ? "safe-to-eat-error" : undefined}
+                className="items-start"
+                label="This food is safe to eat, and I've followed these rules"
+              />
+              {errors.safeToEat && (
+                <p id="safe-to-eat-error" className="mt-1.5 text-[13px] leading-snug text-danger">
+                  {errors.safeToEat.message}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Where it's picked up from, and who gets to see that. */}

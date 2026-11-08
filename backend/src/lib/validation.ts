@@ -12,6 +12,7 @@ import { cursorSchema, limitSchema, searchSchema } from "./pagination.js";
 // to give faster, field-level feedback.
 // ─────────────────────────────────────────────────────────────────────────────
 export const fields = {
+  acceptTerms: z.literal(true, "Confirm you're 18 or older and agree to the Terms and Privacy Policy"),
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Enter a valid 10-digit phone number"),
@@ -40,6 +41,7 @@ export const registerSchema = z.object({
   email: fields.email,
   phone: fields.phone,
   password: fields.newPassword,
+  acceptTerms: fields.acceptTerms,
 });
 
 export const loginSchema = z.object({

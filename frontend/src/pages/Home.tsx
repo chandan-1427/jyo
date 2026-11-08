@@ -67,6 +67,8 @@ const FOOTER_LINKS = [
   { label: "Email", href: "https://mail.google.com/mail/?view=cm&to=jyofoodsharing@gmail.com&su=Jyo Support" },
   { label: "Instagram", href: "https://www.instagram.com/jyo_food_sharing" },
   { label: "GitHub", href: "https://github.com/chandan-1427/jyo" },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
 ];
 
 const INTRO_KEY = "jyo:home-intro";
@@ -308,8 +310,8 @@ export default function Home() {
                 <li key={label}>
                   <a
                     href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    target={href.startsWith("/") ? undefined : "_blank"}
+                    rel={href.startsWith("/") ? undefined : "noopener noreferrer"}
                     className="inline-flex rounded-md px-2 py-2 font-medium text-fg-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-leaf"
                   >
                     {label}

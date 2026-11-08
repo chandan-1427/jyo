@@ -56,6 +56,11 @@ export const users = pgTable("users", {
   description:  text("description"),
   avatarUrl:    text("avatar_url"),
   emailVerified:      boolean("email_verified").notNull().default(false),
+  // When this person agreed to the Terms and Privacy Policy (and confirmed
+  // they're 18 or older) at sign-up, and which version. Null for accounts
+  // made before the policies existed.
+  termsAcceptedAt:    timestamp("terms_accepted_at"),
+  termsVersion:       text("terms_version"),
   verificationToken:  text("verification_token"),
   verificationTokenExpiry: timestamp("verification_token_expiry"),
   resetToken:         text("reset_token"),

@@ -18,7 +18,9 @@ import {
   Phone,
   Play,
   Save,
+  ScrollText,
   Settings,
+  Shield,
   Trash2,
   UserRound,
   X,
@@ -71,6 +73,8 @@ const HELP_LINKS = [
   { label: "Email", icon: Mail, href: "https://mail.google.com/mail/?view=cm&to=jyofoodsharing@gmail.com&su=Jyo Support" },
   { label: "Instagram", icon: FaInstagram, href: "https://www.instagram.com/jyo_food_sharing" },
   { label: "GitHub", icon: FaGithub, href: "https://github.com/chandan-1427/jyo" },
+  { label: "Privacy", icon: Shield, href: "/privacy" },
+  { label: "Terms", icon: ScrollText, href: "/terms" },
 ];
 
 // Underlined text action, dotted so it reads as an action rather than a

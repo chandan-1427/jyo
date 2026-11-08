@@ -163,6 +163,7 @@ describe("email links used twice", () => {
       email: "verify-twice@example.com",
       password: "password123",
       phone: "9876543210",
+      acceptTerms: true,
     });
     const [, token] = vi.mocked(sendVerificationEmail).mock.calls.at(-1)!;
 
