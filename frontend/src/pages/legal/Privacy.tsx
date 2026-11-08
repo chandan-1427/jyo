@@ -34,6 +34,7 @@ export default function Privacy() {
         <p><strong>When you ask for food:</strong> the name you give, a selfie, how soon you can get there, and your location at that moment (to check you're within 20 km; it isn't stored).</p>
         <p><strong>When you browse the feed:</strong> your location, rounded to about 1 km, to find food near you. It isn't stored.</p>
         <p><strong>If you choose to:</strong> whether you share your phone number for a pickup, and, if you turn on notifications, an address your browser gives us for delivering them.</p>
+        <p><strong>When you pick food up:</strong> that you confirmed it, and any thank-you note you write, which the person who shared the food sees.</p>
         <p><strong>If you report or block someone:</strong> the report (the reason, any note you add, and the post's title) or the block. A report goes to the Jyo team only; the person reported isn't told who reported them, and isn't told when they're blocked.</p>
         <p><strong>Automatically:</strong> your IP address, and records of the requests your device makes (with your account ID), used to keep Jyo secure and working; and the notifications we've shown you.</p>
       </Section>
@@ -41,6 +42,7 @@ export default function Privacy() {
       <Section title="Who sees what">
         <ul>
           <li><strong>People near you</strong> see the food's title, description, photo, pickup time and distance. Not your name, not where you are.</li>
+          <li><strong>Anyone a post's link is shared with</strong> (for example in a WhatsApp group) sees a preview with the food's photo, title, whether it's veg, how many it serves and the pickup time. Never where it is or who shared it, and only while the food is still on offer.</li>
           <li><strong>The person you approve</strong> sees the exact pickup spot and your name, from approval until the food is collected or the pickup is called off. They see your phone number only if you chose to share it.</li>
           <li><strong>A person sharing food</strong> sees the name, selfie and arrival time you send with a request, so they can decide and recognise you. They see your phone number only if you chose to share it.</li>
           <li><strong>No one else</strong> sees your email, phone number, exact location or account details. Your account ID is never shown to other people, so your posts can't be linked together.</li>

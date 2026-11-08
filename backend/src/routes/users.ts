@@ -64,6 +64,7 @@ userRoutes.get("/me/stats", async (c) => {
     .select({
       shared: sql<number>`count(*)::int`,
       pickedUp: sql<number>`(count(*) filter (where ${foodPosts.status} = 'completed'))::int`,
+      mealsShared: sql<number>`coalesce(sum(coalesce(${foodPosts.servings}, 1)) filter (where ${foodPosts.status} = 'completed'), 0)::int`,
     })
     .from(foodPosts)
     .where(and(eq(foodPosts.posterId, userId), isDemo ? undefined : eq(foodPosts.isDemo, false)));

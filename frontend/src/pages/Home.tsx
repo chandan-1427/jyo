@@ -1,5 +1,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api/api";
 import { useAuth } from "@/context/AuthContext";
 import { useV2Theme } from "@/lib/theme";
 import { SiteHeader } from "@/components/layout/SiteHeader";
@@ -141,6 +143,25 @@ function CallsToAction({ className }: { className?: string }) {
   );
 }
 
+// Hidden until there's enough to be worth saying: "3 meals shared" would
+// undersell it more than saying nothing.
+const IMPACT_MIN_MEALS = 10;
+
+function ImpactLine() {
+  const { data } = useQuery<{ mealsShared: number; pickups: number }>({
+    queryKey: ["stats", "impact"],
+    queryFn: () => apiFetch("/stats/impact"),
+    staleTime: 5 * 60_000,
+  });
+  if (!data || data.mealsShared < IMPACT_MIN_MEALS) return null;
+  return (
+    <p className="mt-2 text-fg-muted tabular-nums">
+      <span className="font-medium text-fg">{data.mealsShared.toLocaleString("en-IN")} meals</span> shared in
+      Tirupati so far.
+    </p>
+  );
+}
+
 export default function Home() {
   useV2Theme();
   const { user, loading } = useAuth();
@@ -193,6 +214,7 @@ export default function Home() {
               <p className="mt-5 text-base font-medium text-fg sm:text-lg">
                 <span className="text-leaf">Free.</span> No payment. No delivery.
               </p>
+              <ImpactLine />
             </div>
           </div>
 

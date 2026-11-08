@@ -26,6 +26,7 @@ const SAMPLES: Record<keyof typeof backend.fields, unknown[]> = {
   servings: [0, 1, 2, 50, 51, 2.5, Number.NaN, -1, "2", undefined],
   reportReason: ["unsafe_food", "misleading", "money", "harassment", "other", "spam", "", null],
   reportDetails: ["", "Smelled off", " padded ", "x".repeat(500), "x".repeat(501)],
+  thanksNote: ["", "Thank you, it was lovely!", " padded ", "x".repeat(200), "x".repeat(201)],
 };
 
 type Schema = z.ZodType;
@@ -79,6 +80,7 @@ describe("frontend and backend validation stay in sync", () => {
       ["title", "title", "title"], ["description", "description", "description"],
       ["diet", "diet", "diet"], ["servings", "servings", "servings"],
     ]],
+    ["thanks", frontend.thanksSchema, backend.thanksSchema, [["note", "note", "thanksNote"]]],
     ["report", frontend.reportSchema, backend.reportSchema, [
       ["reason", "reason", "reportReason"], ["details", "details", "reportDetails"],
     ]],

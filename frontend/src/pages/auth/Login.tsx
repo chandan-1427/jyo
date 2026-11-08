@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { returnPath } from "@/lib/returnPath";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch, ApiError } from "@/lib/api/api";
@@ -14,6 +15,7 @@ import { TextLink } from "@/components/ui/TextLink";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { register, handleSubmit, getValues, setError, formState: { errors } } = useZodForm(loginSchema, {
     email: "",
@@ -29,7 +31,7 @@ export default function Login() {
       apiFetch("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
     onSuccess: (data) => {
       login(data.user);
-      navigate("/feed");
+      navigate(returnPath(location.state), { replace: true });
     },
     onError: (err: unknown) => {
       if (!(err instanceof ApiError)) return;

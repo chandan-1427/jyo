@@ -1,8 +1,9 @@
 import { Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Layout from "./components/layout/Layout";
 import SplashScreen from "./components/layout/SplashScreen";
+import { returnPath } from "./lib/returnPath";
 
 import Home from "./pages/Home";
 import Login from "./pages/auth/Login";
@@ -20,16 +21,20 @@ import VerifyEmail from "./pages/auth/VerifyEmail";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 
+// A logged-out visitor (say, from a shared link) is sent to log in, then
+// back to the page they asked for.
 function AuthGuard() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <SplashScreen />;
-  return user ? <Outlet /> : <Navigate to="/login" replace />;
+  return user ? <Outlet /> : <Navigate to="/login" replace state={{ from: location.pathname }} />;
 }
 
 function GuestGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <SplashScreen />;
-  return !user ? <>{children}</> : <Navigate to="/feed" replace />;
+  return !user ? <>{children}</> : <Navigate to={returnPath(location.state)} replace />;
 }
 
 export default function App() {

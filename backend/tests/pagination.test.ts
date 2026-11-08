@@ -251,6 +251,6 @@ describe("GET /users/me/stats", () => {
 
     const { status, body } = await getJson(me.cookie, "/users/me/stats");
     expect(status).toBe(200);
-    expect(body.stats).toEqual({ shared: 3, pickedUp: 2, requested: 1 });
+    expect(body.stats).toEqual({ shared: 3, pickedUp: 2, mealsShared: 2, requested: 1 });
   });
 });

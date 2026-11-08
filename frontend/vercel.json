@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/p/:id",
+      "destination": "https://api.jyo.co.in/share/:id"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
