@@ -127,6 +127,13 @@
       "when": 1794136929204,
       "tag": "0017_share_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794138132140,
+      "tag": "0018_push_subscriptions",
+      "breakpoints": true
     }
   ]
 }

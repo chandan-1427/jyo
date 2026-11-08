@@ -48,7 +48,7 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
       port: info.port,
       env: env.APP_ENV,
       cors: env.APP_ENV === "production" ? "jyo.co.in only" : "localhost allowed",
-      routes: ["/auth", "/users", "/posts", "/requests", "/notifications"],
+      routes: ["/auth", "/users", "/posts", "/requests", "/notifications", "/push"],
       jobs: ["expiry", "notificationCleanup", "unverifiedUserCleanup", "demoCleanup", "orphanedUploadCleanup", "revokedSessionCleanup", "deletedAccountPurge", "requestTimeout"],
     },
     "JYO backend started"

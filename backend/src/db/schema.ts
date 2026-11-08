@@ -156,3 +156,19 @@ export const revokedSessions = pgTable("revoked_sessions", {
 }, (table) => [
   index("revoked_sessions_expires_at_idx").on(table.expiresAt),
 ]);
+
+// --- Push subscriptions ---
+// One per browser that turned notifications on (lib/notifications/push.ts).
+// The endpoint is unique: the same browser signing in as someone else moves
+// its subscription to them rather than notifying both.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id:        uuid("id").primaryKey().defaultRandom(),
+  userId:    uuid("user_id").notNull().references(() => users.id),
+  endpoint:  text("endpoint").notNull(),
+  p256dh:    text("p256dh").notNull(),
+  auth:      text("auth").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("push_subscriptions_endpoint_idx").on(table.endpoint),
+  index("push_subscriptions_user_id_idx").on(table.userId),
+]);

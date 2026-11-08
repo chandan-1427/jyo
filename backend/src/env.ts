@@ -40,4 +40,10 @@ export const env = {
   // Optional — Sentry is a no-op when unset, so local dev and the test
   // suite don't need it configured at all.
   SENTRY_DSN: process.env.SENTRY_DSN,
+  // Optional, as a set: push notifications are off unless all three are set.
+  // The key pair must never change once in use: every subscription is tied
+  // to the public key, so a new pair silently stops all of them.
+  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT,
 };

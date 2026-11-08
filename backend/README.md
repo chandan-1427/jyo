@@ -72,6 +72,8 @@ The test suite runs against `.env.test` (committed — it's all dummy/test-only 
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (bypasses RLS) | Supabase project → Settings → API |
 | `RESEND_API_KEY` | API key for sending emails | Resend dashboard |
 | `SENTRY_DSN` | Error tracking (optional — omit to disable) | Sentry project → Settings → Client Keys (DSN) |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Push notification key pair (optional — omit all three to disable). Never change it once in use: every subscription is tied to it | `pnpm exec web-push generate-vapid-keys`, once |
+| `VAPID_SUBJECT` | Contact for the push services, as `mailto:` | Your email, e.g. `mailto:you@example.com` |
 
 ## Database Backups
 

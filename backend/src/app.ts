@@ -15,6 +15,7 @@ import { userRoutes } from "./routes/users.js";
 import { postRoutes } from "./routes/posts.js";
 import { requestRoutes } from "./routes/requests.js";
 import { notificationRoutes } from "./routes/notifications.js";
+import { pushRoutes } from "./routes/push.js";
 
 // The local dev server only outside production: allowed on the live API, any
 // page served on someone's machine at that address (Vite's default port, so
@@ -102,6 +103,7 @@ export function createApp() {
   app.route("/posts", postRoutes);
   app.route("/requests", requestRoutes);
   app.route("/notifications", notificationRoutes);
+  app.route("/push", pushRoutes);
 
   return app;
 }
