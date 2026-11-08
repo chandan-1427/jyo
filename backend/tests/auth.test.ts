@@ -292,7 +292,7 @@ describe("agreeing to the Terms at sign-up", () => {
       const res = await postJson("/auth/register", { ...validUser, acceptTerms });
       expect(res.status).toBe(400);
       expect((await res.json()).details.acceptTerms).toEqual([
-        "Confirm you're 18 or older and agree to the Terms and Privacy Policy",
+        "Agree to the Terms and Privacy Policy to sign up",
       ]);
     }
     expect(await db.select().from(users)).toHaveLength(0);

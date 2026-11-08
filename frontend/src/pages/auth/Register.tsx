@@ -139,7 +139,7 @@ export default function Register() {
             aria-describedby={errors.acceptTerms ? "accept-terms-error" : undefined}
             label={
               <span>
-                I'm 18 or older and agree to the{" "}
+                I agree to the{" "}
                 <a href="/terms" target="_blank" rel="noopener noreferrer" className={textLinkClass}>Terms</a> and{" "}
                 <a href="/privacy" target="_blank" rel="noopener noreferrer" className={textLinkClass}>Privacy Policy</a>
               </span>
