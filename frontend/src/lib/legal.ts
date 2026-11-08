@@ -1,4 +1,4 @@
-// Listed in the Terms and on the post form, so the two always say the same.
+// The food-safety rules listed in the Terms.
 export const FOOD_SAFETY_RULES = [
   "Share only food that was cooked or opened in the last few hours and has been kept covered.",
   "Don't share food that has sat out at room temperature for more than 2 hours, or 1 hour on a hot day.",
