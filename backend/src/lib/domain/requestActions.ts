@@ -1,6 +1,6 @@
 import { db } from "../../db/index.js";
 import { foodPosts, pickupRequests } from "../../db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { ConflictError } from "../errors.js";
 
 type CreateRequestInput = {
@@ -55,7 +55,7 @@ export async function approveRequestTx(requestId: string, postId: string): Promi
     .transaction(async (tx) => {
       const [claimedRequest] = await tx
         .update(pickupRequests)
-        .set({ status: "approved" })
+        .set({ status: "approved", approvedAt: new Date() })
         .where(and(eq(pickupRequests.id, requestId), eq(pickupRequests.status, "pending")))
         .returning({ id: pickupRequests.id });
 
@@ -72,6 +72,53 @@ export async function approveRequestTx(requestId: string, postId: string): Promi
     .then(() => true)
     .catch((err) => {
       if (err instanceof ConflictError) return false;
+      throw err;
+    });
+}
+
+// Ends an approved pickup that won't happen and puts the food back: the
+// poster says the picker never came ("missed"), or the picker says they
+// can't make it ("withdrawn"). The post goes back in the feed, or ends if
+// its pickup time has already passed; either way the picker loses the
+// pickup spot at once, since that's only shown while the post is closed.
+// Guarded like the other status changes: only one of this, the poster
+// marking it collected, or the expiry job's auto-complete can win. Returns
+// the post's new status, or null if the race was lost.
+export async function releaseApprovedPickup(
+  requestId: string,
+  postId: string,
+  outcome: "missed" | "withdrawn"
+): Promise<"open" | "expired" | null> {
+  return db
+    .transaction(async (tx) => {
+      const [claimedRequest] = await tx
+        .update(pickupRequests)
+        .set({ status: outcome })
+        .where(and(eq(pickupRequests.id, requestId), eq(pickupRequests.status, "approved")))
+        .returning({ id: pickupRequests.id });
+
+      if (!claimedRequest) throw new ConflictError();
+
+      const [releasedPost] = await tx
+        .update(foodPosts)
+        .set({
+          status: sql`case when ${foodPosts.pickupWindowEnd} < now() then 'expired'::post_status else 'open'::post_status end`,
+          approvedRequestId: null,
+        })
+        .where(
+          and(
+            eq(foodPosts.id, postId),
+            eq(foodPosts.status, "closed"),
+            eq(foodPosts.approvedRequestId, requestId)
+          )
+        )
+        .returning({ status: foodPosts.status });
+
+      if (!releasedPost) throw new ConflictError();
+      return releasedPost.status as "open" | "expired";
+    })
+    .catch((err) => {
+      if (err instanceof ConflictError) return null;
       throw err;
     });
 }

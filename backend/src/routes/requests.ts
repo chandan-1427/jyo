@@ -18,9 +18,10 @@ import {
   findOwnActiveRequest,
   findUserEmail,
   hasCancelledRequestSince,
+  hasMissedPickup,
   posterNotDeleted,
 } from "../lib/domain/finders.js";
-import { createRequestRow, approveRequestTx } from "../lib/domain/requestActions.js";
+import { createRequestRow, approveRequestTx, releaseApprovedPickup } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
 import { createRequestSchema, myRequestsQuerySchema } from "../lib/validation.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
@@ -28,6 +29,8 @@ import { parseJsonBody, parseQuery, uploadFromForm } from "../lib/http.js";
 import { PAGE_SIZE, afterCursor, matchesSearch, micros, toPage } from "../lib/pagination.js";
 
 export const requestRoutes = new Hono();
+
+type PickupRequest = typeof pickupRequests.$inferSelect;
 
 requestRoutes.use("*", authMiddleware, userLimiter);
 
@@ -41,7 +44,49 @@ const ALREADY_PROCESSED = "This request has already been processed";
 const ALREADY: Record<string, string> = {
   approved: "This request has already been approved",
   rejected: "This request was already declined",
+  missed: "The person sharing has already called off this pickup",
 };
+
+const ALREADY_COLLECTED = "This food has already been marked as collected";
+
+// The picker can't make it after all. The approved pickup ends and the
+// food goes back in the feed (or ends, if its pickup time has passed).
+async function withdrawApprovedRequest(c: Context, request: PickupRequest) {
+  const post = await findPostById(request.postId);
+  if (!post) return c.json({ error: "Post not found" }, 404);
+  if (post.status === "completed") return c.json({ error: ALREADY_COLLECTED }, 409);
+
+  const outcome = await releaseApprovedPickup(request.id, request.postId, "withdrawn");
+
+  if (!outcome) {
+    const now = await findRequestById(request.id);
+    if (now?.status === "withdrawn") return c.json({ message: "Request cancelled" });
+    if ((await findPostById(request.postId))?.status === "completed") {
+      return c.json({ error: ALREADY_COLLECTED }, 409);
+    }
+    return c.json({ error: (now && ALREADY[now.status]) ?? ALREADY_PROCESSED }, 409);
+  }
+
+  const demoExpiresAt = request.isDemo ? request.demoExpiresAt ?? undefined : undefined;
+  createNotification(
+    post.posterId,
+    outcome === "open"
+      ? "The person you approved can't make it. Your food is back in the feed."
+      : "The person you approved can't make it. The pickup time has passed, so your post has ended.",
+    request.postId,
+    "pickup_withdrawn",
+    demoExpiresAt
+  ).catch((err) => logger.error({ err, pickupRequestId: request.id }, "Failed to create pickup_withdrawn notification"));
+
+  // The email says the food is back in the feed, so only when it is.
+  if (outcome === "open") {
+    const posterEmail = await findUserEmail(post.posterId);
+    if (posterEmail && !isSyntheticEmail(posterEmail)) notifyPoster(posterEmail, "pickup_withdrawn");
+    if (!request.isDemo) broadcastFeedChange();
+  }
+
+  return c.json({ message: "Request cancelled" });
+}
 
 // Repeating an action that already happened (a double tap, or a retry whose
 // first answer was lost on the way) answers as the first time did, without
@@ -87,6 +132,12 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
 
   if (post.status !== "open") {
     return ownRequestOrUnavailable(c, postId, userId);
+  }
+
+  // The poster said this picker didn't turn up last time. Letting them ask
+  // straight away would put the poster back where they started.
+  if (await hasMissedPickup(postId, userId)) {
+    return c.json({ error: "The person sharing marked your last pickup of this as missed, so you can't ask for it again." }, 409);
   }
 
   const distance = haversineDistance(lat, lng, post.pickupLat, post.pickupLng);
@@ -328,8 +379,12 @@ requestRoutes.post("/:id/cancel", async (c) => {
     return c.json({ error: "You can only cancel your own requests" }, 403);
   }
 
-  if (request.status === "cancelled") {
+  if (request.status === "cancelled" || request.status === "withdrawn") {
     return c.json({ message: "Request cancelled" });
+  }
+
+  if (request.status === "approved") {
+    return withdrawApprovedRequest(c, request);
   }
 
   if (request.status !== "pending") {
@@ -399,7 +454,7 @@ const myRequestRank = sql<number>`(case
   when ${pickupRequests.status} = 'approved' and ${foodPosts.status} <> 'completed' then 0
   when ${pickupRequests.status} = 'pending' then 1
   when ${pickupRequests.status} = 'approved' then 2
-  when ${pickupRequests.status} = 'rejected' then 3
+  when ${pickupRequests.status} in ('rejected', 'missed') then 3
   else 4 end)`;
 const myRequestValue = sql<string>`(case when ${myRequestRank} <= 1
   then ${micros(sql`${foodPosts.pickupWindowEnd}`)}

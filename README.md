@@ -16,7 +16,7 @@ Households often cook more than they eat, while students and neighbours a few st
 
 1. **Share.** A household posts what they have, with a photo and a pickup time. Their location is taken from their phone.
 2. **Ask.** People within 20 km see it in their feed. They don't see where it is or who posted it. One person asks for it, with their name, how soon they can get there, and a selfie.
-3. **Meet.** The poster sees who asked and approves or declines. Only after approval does the picker see the pickup spot and the poster's name. The poster marks it collected afterwards, and unclaimed posts expire on their own.
+3. **Meet.** The poster sees who asked and approves or declines. Only after approval does the picker see the pickup spot and the poster's name. The poster marks it collected afterwards, and unclaimed posts expire on their own. If the picker can't make it, or doesn't turn up, either side can call the pickup off and the food goes back in the feed.
 
 Both sides get in-app notifications and email at each step. A demo mode lets anyone outside Tirupati try the whole flow with sample data.
 
@@ -89,8 +89,8 @@ jyo/
 |---|---|
 | `open` | In the feed; anyone nearby can ask for it. |
 | `pending_approval` | Someone asked; the poster is deciding. Nobody else can ask meanwhile. |
-| `closed` | Approved; the picker now sees where to go. |
-| `completed` | The poster confirmed it was collected. |
+| `closed` | Approved; the picker now sees where to go. If the picker can't make it, or the poster says they didn't come, it goes back to `open` (or `expired` if the time has passed). |
+| `completed` | The poster confirmed it was collected, or nobody marked it two hours after the pickup time, so it's taken as collected. |
 | `expired` | The pickup time passed with nobody approved. Any waiting request is declined and the picker is told. |
 
 ## Running it for your own city

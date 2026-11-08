@@ -152,17 +152,20 @@ function emailLayout({
 
 export function notifyPoster(
   email: string,
-  event: "request_received" | "request_cancelled"
+  event: "request_received" | "request_cancelled" | "pickup_withdrawn"
 ) {
   const subjects = {
     request_received: "Someone wants to pick up your food",
     request_cancelled: "A pickup request was cancelled",
+    pickup_withdrawn: "Your picker can't make it",
   };
   const messages = {
     request_received:
       "Someone has requested to pick up your food post on Jyo. Open the app to review and approve.",
     request_cancelled:
       "A picker has cancelled their request on your food post. It is now open for others.",
+    pickup_withdrawn:
+      "The person you approved can't make it to the pickup. Your food is back in the feed for others nearby.",
   };
   sendMail(email, subjects[event], `<p>${messages[event]}</p>`)
     .catch((err) => logger.error({ err, event }, "notifyPoster failed"));
@@ -170,17 +173,20 @@ export function notifyPoster(
 
 export function notifyPicker(
   email: string,
-  event: "request_approved" | "request_rejected"
+  event: "request_approved" | "request_rejected" | "pickup_reopened"
 ) {
   const subjects = {
     request_approved: "Your pickup request was approved",
     request_rejected: "Your pickup request was rejected",
+    pickup_reopened: "Your pickup was called off",
   };
   const messages = {
     request_approved:
       "Your request was approved. Open the app to see the pickup location and head there now.",
     request_rejected:
       "Your request was rejected by the poster. Check the feed for other food posts nearby.",
+    pickup_reopened:
+      "The person sharing said you didn't arrive, so they've offered the food to others. Check the feed for other food nearby.",
   };
   sendMail(email, subjects[event], `<p>${messages[event]}</p>`)
     .catch((err) => logger.error({ err, event }, "notifyPicker failed"));

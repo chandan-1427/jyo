@@ -18,7 +18,9 @@ export type PickupRequest = {
   pickerName: string;
   selfieUrl: string | null;
   etaMinutes: number;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  // missed: the poster said the approved picker never came. withdrawn: the
+  // approved picker said they can't make it.
+  status: "pending" | "approved" | "rejected" | "cancelled" | "missed" | "withdrawn";
   isDemo?: boolean;
   createdAt: string;
 };

@@ -66,6 +66,33 @@ export async function hasCancelledRequestSince(postId: string, pickerId: string,
   return !!row;
 }
 
+// Whether the poster marked this picker as not turning up for the post.
+export async function hasMissedPickup(postId: string, pickerId: string) {
+  const [row] = await db
+    .select({ id: pickupRequests.id })
+    .from(pickupRequests)
+    .where(
+      and(
+        eq(pickupRequests.postId, postId),
+        eq(pickupRequests.pickerId, pickerId),
+        eq(pickupRequests.status, "missed")
+      )
+    )
+    .limit(1);
+  return !!row;
+}
+
+// Whether an approved pickup of this post was ever called off, by either
+// side: how a repeated "reopen" tells it already happened.
+export async function hasReleasedPickup(postId: string) {
+  const [row] = await db
+    .select({ id: pickupRequests.id })
+    .from(pickupRequests)
+    .where(and(eq(pickupRequests.postId, postId), inArray(pickupRequests.status, ["missed", "withdrawn"])))
+    .limit(1);
+  return !!row;
+}
+
 export async function findUserEmail(userId: string): Promise<string | null> {
   const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
   return user?.email ?? null;

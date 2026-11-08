@@ -66,7 +66,7 @@ Every status-changing endpoint that can be hit twice (double-click, retry) — `
 
 ### Post status lifecycle
 
-`open` → `pending_approval` (request submitted) → `closed` (approved) → `completed`, or → `expired` (cron job, pickup window passed) at any point before `closed`. Exact pickup coordinates (`pickupLat`/`pickupLng`) are stripped from every response except to the poster or approved picker once `closed` — see `posts.ts`'s `/:id` and `/` (feed) handlers for the redaction pattern. Preserve this when adding new fields derived from location.
+`open` → `pending_approval` (request submitted) → `closed` (approved) → `completed`, or → `expired` (cron job, pickup window passed) at any point before `closed`. An approved pickup always has a way out: the poster calls it off when the picker didn't come (`POST /posts/:id/reopen`, request → `missed`, and that picker can't ask for the post again), or the picker says they can't make it (`POST /requests/:id/cancel` on an approved request, request → `withdrawn`). Both go through `releaseApprovedPickup` (`lib/domain/requestActions.ts`) and put the post back to `open`, or `expired` if its window has passed. A `closed` post nobody marks collected is set `completed` with `auto_completed = true` two hours after its window (`runAutoComplete` in `jobs/expiry.ts`), so counts of food shared can tell assumed pickups from confirmed ones. Exact pickup coordinates (`pickupLat`/`pickupLng`) are stripped from every response except to the poster or approved picker once `closed` — see `posts.ts`'s `/:id` and `/` (feed) handlers for the redaction pattern. Preserve this when adding new fields derived from location.
 
 ### Auth
 

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { useMarkPostNotificationsRead } from "@/lib/api/queries/notifications";
-import { formatPickupWindow } from "@/lib/format";
+import { formatAgo, formatPickupWindow } from "@/lib/format";
 import { useV2Theme } from "@/lib/theme";
 import type { FoodPost, PickupRequest } from "@/types/api";
 import RequestModal from "@/components/posts/RequestModal";
@@ -28,6 +28,9 @@ type PostDetailData = {
   pendingRequest: PickupRequest | null;
   // The viewer's own latest request on this post, if they've made one.
   myRequest: { id: string; status: PickupRequest["status"]; etaMinutes: number } | null;
+  // Only to the poster, while a pickup they approved is on. approvedAt is
+  // null for approvals made before the API recorded it.
+  approvedPickup: { pickerName: string; etaMinutes: number; approvedAt: string | null } | null;
 };
 
 type Post = PostDetailData["post"];
@@ -131,11 +134,22 @@ function VisitorPanel({
     );
   }
 
+  // The API refuses a new request from someone marked as not turning up.
+  if (status === "open" && myRequest?.status === "missed") {
+    return (
+      <Panel>
+        <Notice>They said you didn't arrive for your last pickup of this, so you can't ask for it again.</Notice>
+        <FindFoodButton />
+      </Panel>
+    );
+  }
+
   if (status === "open") {
     return (
       <Panel>
         {/* Asking again after a "no" is allowed, but they should know. */}
         {myRequest?.status === "rejected" && <Notice>They declined your last request for this.</Notice>}
+        {myRequest?.status === "withdrawn" && <Notice>You said you couldn't make it last time. You can ask again.</Notice>}
         <Button size="lg" fullWidth onClick={onRequest}>
           Request pickup
         </Button>
@@ -162,7 +176,10 @@ function VisitorPanel({
   );
 }
 
-function PickerPanel({ post }: { post: Post }) {
+function PickerPanel({ post, requestId }: { post: Post; requestId: string | undefined }) {
+  const queryClient = useQueryClient();
+  const [withdrawing, setWithdrawing] = useState(false);
+
   if (post.status === "completed") {
     return (
       <Panel>
@@ -185,16 +202,49 @@ function PickerPanel({ post }: { post: Post }) {
     <Panel>
       <Notice tone="success">Your request was approved. Head over during the pickup time.</Notice>
       {post.pickupLat != null && post.pickupLng != null && <MapsButton lat={post.pickupLat} lng={post.pickupLng} />}
+      {requestId && (
+        <Button variant="outline" fullWidth onClick={() => setWithdrawing(true)} iconLeft={<X className="size-4" aria-hidden="true" />}>
+          Can't make it
+        </Button>
+      )}
+      {withdrawing && requestId && (
+        <ConfirmDialog
+          title="Can't make it?"
+          description="They'll be told, and the food goes back in the feed for someone else nearby. You'll no longer see the pickup spot."
+          confirmLabel="I can't make it"
+          busyLabel="Letting them know…"
+          tone="danger"
+          cancelLabel="I'm still going"
+          onConfirm={async () => {
+            try {
+              await apiFetch(`/requests/${requestId}/cancel`, { method: "POST" });
+            } finally {
+              queryClient.invalidateQueries({ queryKey: ["posts", post.id] });
+              queryClient.invalidateQueries({ queryKey: ["requests", "mine"] });
+            }
+          }}
+          onClose={() => setWithdrawing(false)}
+        />
+      )}
     </Panel>
   );
 }
 
-function PosterPanel({ post, pendingRequest }: { post: Post; pendingRequest: PickupRequest | null }) {
+function PosterPanel({
+  post,
+  pendingRequest,
+  approvedPickup,
+}: {
+  post: Post;
+  pendingRequest: PickupRequest | null;
+  approvedPickup: PostDetailData["approvedPickup"];
+}) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [viewingSelfie, setViewingSelfie] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [callingOff, setCallingOff] = useState(false);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["posts", post.id] });
@@ -336,11 +386,25 @@ function PosterPanel({ post, pendingRequest }: { post: Post; pendingRequest: Pic
   }
 
   if (post.status === "closed") {
+    const name = approvedPickup?.pickerName ?? "The person you approved";
     return (
       <Panel>
+        {approvedPickup && (
+          <div className="flex items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-lifted text-fg-subtle">
+              <UserRound className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate font-medium">{approvedPickup.pickerName} is coming</p>
+              <p className="text-sm text-fg-muted tabular-nums">
+                {approvedPickup.approvedAt ? `Approved ${formatAgo(approvedPickup.approvedAt)}. ` : ""}
+                Said about {approvedPickup.etaMinutes} min.
+              </p>
+            </div>
+          </div>
+        )}
         <p className="leading-relaxed text-fg-muted">
-          You approved a pickup. Once the food has been collected, mark it here. That also hides your pickup spot
-          again.
+          Once the food has been collected, mark it here. That also hides your pickup spot again.
         </p>
         {errorNotice}
         <Button
@@ -348,10 +412,31 @@ function PosterPanel({ post, pendingRequest }: { post: Post; pendingRequest: Pic
           fullWidth
           onClick={() => complete.mutate()}
           loading={complete.isPending}
+          disabled={busy}
           iconLeft={<CheckCircle2 className="size-4" aria-hidden="true" />}
         >
           {complete.isPending ? "Saving…" : "Mark as collected"}
         </Button>
+        <Button variant="outline" fullWidth onClick={() => setCallingOff(true)} disabled={busy}>
+          They didn't come
+        </Button>
+        {callingOff && (
+          <ConfirmDialog
+            title="Call off this pickup?"
+            description={`${name} will be told, and the food goes back in the feed for others nearby. They won't be able to ask for it again.`}
+            confirmLabel="Call off pickup"
+            busyLabel="Calling off…"
+            tone="danger"
+            onConfirm={async () => {
+              try {
+                await apiFetch(`/posts/${post.id}/reopen`, { method: "POST" });
+              } finally {
+                refresh();
+              }
+            }}
+            onClose={() => setCallingOff(false)}
+          />
+        )}
       </Panel>
     );
   }
@@ -509,9 +594,9 @@ export default function PostDetail() {
           </div>
 
           {isPoster ? (
-            <PosterPanel post={post} pendingRequest={pendingRequest} />
+            <PosterPanel post={post} pendingRequest={pendingRequest} approvedPickup={data.approvedPickup} />
           ) : isApprovedPicker ? (
-            <PickerPanel post={post} />
+            <PickerPanel post={post} requestId={data.myRequest?.id} />
           ) : (
             <VisitorPanel post={post} myRequest={data.myRequest} onRequest={() => setRequesting(true)} />
           )}
