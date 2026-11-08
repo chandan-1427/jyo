@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
 
-// Shown on the Feed page in place of the (empty, out-of-range) real feed —
+// Shown on the Feed and Post food pages in place of the real page —
 // see docs/demo-mode-plan.md. Jyo only operates in Tirupati, so a visitor
-// outside the 20km radius would otherwise just see an empty grid forever.
+// outside the 20km radius would otherwise see an empty feed, or fill in a
+// post only to have it refused.
 export default function OutOfRegionCard() {
   const { startDemo } = useAuth();
   const [loading, setLoading] = useState(false);

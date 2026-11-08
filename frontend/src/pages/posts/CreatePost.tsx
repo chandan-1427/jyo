@@ -11,6 +11,9 @@ import { useImageUpload } from "@/lib/uploads";
 import { randomUuid } from "@/lib/randomUuid";
 import { useV2Theme } from "@/lib/theme";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
+import { isWithinTirupati } from "@/lib/location/geofence";
+import { useAuth } from "@/context/AuthContext";
+import OutOfRegionCard from "@/components/posts/OutOfRegionCard";
 import { Button } from "@/components/ui/Button";
 import { DateTimeField } from "@/components/ui/DateTimeField";
 import { ImagePickerField } from "@/components/ui/ImagePickerField";
@@ -38,6 +41,7 @@ function defaultWindow() {
 
 export default function CreatePost() {
   useV2Theme();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   // Fixed when the page opens, like the times' limits below.
@@ -108,6 +112,17 @@ export default function CreatePost() {
 
   const onSubmit = handleSubmit((values) => coords && create.mutate(values));
   const now = toDateTimeInput(new Date());
+
+  // Checked as soon as the location is known, not after the form is filled in
+  // and the API refuses it. The API still enforces it either way.
+  if (coords && !user?.isDemo && !isWithinTirupati(coords.lat, coords.lng)) {
+    return (
+      <div className="text-fg">
+        <PageHeader title="Post food" subtitle="Share what you have with someone nearby." />
+        <OutOfRegionCard />
+      </div>
+    );
+  }
 
   return (
     <div className="text-fg">

@@ -402,7 +402,7 @@ function PosterPanel({
           requestId={pendingRequest.id}
           postId={post.id}
           sharing={pendingRequest.sharePhone ?? false}
-          label={`Share my phone number with ${pendingRequest.pickerName} if I approve`}
+          label={`Share my phone number with ${pendingRequest.pickerName}`}
         />
 
         {errorNotice}
