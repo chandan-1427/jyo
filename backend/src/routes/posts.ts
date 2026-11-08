@@ -14,7 +14,7 @@ import {
   hasReleasedPickup,
   posterNotDeleted,
 } from "../lib/domain/finders.js";
-import { releaseApprovedPickup } from "../lib/domain/requestActions.js";
+import { releaseApprovedPickup, REQUEST_TIMEOUT_MS } from "../lib/domain/requestActions.js";
 import { notifyPicker } from "../lib/mailer.js";
 import { createNotification } from "../lib/notifications/notify.js";
 import { createPostLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
@@ -34,6 +34,8 @@ const NOT_YOUR_POST = "You can only change your own posts";
 
 // Most feed posts it will return; see the feed handler.
 const FEED_LIMIT = 200;
+
+const answerBy = (askedAt: Date) => new Date(askedAt.getTime() + REQUEST_TIMEOUT_MS);
 
 postRoutes.use("*", authMiddleware, userLimiter);
 
@@ -316,7 +318,7 @@ postRoutes.get("/:id", async (c) => {
       )
       .orderBy(desc(pickupRequests.createdAt))  // newest first
       .limit(1);
-    pendingRequest = req ?? null;
+    pendingRequest = req ? { ...req, answerBy: answerBy(req.createdAt) } : null;
   }
 
   // The viewer's own latest request on this post, so the page can say "your
@@ -325,12 +327,19 @@ postRoutes.get("/:id", async (c) => {
   let myRequest = null;
   if (!isPoster) {
     const [mine] = await db
-      .select({ id: pickupRequests.id, status: pickupRequests.status, etaMinutes: pickupRequests.etaMinutes })
+      .select({
+        id: pickupRequests.id,
+        status: pickupRequests.status,
+        etaMinutes: pickupRequests.etaMinutes,
+        createdAt: pickupRequests.createdAt,
+      })
       .from(pickupRequests)
       .where(and(eq(pickupRequests.postId, postId), eq(pickupRequests.pickerId, userId)))
       .orderBy(desc(pickupRequests.createdAt))
       .limit(1);
-    myRequest = mine ?? null;
+    myRequest = mine
+      ? { id: mine.id, status: mine.status, etaMinutes: mine.etaMinutes, answerBy: mine.status === "pending" ? answerBy(mine.createdAt) : null }
+      : null;
   }
 
   const showLocation = (isPoster || isApprovedPicker) && post.status === "closed";

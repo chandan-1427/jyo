@@ -88,7 +88,7 @@ jyo/
 | Status | Meaning |
 |---|---|
 | `open` | In the feed; anyone nearby can ask for it. |
-| `pending_approval` | Someone asked; the poster is deciding. Nobody else can ask meanwhile. |
+| `pending_approval` | Someone asked; the poster is deciding. Nobody else can ask meanwhile, so an unanswered request closes after 15 minutes and the post is `open` again. |
 | `closed` | Approved; the picker now sees where to go. If the picker can't make it, or the poster says they didn't come, it goes back to `open` (or `expired` if the time has passed). |
 | `completed` | The poster confirmed it was collected, or nobody marked it two hours after the pickup time, so it's taken as collected. |
 | `expired` | The pickup time passed with nobody approved. Any waiting request is declined and the picker is told. |

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { useMarkPostNotificationsRead } from "@/lib/api/queries/notifications";
-import { formatAgo, formatPickupWindow } from "@/lib/format";
+import { formatAgo, formatPickupWindow, formatTime } from "@/lib/format";
 import { useV2Theme } from "@/lib/theme";
 import type { FoodPost, PickupRequest } from "@/types/api";
 import RequestModal from "@/components/posts/RequestModal";
@@ -27,7 +27,7 @@ type PostDetailData = {
   isApprovedPicker: boolean;
   pendingRequest: PickupRequest | null;
   // The viewer's own latest request on this post, if they've made one.
-  myRequest: { id: string; status: PickupRequest["status"]; etaMinutes: number } | null;
+  myRequest: { id: string; status: PickupRequest["status"]; etaMinutes: number; answerBy: string | null } | null;
   // Only to the poster, while a pickup they approved is on. approvedAt is
   // null for approvals made before the API recorded it.
   approvedPickup: { pickerName: string; etaMinutes: number; approvedAt: string | null } | null;
@@ -108,7 +108,11 @@ function VisitorPanel({
   if (myRequest?.status === "pending" && status === "pending_approval") {
     return (
       <Panel>
-        <Notice>You asked for this. Waiting for their answer; you'll get a notification either way.</Notice>
+        <Notice>
+          {myRequest.answerBy
+            ? `You asked for this. They have until ${formatTime(new Date(myRequest.answerBy))} to answer, and you'll get a notification either way.`
+            : "You asked for this. Waiting for their answer; you'll get a notification either way."}
+        </Notice>
         <Button variant="outline" fullWidth onClick={() => setCancelling(true)} iconLeft={<X className="size-4" aria-hidden="true" />}>
           Cancel request
         </Button>
@@ -150,6 +154,7 @@ function VisitorPanel({
         {/* Asking again after a "no" is allowed, but they should know. */}
         {myRequest?.status === "rejected" && <Notice>They declined your last request for this.</Notice>}
         {myRequest?.status === "withdrawn" && <Notice>You said you couldn't make it last time. You can ask again.</Notice>}
+        {myRequest?.status === "timed_out" && <Notice>They didn't answer your last request in time. You can ask again.</Notice>}
         <Button size="lg" fullWidth onClick={onRequest}>
           Request pickup
         </Button>
@@ -342,6 +347,13 @@ function PosterPanel({
             </p>
           </div>
         </div>
+
+        {pendingRequest.answerBy && (
+          <Notice>
+            Answer by <span className="tabular-nums">{formatTime(new Date(pendingRequest.answerBy))}</span>. After
+            that the request closes and your food goes back in the feed.
+          </Notice>
+        )}
 
         <p className="text-sm leading-relaxed text-fg-muted">
           Approving shares your exact pickup spot with them. Declining opens the post to others again. While

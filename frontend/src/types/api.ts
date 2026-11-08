@@ -20,7 +20,9 @@ export type PickupRequest = {
   etaMinutes: number;
   // missed: the poster said the approved picker never came. withdrawn: the
   // approved picker said they can't make it.
-  status: "pending" | "approved" | "rejected" | "cancelled" | "missed" | "withdrawn";
+  status: "pending" | "approved" | "rejected" | "cancelled" | "missed" | "withdrawn" | "timed_out";
+  // While pending: when it closes if the poster hasn't answered.
+  answerBy?: string;
   isDemo?: boolean;
   createdAt: string;
 };

@@ -30,6 +30,9 @@ export const requestStatusEnum = pgEnum("request_status", [
   // picker said they can't make it (withdrawn). Either puts the food back.
   "missed",
   "withdrawn",
+  // Waited too long for the poster's answer (jobs/requestTimeout.ts), or the
+  // pickup time ran out while it waited (jobs/expiry.ts).
+  "timed_out",
 ]);
 
 export const notificationTypeEnum = pgEnum("notification_type", [
@@ -39,6 +42,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "request_rejected",
   "pickup_withdrawn",
   "pickup_reopened",
+  "request_timed_out",
 ]);
 
 // --- Users ---
@@ -121,6 +125,7 @@ export const pickupRequests = pgTable("pickup_requests", {
 }, (table) => [
   index("pickup_requests_post_id_idx").on(table.postId),
   index("pickup_requests_picker_id_idx").on(table.pickerId),
+  index("pickup_requests_pending_created_at_idx").on(table.createdAt).where(sql`${table.status} = 'pending'`),
 ]);
 
 // --- Notifications ---

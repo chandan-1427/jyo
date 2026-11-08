@@ -173,12 +173,13 @@ export function notifyPoster(
 
 export function notifyPicker(
   email: string,
-  event: "request_approved" | "request_rejected" | "pickup_reopened"
+  event: "request_approved" | "request_rejected" | "pickup_reopened" | "request_timed_out"
 ) {
   const subjects = {
     request_approved: "Your pickup request was approved",
     request_rejected: "Your pickup request was rejected",
     pickup_reopened: "Your pickup was called off",
+    request_timed_out: "No answer to your pickup request",
   };
   const messages = {
     request_approved:
@@ -187,6 +188,8 @@ export function notifyPicker(
       "Your request was rejected by the poster. Check the feed for other food posts nearby.",
     pickup_reopened:
       "The person sharing said you didn't arrive, so they've offered the food to others. Check the feed for other food nearby.",
+    request_timed_out:
+      "The person sharing didn't answer your request in time, so it closed. Check the feed for other food nearby.",
   };
   sendMail(email, subjects[event], `<p>${messages[event]}</p>`)
     .catch((err) => logger.error({ err, event }, "notifyPicker failed"));

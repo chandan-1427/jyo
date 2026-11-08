@@ -10,7 +10,7 @@ import { isSyntheticEmail } from "../lib/domain/demo.js";
 import { logger } from "../lib/logger.js";
 
 // Ends posts whose pickup window has passed while nobody had been approved
-// (open or waiting for an answer), and declines the request left waiting on
+// (open or waiting for an answer), and times out the request left waiting on
 // them, telling its picker. An approved post (closed) is left alone here:
 // the pickup was agreed, and the poster marks it collected (or, if nobody
 // does, runAutoComplete below does).
@@ -36,7 +36,7 @@ export async function runExpiry(now = new Date()) {
 
     const declined = await tx
       .update(pickupRequests)
-      .set({ status: "rejected" })
+      .set({ status: "timed_out" })
       .where(
         and(
           inArray(pickupRequests.postId, expired.map((p) => p.id)),
@@ -66,14 +66,14 @@ export async function runExpiry(now = new Date()) {
       req.pickerId,
       "The food post you requested expired before the poster responded.",
       req.postId,
-      "request_rejected",
+      "request_timed_out",
       demoExpiresAt
     ).catch((err) => logger.error({ err, pickupRequestId: req.id }, "Failed to create expiry notification"));
 
     const [picker] = await db.select({ email: users.email }).from(users).where(eq(users.id, req.pickerId)).limit(1);
 
     if (picker && !isSyntheticEmail(picker.email)) {
-      notifyPicker(picker.email, "request_rejected");
+      notifyPicker(picker.email, "request_timed_out");
     }
   }
 
