@@ -22,6 +22,8 @@ const SAMPLES: Record<keyof typeof backend.fields, unknown[]> = {
   etaMinutes: [0, 1, 15, 180, 181, 2.5, Number.NaN, -5, "15", undefined],
   title: ["", "ab", " ab ", "Rice and dal", "x".repeat(100), "x".repeat(101)],
   description: ["", "Fresh, made today", "x".repeat(500), "x".repeat(501)],
+  diet: ["veg", "egg", "non_veg", "vegan", "Veg", "", null],
+  servings: [0, 1, 2, 50, 51, 2.5, Number.NaN, -1, "2", undefined],
 };
 
 type Schema = z.ZodType;
@@ -73,9 +75,11 @@ describe("frontend and backend validation stay in sync", () => {
     ]],
     ["create post", frontend.createPostSchema, backend.createPostSchema, [
       ["title", "title", "title"], ["description", "description", "description"],
+      ["diet", "diet", "diet"], ["servings", "servings", "servings"],
     ]],
     ["edit post", frontend.editPostSchema, backend.updatePostSchema, [
       ["title", "title", "title"], ["description", "description", "description"],
+      ["diet", "diet", "diet"], ["servings", "servings", "servings"],
     ]],
   ];
 

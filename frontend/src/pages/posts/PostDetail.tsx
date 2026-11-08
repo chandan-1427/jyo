@@ -2,12 +2,14 @@ import { useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft, Check, CheckCircle2, Clock, ExternalLink, MapPin, Maximize2, Navigation, Pencil, Plus, Timer, Trash2,
-  UserRound, UtensilsCrossed, X,
+  ArrowLeft, ChefHat, Check, CheckCircle2, Clock, ExternalLink, MapPin, Maximize2, Navigation, Package, Pencil, Plus, Timer, Trash2,
+  UserRound, Utensils, UtensilsCrossed, X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { useMarkPostNotificationsRead } from "@/lib/api/queries/notifications";
-import { formatAgo, formatPickupWindow, formatTime } from "@/lib/format";
+import { formatAgo, formatDayTime, formatPickupWindow, formatTime } from "@/lib/format";
+import { foodSummary } from "@/lib/food";
+import { DietMark } from "@/components/posts/FoodDetails";
 import { useV2Theme } from "@/lib/theme";
 import type { FoodPost, PickupRequest } from "@/types/api";
 import RequestModal from "@/components/posts/RequestModal";
@@ -623,6 +625,7 @@ export default function PostDetail() {
   const { post, isPoster, isApprovedPicker, pendingRequest } = data;
   const statusTag = STATUS_TAG[post.status];
   const spot = pickupSpotText(post.status, isPoster, isApprovedPicker);
+  const food = foodSummary(post);
 
   return (
     <div className="text-fg">
@@ -649,6 +652,26 @@ export default function PostDetail() {
             <Fact icon={<Clock />} label="Pickup time">
               <span className="tabular-nums">{formatPickupWindow(post.pickupWindowStart, post.pickupWindowEnd)}</span>
             </Fact>
+            {food && (
+              <Fact icon={<Utensils />} label="Food">
+                <span className="inline-flex items-center gap-2">
+                  {post.diet && <DietMark diet={post.diet} />}
+                  {food}
+                </span>
+              </Fact>
+            )}
+            {post.cookedAt && (
+              <Fact icon={<ChefHat />} label="Cooked">
+                <span className="tabular-nums">
+                  {formatDayTime(post.cookedAt)} ({formatAgo(post.cookedAt)})
+                </span>
+              </Fact>
+            )}
+            {post.bringContainer && (
+              <Fact icon={<Package />} label="Container">
+                Please bring your own
+              </Fact>
+            )}
             {spot && (
               <Fact icon={<MapPin />} label="Pickup spot">
                 {spot}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Controller } from "react-hook-form";
+import { Controller, FormProvider } from "react-hook-form";
 import { ImagePlus } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { useImageUpload } from "@/lib/uploads";
@@ -14,8 +14,9 @@ import { Button } from "../ui/Button";
 import { Notice } from "../ui/Notice";
 import { PhotoField } from "../ui/PhotoField";
 import { DateTimeField } from "../ui/DateTimeField";
+import { FoodDetailsFields, type FoodDetailsValues } from "./FoodDetails";
 
-type EditValues = {
+type EditValues = FoodDetailsValues & {
   title: string;
   description: string;
   photo?: File;
@@ -28,12 +29,17 @@ type EditValues = {
 export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () => void }) {
   const queryClient = useQueryClient();
 
-  const { register, control, handleSubmit, setValue, setError, watch, formState: { errors, isDirty } } = useZodForm(editPostSchema, {
+  const form = useZodForm(editPostSchema, {
     title: post.title,
     description: post.description ?? "",
     pickupWindowStart: toDateTimeInput(post.pickupWindowStart),
     pickupWindowEnd: toDateTimeInput(post.pickupWindowEnd),
+    diet: post.diet ?? undefined,
+    servings: post.servings ?? undefined,
+    cookedAt: post.cookedAt ? toDateTimeInput(post.cookedAt) : "",
+    bringContainer: post.bringContainer ?? false,
   });
+  const { register, control, handleSubmit, setValue, setError, watch, formState: { errors, isDirty } } = form;
   const uploadPhoto = useImageUpload("food-photos");
   const save = useMutation({
     mutationFn: async (values: EditValues) => {
@@ -46,6 +52,10 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
           photoUrl,
           pickupWindowStart: new Date(values.pickupWindowStart).toISOString(),
           pickupWindowEnd: new Date(values.pickupWindowEnd).toISOString(),
+          diet: values.diet,
+          servings: values.servings,
+          cookedAt: new Date(values.cookedAt).toISOString(),
+          bringContainer: values.bringContainer,
         }),
       });
     },
@@ -54,7 +64,7 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
       onClose();
     },
     onError: (err) => {
-      applyServerFieldErrors(err, setError, ["title", "description", "pickupWindowEnd"]);
+      applyServerFieldErrors(err, setError, ["title", "description", "pickupWindowEnd", "diet", "servings", "cookedAt"]);
     },
   });
 
@@ -74,6 +84,7 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
     <Dialog title="Edit post" size="lg" onClose={onClose}>
       {error && <Notice tone="error" className="mb-5">{error}</Notice>}
 
+      <FormProvider {...form}>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
         {/* The current photo stays unless a new one is chosen. */}
         <PhotoField
@@ -88,6 +99,8 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
         <TextField label="Title" error={errors.title?.message} {...register("title")} />
 
         <TextAreaField label="Description" rows={4} error={errors.description?.message} {...register("description")} />
+
+        <FoodDetailsFields />
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Controller
@@ -128,6 +141,7 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
           {save.isPending ? "Saving…" : "Save changes"}
         </Button>
       </form>
+      </FormProvider>
     </Dialog>
   );
 }

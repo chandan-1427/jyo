@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Clock, UtensilsCrossed } from "lucide-react";
 import type { FoodPost } from "@/types/api";
 import { formatPickupTime } from "@/lib/format";
+import { foodSummary } from "@/lib/food";
+import { DietMark } from "./FoodDetails";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "../ui/Checkbox";
 
@@ -83,6 +85,7 @@ function CardPhoto({ src }: { src: string | null }) {
 // With a `status` line, that line says where the post stands instead.
 export default function PostCard({ post, status, action, selection }: Props) {
   const requestedTag = !status && post.status === "pending_approval";
+  const food = foodSummary(post);
 
   return (
     // flex, so the link fills the grid row's height whether or not there's an action.
@@ -118,6 +121,12 @@ export default function PostCard({ post, status, action, selection }: Props) {
           <h2 className="line-clamp-2 font-display text-[15px] font-semibold leading-snug text-balance sm:text-base">
             {post.title}
           </h2>
+          {food && (
+            <p className="mt-1 flex items-center gap-1.5 text-[13px] leading-snug text-fg-muted sm:text-sm">
+              {post.diet && <DietMark diet={post.diet} />}
+              {food}
+            </p>
+          )}
           {status && (
             <p
               className={cn(

@@ -171,6 +171,7 @@ describe("emails to the poster", () => {
         pickupLng: 79.42,
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     const postId = (await created.json()).post.id;
@@ -204,6 +205,7 @@ describe("emails to the poster", () => {
         pickupLng: 79.42,
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     const postId = (await created.json()).post.id;

@@ -33,6 +33,12 @@ export const fields = {
     .max(180, "It must be 180 minutes or less"),
   title: z.string().trim().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
   description: z.string().trim().max(500, "Description is too long"),
+  diet: z.enum(["veg", "egg", "non_veg"], "Choose veg, egg or non-veg"),
+  servings: z
+    .number({ error: "Enter how many people it serves" })
+    .int("Enter a whole number")
+    .min(1, "Enter at least 1")
+    .max(50, "It must be 50 or less"),
 };
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -150,9 +156,24 @@ const endWithinLimit = (data: PickupWindow) =>
   new Date(data.pickupWindowEnd).getTime() <= Date.now() + MAX_PICKUP_DAYS_AHEAD * 86_400_000 + 3_600_000;
 const WITHIN_LIMIT = { message: `Pickup has to end within ${MAX_PICKUP_DAYS_AHEAD} days`, path: ["pickupWindowEnd"] };
 
+// When the food was cooked: not in the future (a few minutes' slack for a
+// phone clock running fast), and not more than a day ago.
+const COOKED_SLACK_MS = 10 * 60_000;
+const COOKED_MAX_AGE_MS = 24 * 3_600_000;
+const cookedAt = z.iso.datetime("Invalid cooked time");
+type Cooked = { cookedAt?: string };
+const cookedNotFuture = (d: Cooked) => !d.cookedAt || new Date(d.cookedAt).getTime() <= Date.now() + COOKED_SLACK_MS;
+const cookedRecently = (d: Cooked) => !d.cookedAt || new Date(d.cookedAt).getTime() >= Date.now() - COOKED_MAX_AGE_MS;
+const NOT_FUTURE = { message: "That time hasn't happened yet", path: ["cookedAt"] };
+const TOO_OLD = { message: "Food cooked more than a day ago can't be shared", path: ["cookedAt"] };
+
 export const createPostSchema = z
   .object({
     ...postFields,
+    diet: fields.diet,
+    servings: fields.servings,
+    cookedAt,
+    bringContainer: z.boolean().optional(),
     pickupLat: z.number().min(-90).max(90),
     pickupLng: z.number().min(-180).max(180),
     // Made once per visit to the post form, so a retried submit can be
@@ -161,13 +182,23 @@ export const createPostSchema = z
   })
   .refine(endAfterStart, { message: "End time must be after start time", path: ["pickupWindowEnd"] })
   .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] })
-  .refine(endWithinLimit, WITHIN_LIMIT);
+  .refine(endWithinLimit, WITHIN_LIMIT)
+  .refine(cookedNotFuture, NOT_FUTURE)
+  .refine(cookedRecently, TOO_OLD);
 
 // The pickup spot can't be edited: it was checked against the service area
-// when the post was made. Omitting photoUrl or description keeps the current
+// when the post was made. Omitting photoUrl, description or a food detail keeps the current
 // one, which is why editing is a PATCH rather than a PUT.
 export const updatePostSchema = z
-  .object(postFields)
+  .object({
+    ...postFields,
+    diet: fields.diet.optional(),
+    servings: fields.servings.optional(),
+    cookedAt: cookedAt.optional(),
+    bringContainer: z.boolean().optional(),
+  })
   .refine(endAfterStart, { message: "End time must be after start time", path: ["pickupWindowEnd"] })
   .refine(endInFuture, { message: "End time must be in the future", path: ["pickupWindowEnd"] })
-  .refine(endWithinLimit, WITHIN_LIMIT);
+  .refine(endWithinLimit, WITHIN_LIMIT)
+  .refine(cookedNotFuture, NOT_FUTURE)
+  .refine(cookedRecently, TOO_OLD);

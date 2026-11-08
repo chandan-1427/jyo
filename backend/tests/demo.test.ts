@@ -62,6 +62,7 @@ describe("POST /auth/demo/start and /stop", () => {
         pickupLng: 80.2707,
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     expect(res.status).toBe(201);
@@ -106,6 +107,7 @@ describe("POST /auth/demo/start and /stop", () => {
         pickupLng: TIRUPATI.lng,
         pickupWindowStart: new Date().toISOString(),
         pickupWindowEnd: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     expect(realPost.status).toBe(201);
@@ -133,6 +135,7 @@ describe("POST /auth/demo/start and /stop", () => {
         pickupLng: TIRUPATI.lng,
         pickupWindowStart: new Date().toISOString(),
         pickupWindowEnd: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     expect(ownDemoPost.status).toBe(201);

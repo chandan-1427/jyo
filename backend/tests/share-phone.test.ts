@@ -29,6 +29,7 @@ async function newPost(cookie: string) {
       pickupLng: 79.42,
       pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
       pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+      diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
     }),
   });
   return (await res.json()).post.id as string;

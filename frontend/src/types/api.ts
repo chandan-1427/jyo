@@ -8,6 +8,11 @@ export type FoodPost = {
   pickupWindowStart: string;
   pickupWindowEnd: string;
   status: "open" | "pending_approval" | "closed" | "expired" | "completed";
+  // Null on posts made before the form asked for them.
+  diet?: "veg" | "egg" | "non_veg" | null;
+  servings?: number | null;
+  cookedAt?: string | null;
+  bringContainer?: boolean;
   isDemo?: boolean;
   createdAt: string;
 };
@@ -39,6 +44,10 @@ export type MyRequest = {
   postStatus: FoodPost["status"];
   pickupWindowStart: string;
   pickupWindowEnd: string;
+  postDiet: FoodPost["diet"];
+  postServings: number | null;
+  postCookedAt: string | null;
+  postBringContainer: boolean;
   pickerName: string;
   etaMinutes: number;
   status: PickupRequest["status"];

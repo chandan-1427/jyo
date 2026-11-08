@@ -1,0 +1,105 @@
+import { useState } from "react";
+import { Controller, useFormContext } from "react-hook-form";
+import { toDateTimeInput } from "@/lib/format";
+import { DIET_LABEL, DIETS, type Diet } from "@/lib/food";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "../ui/Checkbox";
+import { DateTimeField } from "../ui/DateTimeField";
+import { TextField } from "../ui/TextField";
+
+// The marks people in India already read on food packets: green for veg,
+// brown for non-veg (FSSAI), and yellow, the usual convention, for egg.
+// These three colours are the exception to the app's cool palette, because
+// their meaning comes from the convention.
+const MARK_COLOUR: Record<Diet, string> = { veg: "#3DBB6E", egg: "#E0B341", non_veg: "#C2703D" };
+
+export function DietMark({ diet, className }: { diet: Diet; className?: string }) {
+  const colour = MARK_COLOUR[diet];
+  return (
+    <svg viewBox="0 0 16 16" className={cn("size-3.5 shrink-0", className)} aria-hidden="true">
+      <rect x="1" y="1" width="14" height="14" rx="2" fill="none" stroke={colour} strokeWidth="1.6" />
+      {diet === "non_veg" ? <path d="M8 4.2 L11.6 11 H4.4 Z" fill={colour} /> : <circle cx="8" cy="8" r="3.3" fill={colour} />}
+    </svg>
+  );
+}
+
+export type FoodDetailsValues = {
+  diet: Diet;
+  servings: number;
+  cookedAt: string;
+  bringContainer: boolean;
+};
+
+// The food-detail fields of the post and edit forms, which wrap them in a
+// FormProvider.
+export function FoodDetailsFields() {
+  const { register, control, formState: { errors } } = useFormContext<FoodDetailsValues>();
+  // Fixed when the form opens; the API re-checks both ends on submit.
+  const [{ now, dayAgo }] = useState(() => ({
+    now: toDateTimeInput(new Date()),
+    dayAgo: toDateTimeInput(new Date(Date.now() - 24 * 3_600_000)),
+  }));
+
+  return (
+    <>
+      <fieldset aria-describedby={errors.diet ? "diet-error" : undefined}>
+        <legend className="text-sm font-medium text-fg">Veg or non-veg?</legend>
+        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+          {DIETS.map((diet) => (
+            <label
+              key={diet}
+              className={cn(
+                "flex h-11 cursor-pointer items-center gap-2.5 rounded-xl bg-raised px-3.5 text-sm sm:justify-center sm:px-2 font-medium text-fg-muted ring-1 ring-inset ring-fg/[0.08] transition-colors",
+                "hover:text-fg has-[:checked]:bg-lifted has-[:checked]:text-fg has-[:checked]:ring-2 has-[:checked]:ring-leaf",
+                "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf"
+              )}
+            >
+              <input type="radio" value={diet} className="peer sr-only" {...register("diet")} />
+              <span
+                aria-hidden="true"
+                className="grid size-4 shrink-0 place-items-center rounded-full ring-[1.5px] ring-inset ring-fg/30 peer-checked:ring-leaf after:size-2 after:scale-0 after:rounded-full after:bg-leaf after:transition-transform after:duration-150 after:content-[''] peer-checked:after:scale-100 motion-reduce:after:transition-none"
+              />
+              <DietMark diet={diet} />
+              {DIET_LABEL[diet]}
+            </label>
+          ))}
+        </div>
+        {errors.diet && (
+          <p id="diet-error" className="mt-1.5 text-[13px] leading-snug text-danger">
+            {errors.diet.message}
+          </p>
+        )}
+      </fieldset>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <TextField
+          label="Serves how many?"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={50}
+          placeholder="2"
+          error={errors.servings?.message}
+          {...register("servings", { valueAsNumber: true })}
+        />
+        <Controller
+          control={control}
+          name="cookedAt"
+          render={({ field }) => (
+            <DateTimeField
+              label="When was it cooked?"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              min={dayAgo}
+              max={now}
+              error={errors.cookedAt?.message}
+            />
+          )}
+        />
+      </div>
+
+      <Checkbox {...register("bringContainer")} label="Ask them to bring their own container" />
+    </>
+  );
+}
