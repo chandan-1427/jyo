@@ -46,4 +46,7 @@ export const env = {
   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
   VAPID_SUBJECT: process.env.VAPID_SUBJECT,
+  // Optional: where reports of posts and people are emailed. Reports are
+  // stored either way.
+  REPORTS_EMAIL: process.env.REPORTS_EMAIL,
 };

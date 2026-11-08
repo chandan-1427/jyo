@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, users } from "../db/schema.js";
 import { eq, or, and, gte, asc, desc, inArray, sql, getTableColumns } from "drizzle-orm";
@@ -17,11 +17,12 @@ import {
 import { releaseApprovedPickup, REQUEST_TIMEOUT_MS } from "../lib/domain/requestActions.js";
 import { notifyPicker } from "../lib/mailer.js";
 import { createNotification } from "../lib/notifications/notify.js";
-import { createPostLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
+import { blockUser, fileReport, isBlockedBetween, notBlockedWith } from "../lib/domain/safety.js";
+import { createPostLimiter, reportLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
 import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS, isSyntheticEmail } from "../lib/domain/demo.js";
-import { createPostSchema, feedQuerySchema, myPostsQuerySchema, updatePostSchema } from "../lib/validation.js";
+import { createPostSchema, feedQuerySchema, myPostsQuerySchema, reportSchema, updatePostSchema } from "../lib/validation.js";
 import { ConflictError } from "../lib/errors.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 import { parseJsonBody, parseQuery, uploadFromForm } from "../lib/http.js";
@@ -162,7 +163,8 @@ postRoutes.get("/", async (c) => {
         isDemo
           ? or(eq(foodPosts.isDemo, false), eq(foodPosts.seededForUserId, userId))
           : eq(foodPosts.isDemo, false),
-        posterNotDeleted
+        posterNotDeleted,
+        notBlockedWith(userId)
       )
     )
     // Posts someone can still request come first, and within each group the
@@ -281,6 +283,11 @@ postRoutes.get("/:id", async (c) => {
   // A demo post seeded for one visitor's session: to anyone else it's as if
   // it isn't there, as in the feed and when requesting it.
   if (post.isDemo && !isPoster && post.seededForUserId !== userId) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  // Blocked either way round: as if it isn't there, as in the feed.
+  if (!isPoster && (await isBlockedBetween(userId, post.posterId))) {
     return c.json({ error: "Post not found" }, 404);
   }
 
@@ -464,6 +471,52 @@ postRoutes.post("/:id/complete", async (c) => {
   }
 
   return c.json({ message: "Post marked as completed" });
+});
+
+const REPORT_THANKS = "Thanks for telling us. We'll look into it.";
+const DEMO_NOT_REPORTABLE = "This is a sample post in demo mode, so there's no one to report or block.";
+
+// The post a viewer may report, or block the poster of: one that exists, is
+// someone else's, and isn't a demo sample.
+async function postToActOn(c: Context, userId: string, postId: string) {
+  if (!isValidUuid(postId)) return { response: c.json({ error: "Post not found" }, 404) };
+  const post = await findPostById(postId);
+  if (!post || (post.isDemo && post.seededForUserId !== userId && post.posterId !== userId)) {
+    return { response: c.json({ error: "Post not found" }, 404) };
+  }
+  if (post.posterId === userId) return { response: c.json({ error: "This is your own post" }, 403) };
+  if (post.isDemo) return { response: c.json({ error: DEMO_NOT_REPORTABLE }, 409) };
+  return { post };
+}
+
+// --- Report a post, and the person who shared it ---
+postRoutes.post("/:id/report", reportLimiter, async (c) => {
+  const { userId } = c.get("user");
+  const parsed = await parseJsonBody(c, reportSchema);
+  if (!parsed.ok) return parsed.response;
+  const { post, response } = await postToActOn(c, userId, c.req.param("id"));
+  if (!post) return response;
+
+  const created = await fileReport({
+    reporterId: userId,
+    reportedUserId: post.posterId,
+    postId: post.id,
+    postTitle: post.title,
+    reason: parsed.data.reason,
+    details: parsed.data.details,
+    about: "post",
+  });
+  return c.json({ message: REPORT_THANKS }, created ? 201 : 200);
+});
+
+// --- Block the person who shared a post ---
+postRoutes.post("/:id/block", async (c) => {
+  const { userId } = c.get("user");
+  const { post, response } = await postToActOn(c, userId, c.req.param("id"));
+  if (!post) return response;
+
+  const created = await blockUser(userId, post.posterId, `Shared “${post.title}”`);
+  return c.json({ message: "Blocked" }, created ? 201 : 200);
 });
 
 // --- The approved picker didn't come: offer the food to others ---

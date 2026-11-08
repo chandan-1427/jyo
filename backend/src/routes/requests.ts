@@ -6,7 +6,7 @@ import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/geo/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
 import { isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE } from "../lib/storage.js";
-import { createRequestLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
+import { createRequestLimiter, reportLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
 import { createNotification } from "../lib/notifications/notify.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
@@ -22,8 +22,9 @@ import {
   posterNotDeleted,
 } from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx, releaseApprovedPickup } from "../lib/domain/requestActions.js";
+import { blockUser, fileReport, isBlockedBetween } from "../lib/domain/safety.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
-import { createRequestSchema, myRequestsQuerySchema, updateRequestSchema } from "../lib/validation.js";
+import { createRequestSchema, myRequestsQuerySchema, reportSchema, updateRequestSchema } from "../lib/validation.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 import { parseJsonBody, parseQuery, uploadFromForm } from "../lib/http.js";
 import { PAGE_SIZE, afterCursor, matchesSearch, micros, toPage } from "../lib/pagination.js";
@@ -136,6 +137,12 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   // get a fake "approved" post for food that doesn't exist. To anyone else
   // it's as if it isn't there.
   if (!post || (post.isDemo && post.seededForUserId !== userId)) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  // Blocked either way round: the post is hidden from them, so it's as if
+  // it isn't there.
+  if (await isBlockedBetween(userId, post.posterId)) {
     return c.json({ error: "Post not found" }, 404);
   }
 
@@ -449,6 +456,53 @@ requestRoutes.post("/:id/cancel", async (c) => {
   if (!request.isDemo) broadcastFeedChange();
 
   return c.json({ message: "Request cancelled" });
+});
+
+const REPORT_THANKS = "Thanks for telling us. We'll look into it.";
+const DEMO_NOT_REPORTABLE = "This is a sample post in demo mode, so there's no one to report or block.";
+
+// The request whose asker the poster may report or block: one on the
+// poster's own post, and not a demo sample.
+async function requestToActOn(c: Context, userId: string, requestId: string) {
+  if (!isValidUuid(requestId)) return { response: c.json({ error: "Request not found" }, 404) };
+  const request = await findRequestById(requestId);
+  const post = request && (await findPostById(request.postId));
+  if (!request || !post) return { response: c.json({ error: "Request not found" }, 404) };
+  if (post.posterId !== userId) {
+    return { response: c.json({ error: "Only the person sharing can do this" }, 403) };
+  }
+  if (request.isDemo) return { response: c.json({ error: DEMO_NOT_REPORTABLE }, 409) };
+  return { request, post };
+}
+
+// --- Report the person who asked for your food ---
+requestRoutes.post("/:id/report", reportLimiter, async (c) => {
+  const { userId } = c.get("user");
+  const parsed = await parseJsonBody(c, reportSchema);
+  if (!parsed.ok) return parsed.response;
+  const { request, post, response } = await requestToActOn(c, userId, c.req.param("id"));
+  if (!request || !post) return response;
+
+  const created = await fileReport({
+    reporterId: userId,
+    reportedUserId: request.pickerId,
+    postId: post.id,
+    postTitle: post.title,
+    reason: parsed.data.reason,
+    details: parsed.data.details,
+    about: "picker",
+  });
+  return c.json({ message: REPORT_THANKS }, created ? 201 : 200);
+});
+
+// --- Block the person who asked for your food ---
+requestRoutes.post("/:id/block", async (c) => {
+  const { userId } = c.get("user");
+  const { request, post, response } = await requestToActOn(c, userId, c.req.param("id"));
+  if (!request || !post) return response;
+
+  const created = await blockUser(userId, request.pickerId, `${request.pickerName}, who asked for “${post.title}”`);
+  return c.json({ message: "Blocked" }, created ? 201 : 200);
 });
 
 // --- Share your phone number with the other side, or stop ---

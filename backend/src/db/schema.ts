@@ -184,3 +184,42 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   uniqueIndex("push_subscriptions_endpoint_idx").on(table.endpoint),
   index("push_subscriptions_user_id_idx").on(table.userId),
 ]);
+
+// --- Reports ---
+// Someone reporting a post (and so its poster), or a poster reporting the
+// person who asked for their food. Emailed to whoever runs Jyo to act on.
+// One per reporter, person and post: reporting the same thing again changes
+// nothing. The post's title is copied, and the link to the post cleared if
+// it's deleted, so deleting a post neither fails nor erases the report.
+// Erasing either account erases the report (cascade).
+export const reportReasonEnum = pgEnum("report_reason", ["unsafe_food", "misleading", "money", "harassment", "other"]);
+
+export const reports = pgTable("reports", {
+  id:             uuid("id").primaryKey().defaultRandom(),
+  reporterId:     uuid("reporter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reportedUserId: uuid("reported_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  postId:         uuid("post_id").references(() => foodPosts.id, { onDelete: "set null" }),
+  postTitle:      text("post_title").notNull(),
+  reason:         reportReasonEnum("reason").notNull(),
+  details:        text("details"),
+  createdAt:      timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("reports_reporter_reported_post_idx").on(table.reporterId, table.reportedUserId, table.postId),
+  index("reports_reported_user_id_idx").on(table.reportedUserId),
+]);
+
+// --- Blocks ---
+// Either side of a block stops seeing the other's posts and can't ask for
+// their food. The label is what the blocker saw ("Shared “Veg pulao”"), so
+// their list of blocked people needs no other person's account details.
+// Erasing either account erases the block (cascade).
+export const blocks = pgTable("blocks", {
+  id:        uuid("id").primaryKey().defaultRandom(),
+  blockerId: uuid("blocker_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  blockedId: uuid("blocked_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  label:     text("label").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("blocks_blocker_blocked_idx").on(table.blockerId, table.blockedId),
+  index("blocks_blocked_id_idx").on(table.blockedId),
+]);

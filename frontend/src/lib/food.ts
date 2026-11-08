@@ -14,3 +14,16 @@ export function foodSummary(post: Pick<FoodPost, "diet" | "servings">): string |
   const text = parts.join(", ");
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+// The feed's filter by diet. Posts from before the form asked have no diet,
+// so they only show under All.
+export type DietFilter = "all" | Diet;
+
+export const DIET_FILTERS: { value: DietFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  ...DIETS.map((diet) => ({ value: diet, label: DIET_LABEL[diet] })),
+];
+
+export function matchesDiet(post: Pick<FoodPost, "diet">, filter: DietFilter): boolean {
+  return filter === "all" || post.diet === filter;
+}

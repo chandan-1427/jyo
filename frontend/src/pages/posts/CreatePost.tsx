@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { DateTimeField } from "@/components/ui/DateTimeField";
 import { ImagePickerField } from "@/components/ui/ImagePickerField";
 import { Notice } from "@/components/ui/Notice";
-import { ContainerCheckbox, FoodDetailsFields, type FoodDetailsValues } from "@/components/posts/FoodDetails";
+import { ContainerCheckbox, CookedAtField, DietField, ServesField, type FoodDetailsValues } from "@/components/posts/FoodDetails";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TextAreaField, TextField } from "@/components/ui/TextField";
 
@@ -139,7 +139,7 @@ export default function CreatePost() {
       {error && <Notice tone="error" className="mb-6">{error}</Notice>}
 
       <FormProvider {...form}>
-      <form onSubmit={onSubmit} noValidate className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12">
+      <form onSubmit={onSubmit} noValidate className="grid items-start gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-12">
         <ImagePickerField
           label="Photo"
           hint="A clear photo helps people decide."
@@ -161,39 +161,55 @@ export default function CreatePost() {
 
           {/* Nothing in the past, nothing more than a week out, and the end
               no earlier than the start. */}
-          <FoodDetailsFields />
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Controller
-              control={control}
-              name="pickupWindowStart"
-              render={({ field }) => (
-                <DateTimeField
-                  label="Pickup starts"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  min={now}
-                  max={latest}
-                  error={errors.pickupWindowStart?.message}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="pickupWindowEnd"
-              render={({ field }) => (
-                <DateTimeField
-                  label="Pickup ends"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  min={pickupStart > now ? pickupStart : now}
-                  max={latest}
-                  error={errors.pickupWindowEnd?.message}
-                />
-              )}
-            />
+          {/* One grid, so each width can arrange the same fields in its own rows:
+              phones: diet / serves + cooked / start / end; tablets and wide
+              desktops: diet + serves / cooked + start + end. Between 1024 and
+              1279px the photo column leaves too little room for three dates
+              side by side, so cooked gets its own row there. */}
+          <div className="grid grid-cols-12 gap-x-3 gap-y-5 sm:gap-x-5">
+            <div className="col-span-12 md:col-span-9">
+              <DietField />
+            </div>
+            <div className="col-span-4 md:col-span-3">
+              <ServesField />
+            </div>
+            <div className="col-span-8 md:col-span-4 lg:col-span-12 xl:col-span-4">
+              <CookedAtField />
+            </div>
+            <div className="col-span-12 md:col-span-4 lg:col-span-6 xl:col-span-4">
+              <Controller
+                control={control}
+                name="pickupWindowStart"
+                render={({ field }) => (
+                  <DateTimeField
+                    label="Pickup starts"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    min={now}
+                    max={latest}
+                    error={errors.pickupWindowStart?.message}
+                  />
+                )}
+              />
+            </div>
+            <div className="col-span-12 md:col-span-4 lg:col-span-6 xl:col-span-4">
+              <Controller
+                control={control}
+                name="pickupWindowEnd"
+                render={({ field }) => (
+                  <DateTimeField
+                    label="Pickup ends"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    min={pickupStart > now ? pickupStart : now}
+                    max={latest}
+                    error={errors.pickupWindowEnd?.message}
+                  />
+                )}
+              />
+            </div>
           </div>
 
           <ContainerCheckbox />

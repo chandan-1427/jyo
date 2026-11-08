@@ -30,74 +30,96 @@ export type FoodDetailsValues = {
   bringContainer: boolean;
 };
 
-// The food-detail fields of the post and edit forms, which wrap them in a
-// FormProvider.
-export function FoodDetailsFields() {
-  const { register, control, formState: { errors } } = useFormContext<FoodDetailsValues>();
+function useDayRange() {
   // Fixed when the form opens; the API re-checks both ends on submit.
-  const [{ now, dayAgo }] = useState(() => ({
+  const [range] = useState(() => ({
     now: toDateTimeInput(new Date()),
     dayAgo: toDateTimeInput(new Date(Date.now() - 24 * 3_600_000)),
   }));
+  return range;
+}
 
+export function DietField() {
+  const { register, formState: { errors } } = useFormContext<FoodDetailsValues>();
+  return (
+    <fieldset aria-describedby={errors.diet ? "diet-error" : undefined}>
+      <legend className="text-sm font-medium text-fg">Veg or non-veg?</legend>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {DIETS.map((diet) => (
+          <label
+            key={diet}
+            className={cn(
+              "flex h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-raised px-2 text-[13px] font-medium text-fg-muted ring-1 ring-inset ring-fg/[0.08] transition-colors sm:gap-2 sm:text-sm",
+              "hover:text-fg has-[:checked]:bg-lifted has-[:checked]:text-fg has-[:checked]:ring-2 has-[:checked]:ring-leaf",
+              "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf"
+            )}
+          >
+            <input type="radio" value={diet} className="peer sr-only" {...register("diet")} />
+            <span
+              aria-hidden="true"
+              className="grid size-4 shrink-0 place-items-center rounded-full ring-[1.5px] ring-inset ring-fg/30 peer-checked:ring-leaf after:size-2 after:scale-0 after:rounded-full after:bg-leaf after:transition-transform after:duration-150 after:content-[''] peer-checked:after:scale-100 motion-reduce:after:transition-none"
+            />
+            {/* Room for the mark only from tablet width; cards show it everywhere. */}
+            <DietMark diet={diet} className="hidden sm:block" />
+            <span className="truncate">{DIET_LABEL[diet]}</span>
+          </label>
+        ))}
+      </div>
+      {errors.diet && (
+        <p id="diet-error" className="mt-1.5 text-[13px] leading-snug text-danger">
+          {errors.diet.message}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
+export function ServesField() {
+  const { register, formState: { errors } } = useFormContext<FoodDetailsValues>();
+  return (
+    <TextField
+      label="Serves"
+      type="number"
+      inputMode="numeric"
+      min={1}
+      max={50}
+      placeholder="2"
+      error={errors.servings?.message}
+      {...register("servings", { valueAsNumber: true })}
+    />
+  );
+}
+
+export function CookedAtField() {
+  const { control, formState: { errors } } = useFormContext<FoodDetailsValues>();
+  const { now, dayAgo } = useDayRange();
+  return (
+    <Controller
+      control={control}
+      name="cookedAt"
+      render={({ field }) => (
+        <DateTimeField
+          label="Cooked at"
+          value={field.value}
+          onChange={field.onChange}
+          onBlur={field.onBlur}
+          min={dayAgo}
+          max={now}
+          error={errors.cookedAt?.message}
+        />
+      )}
+    />
+  );
+}
+
+// The food fields in one block, for the edit dialog, inside a FormProvider.
+export function FoodDetailsFields() {
   return (
     <>
-      <fieldset aria-describedby={errors.diet ? "diet-error" : undefined}>
-        <legend className="text-sm font-medium text-fg">Veg or non-veg?</legend>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {DIETS.map((diet) => (
-            <label
-              key={diet}
-              className={cn(
-                "flex h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-raised px-2 text-[13px] font-medium text-fg-muted ring-1 ring-inset ring-fg/[0.08] transition-colors sm:gap-2 sm:text-sm",
-                "hover:text-fg has-[:checked]:bg-lifted has-[:checked]:text-fg has-[:checked]:ring-2 has-[:checked]:ring-leaf",
-                "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf"
-              )}
-            >
-              <input type="radio" value={diet} className="peer sr-only" {...register("diet")} />
-              <span
-                aria-hidden="true"
-                className="grid size-4 shrink-0 place-items-center rounded-full ring-[1.5px] ring-inset ring-fg/30 peer-checked:ring-leaf after:size-2 after:scale-0 after:rounded-full after:bg-leaf after:transition-transform after:duration-150 after:content-[''] peer-checked:after:scale-100 motion-reduce:after:transition-none"
-              />
-              {/* Room for the mark only from tablet width; cards show it everywhere. */}
-              <DietMark diet={diet} className="hidden sm:block" />
-              <span className="truncate">{DIET_LABEL[diet]}</span>
-            </label>
-          ))}
-        </div>
-        {errors.diet && (
-          <p id="diet-error" className="mt-1.5 text-[13px] leading-snug text-danger">
-            {errors.diet.message}
-          </p>
-        )}
-      </fieldset>
-
+      <DietField />
       <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-5">
-        <TextField
-          label="Serves"
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={50}
-          placeholder="2"
-          error={errors.servings?.message}
-          {...register("servings", { valueAsNumber: true })}
-        />
-        <Controller
-          control={control}
-          name="cookedAt"
-          render={({ field }) => (
-            <DateTimeField
-              label="Cooked at"
-              value={field.value}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              min={dayAgo}
-              max={now}
-              error={errors.cookedAt?.message}
-            />
-          )}
-        />
+        <ServesField />
+        <CookedAtField />
       </div>
     </>
   );

@@ -28,6 +28,8 @@ export const fields = {
   title: z.string().trim().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
   description: z.string().trim().max(500, "Description is too long"),
   diet: z.enum(["veg", "egg", "non_veg"], "Choose veg, egg or non-veg"),
+  reportReason: z.enum(["unsafe_food", "misleading", "money", "harassment", "other"], "Choose a reason"),
+  reportDetails: z.string().trim().max(500, "Keep it under 500 characters"),
   servings: z
     .number({ error: "Enter how many people it serves" })
     .int("Enter a whole number")
@@ -143,3 +145,9 @@ export const editPostSchema = z
     path: ["pickupWindowEnd"],
   })
   .refine(endWithinLimit, WITHIN_LIMIT);
+
+// ─── Report ──────────────────────────────────────────────────────────────────
+export const reportSchema = z.object({
+  reason: fields.reportReason,
+  details: fields.reportDetails,
+});

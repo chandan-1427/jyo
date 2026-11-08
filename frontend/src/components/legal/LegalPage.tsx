@@ -6,7 +6,7 @@ import { useV2Theme } from "@/lib/theme";
 import { Logo } from "@/components/ui/Logo";
 import { textLinkClass } from "@/components/ui/TextLink";
 
-export const LAST_UPDATED = "8 November 2026";
+export const LAST_UPDATED = "9 November 2026";
 export const CONTACT_EMAIL = "jyofoodsharing@gmail.com";
 
 export function Section({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
