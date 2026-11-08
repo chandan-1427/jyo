@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { syncPush } from "@/lib/push";
 import { cn } from "@/lib/utils";
 import Navbar from "./Navbar";
 import DemoIndicator from "./DemoIndicator";
@@ -15,6 +17,11 @@ import DemoIndicator from "./DemoIndicator";
 // exactly the space left on screen.
 export default function Layout() {
   const { user } = useAuth();
+
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId) syncPush().catch(() => {});
+  }, [userId]);
 
   return (
     <div className="min-h-screen bg-canvas [--header-h:3.5rem] sm:[--header-h:4.25rem]">

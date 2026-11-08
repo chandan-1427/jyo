@@ -42,7 +42,7 @@ pnpm test      # vitest unit tests (jsdom), next to the code as *.test.ts(x)
 pnpm preview   # serve the production build locally
 ```
 
-Frontend tests are unit tests of the shared helpers every screen relies on (`apiFetch`, `applyServerFieldErrors`, `useImageUpload`, `randomUuid`, `useDebouncedValue`, `useLinkToken`), with `fetch` stubbed; `vitest.config.ts` fixes `VITE_API_URL` to `https://api.test`. One component test so far (`PhoneShare`: correcting your number before sharing it); no end-to-end tests yet.
+Frontend tests are unit tests of the shared helpers every screen relies on (`apiFetch`, `applyServerFieldErrors`, `useImageUpload`, `randomUuid`, `useDebouncedValue`, `useLinkToken`), with `fetch` stubbed; `vitest.config.ts` fixes `VITE_API_URL` to `https://api.test`. Also `lib/push.ts` (browser APIs stubbed) and one component test (`PhoneShare`: correcting your number before sharing it); no end-to-end tests yet. The service worker (`public/sw.js`) only shows notifications and opens the app on a tap: it has no fetch handler on purpose, since a caching worker can keep serving an old app after a deploy, and `vercel.json` serves it with `no-cache`.
 
 ## Architecture
 

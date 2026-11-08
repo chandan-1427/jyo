@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/api";
+import { disablePush } from "@/lib/push";
 import { authMeKey, fetchAuthMe, type Profile } from "@/lib/api/queries/auth";
 
 type AuthContextType = {
@@ -31,6 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    // While still signed in: unsubscribing needs the session. A failure
+    // mustn't stop the logout.
+    await disablePush().catch(() => {});
     await apiFetch("/auth/logout", { method: "POST" });
     queryClient.setQueryData(authMeKey, null);
   };

@@ -21,6 +21,7 @@ import { ImageViewer } from "@/components/ui/ImageViewer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
 import { ContactButtons, SharePhoneSetting } from "@/components/posts/PhoneShare";
+import { NotificationPrompt } from "@/components/posts/NotificationPrompt";
 
 type PostDetailData = {
   post: FoodPost & { pickupLat: number | null; pickupLng: number | null };
@@ -666,6 +667,13 @@ export default function PostDetail() {
             <PickerPanel post={post} myRequest={data.myRequest} contact={data.contact} />
           ) : (
             <VisitorPanel post={post} myRequest={data.myRequest} onRequest={() => setRequesting(true)} />
+          )}
+
+          {isPoster && (post.status === "open" || post.status === "pending_approval") && !post.isDemo && (
+            <NotificationPrompt reason="Get an alert the moment someone asks for this. You'll have 15 minutes to answer." />
+          )}
+          {!isPoster && data.myRequest && ["pending", "approved"].includes(data.myRequest.status) && !post.isDemo && (
+            <NotificationPrompt reason="Get an alert as soon as they answer, so you can head over in time." />
           )}
         </div>
       </div>

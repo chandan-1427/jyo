@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
+  BellRing,
   Camera,
   Check,
   CircleQuestionMark,
@@ -37,6 +38,7 @@ import { Notice } from "@/components/ui/Notice";
 import { TextAreaField, TextField } from "@/components/ui/TextField";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { DeleteAccountDialog } from "@/components/auth/DeleteAccountDialog";
+import { NotificationSetting } from "@/components/posts/NotificationPrompt";
 import { BannerPattern } from "@/components/profile/BannerPattern";
 
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5MB — matches the backend's hard limit
@@ -495,7 +497,7 @@ export default function Profile() {
         <Card
           title="Personal information"
           description="Your name is shown on the food you share with the community."
-          className="lg:col-start-1 lg:row-span-3 lg:row-start-1"
+          className="lg:col-start-1 lg:row-span-4 lg:row-start-1"
           action={
             !editing ? (
               <div className="flex items-center gap-3">
@@ -648,6 +650,12 @@ export default function Profile() {
               </li>
             ))}
           </ul>
+        </Card>
+
+        <Card title="Notifications" className="lg:col-start-2" icon={<BellRing />}>
+          <div className="mt-4">
+            <NotificationSetting />
+          </div>
         </Card>
 
         <Card
