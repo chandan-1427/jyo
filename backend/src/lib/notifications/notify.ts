@@ -1,6 +1,8 @@
 import { db } from "../../db/index.js";
 import { notifications, notificationTypeEnum } from "../../db/schema.js";
 import { publish } from "./notificationStream.js";
+import { sendPush } from "./push.js";
+import { logger } from "../logger.js";
 
 type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
 
@@ -30,4 +32,11 @@ export async function createNotification(
     });
 
   await publish(userId, row);
+
+  // Demo notifications are about sample food: nothing to buzz a phone for.
+  if (!demoExpiresAt) {
+    sendPush(userId, { body: message, url: postId ? `/posts/${postId}` : "/feed" }).catch((err) =>
+      logger.error({ err, userId }, "Sending push notification failed")
+    );
+  }
 }

@@ -1,6 +1,6 @@
 import { eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { foodPosts, notifications, pickupRequests, users } from "../../db/schema.js";
+import { foodPosts, notifications, pickupRequests, pushSubscriptions, users } from "../../db/schema.js";
 import { ConflictError } from "../errors.js";
 
 export const PICKUP_IN_PROGRESS =
@@ -89,6 +89,7 @@ export async function deleteAccount(userId: string) {
       const openIds = posts.filter((p) => p.status === "open").map((p) => p.id);
       if (openIds.length) await tx.update(foodPosts).set({ status: "expired" }).where(inArray(foodPosts.id, openIds));
       await tx.update(pickupRequests).set({ selfieUrl: null }).where(eq(pickupRequests.pickerId, userId));
+      await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
 
       return {
         status: "deleted" as const,
@@ -134,6 +135,7 @@ export async function purgeAccount(userId: string) {
     }
 
     await tx.delete(notifications).where(eq(notifications.userId, userId));
+    await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
     if (postIds.length) await tx.delete(foodPosts).where(inArray(foodPosts.id, postIds));
     const [account] = await tx.delete(users).where(eq(users.id, userId)).returning({ avatarUrl: users.avatarUrl });
 

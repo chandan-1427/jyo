@@ -23,6 +23,7 @@ import { parseJsonBody } from "../lib/http.js";
 import { endSession, revokeSession, startSession } from "../lib/session.js";
 import { hashLinkToken, newLinkToken } from "../lib/linkTokens.js";
 import { burnTimeForUnknownAccount, hashPassword, needsRehash, verifyPassword } from "../lib/passwords.js";
+import { removeAllSubscriptions } from "../lib/notifications/push.js";
 
 export const authRoutes = new Hono();
 
@@ -307,6 +308,10 @@ authRoutes.post("/reset-password", resetPasswordLimiter, async (c) => {
   if (!reset) {
     return c.json({ error: "Invalid or expired reset link" }, 400);
   }
+
+  // Devices signed out by the reset stop getting this account's notifications
+  // too; each turns them back on when it signs in again.
+  await removeAllSubscriptions(user.id);
 
   return c.json({ message: "Password reset successfully. You can now log in." });
 });
