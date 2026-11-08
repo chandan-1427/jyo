@@ -196,6 +196,8 @@ export default function CreatePost() {
             />
           </div>
 
+          <ContainerCheckbox />
+
           {/* Where it's picked up from, and who gets to see that. */}
           {locating ? (
             <Notice>
@@ -224,8 +226,6 @@ export default function CreatePost() {
               {locationError} Your location is the pickup spot, so it's needed to post.
             </Notice>
           )}
-
-          <ContainerCheckbox />
 
           <Button
             type="submit"
