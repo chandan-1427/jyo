@@ -87,6 +87,11 @@ export const createRequestSchema = z.object({
   etaMinutes: fields.etaMinutes,
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
+  sharePhone: z.boolean().optional(),
+});
+
+export const updateRequestSchema = z.object({
+  sharePhone: z.boolean(),
 });
 
 // ─── Feed ────────────────────────────────────────────────────────────────────

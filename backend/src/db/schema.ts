@@ -119,6 +119,10 @@ export const pickupRequests = pgTable("pickup_requests", {
   etaMinutes: integer("eta_minutes").notNull(),
   status:     requestStatusEnum("status").notNull().default("pending"),
   approvedAt: timestamp("approved_at"),                        // null for approvals made before it existed
+  // Each side's own choice to show their phone number to the other, only
+  // while the approved pickup is on (GET /posts/:id).
+  pickerSharesPhone: boolean("picker_shares_phone").notNull().default(false),
+  posterSharesPhone: boolean("poster_shares_phone").notNull().default(false),
   isDemo:     boolean("is_demo").notNull().default(false),
   demoExpiresAt: timestamp("demo_expires_at"),
   createdAt:  timestamp("created_at").notNull().defaultNow(),

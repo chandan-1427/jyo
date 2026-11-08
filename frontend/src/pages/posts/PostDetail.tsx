@@ -20,6 +20,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { ImageViewer } from "@/components/ui/ImageViewer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
+import { ContactButtons, SharePhoneSetting } from "@/components/posts/PhoneShare";
 
 type PostDetailData = {
   post: FoodPost & { pickupLat: number | null; pickupLng: number | null };
@@ -27,10 +28,24 @@ type PostDetailData = {
   isApprovedPicker: boolean;
   pendingRequest: PickupRequest | null;
   // The viewer's own latest request on this post, if they've made one.
-  myRequest: { id: string; status: PickupRequest["status"]; etaMinutes: number; answerBy: string | null } | null;
+  myRequest: {
+    id: string;
+    status: PickupRequest["status"];
+    etaMinutes: number;
+    answerBy: string | null;
+    sharePhone: boolean;
+  } | null;
   // Only to the poster, while a pickup they approved is on. approvedAt is
   // null for approvals made before the API recorded it.
-  approvedPickup: { pickerName: string; etaMinutes: number; approvedAt: string | null } | null;
+  approvedPickup: {
+    id: string;
+    pickerName: string;
+    etaMinutes: number;
+    approvedAt: string | null;
+    sharePhone: boolean;
+  } | null;
+  // The other side's number while the pickup is on, if they chose to share it.
+  contact: { phone: string } | null;
 };
 
 type Post = PostDetailData["post"];
@@ -181,7 +196,16 @@ function VisitorPanel({
   );
 }
 
-function PickerPanel({ post, requestId }: { post: Post; requestId: string | undefined }) {
+function PickerPanel({
+  post,
+  myRequest,
+  contact,
+}: {
+  post: Post;
+  myRequest: PostDetailData["myRequest"];
+  contact: PostDetailData["contact"];
+}) {
+  const requestId = myRequest?.id;
   const queryClient = useQueryClient();
   const [withdrawing, setWithdrawing] = useState(false);
 
@@ -207,6 +231,17 @@ function PickerPanel({ post, requestId }: { post: Post; requestId: string | unde
     <Panel>
       <Notice tone="success">Your request was approved. Head over during the pickup time.</Notice>
       {post.pickupLat != null && post.pickupLng != null && <MapsButton lat={post.pickupLat} lng={post.pickupLng} />}
+      {contact && (
+        <ContactButtons phone={contact.phone} message={`Hi, I'm picking up "${post.title}" from Jyo.`} />
+      )}
+      {myRequest && (
+        <SharePhoneSetting
+          requestId={myRequest.id}
+          postId={post.id}
+          sharing={myRequest.sharePhone}
+          label={`Share my phone number with ${post.posterName ?? "them"}`}
+        />
+      )}
       {requestId && (
         <Button variant="outline" fullWidth onClick={() => setWithdrawing(true)} iconLeft={<X className="size-4" aria-hidden="true" />}>
           Can't make it
@@ -239,10 +274,12 @@ function PosterPanel({
   post,
   pendingRequest,
   approvedPickup,
+  contact,
 }: {
   post: Post;
   pendingRequest: PickupRequest | null;
   approvedPickup: PostDetailData["approvedPickup"];
+  contact: PostDetailData["contact"];
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -360,6 +397,13 @@ function PosterPanel({
           they wait for your answer, the post can't be edited or deleted.
         </p>
 
+        <SharePhoneSetting
+          requestId={pendingRequest.id}
+          postId={post.id}
+          sharing={pendingRequest.sharePhone ?? false}
+          label={`Share my phone number with ${pendingRequest.pickerName} if I approve`}
+        />
+
         {errorNotice}
 
         <div className="grid grid-cols-2 gap-3">
@@ -414,6 +458,17 @@ function PosterPanel({
               </p>
             </div>
           </div>
+        )}
+        {contact && (
+          <ContactButtons phone={contact.phone} message={`Hi, this is about "${post.title}" you're picking up on Jyo.`} />
+        )}
+        {approvedPickup && (
+          <SharePhoneSetting
+            requestId={approvedPickup.id}
+            postId={post.id}
+            sharing={approvedPickup.sharePhone}
+            label={`Share my phone number with ${approvedPickup.pickerName}`}
+          />
         )}
         <p className="leading-relaxed text-fg-muted">
           Once the food has been collected, mark it here. That also hides your pickup spot again.
@@ -606,9 +661,9 @@ export default function PostDetail() {
           </div>
 
           {isPoster ? (
-            <PosterPanel post={post} pendingRequest={pendingRequest} approvedPickup={data.approvedPickup} />
+            <PosterPanel post={post} pendingRequest={pendingRequest} approvedPickup={data.approvedPickup} contact={data.contact} />
           ) : isApprovedPicker ? (
-            <PickerPanel post={post} requestId={data.myRequest?.id} />
+            <PickerPanel post={post} myRequest={data.myRequest} contact={data.contact} />
           ) : (
             <VisitorPanel post={post} myRequest={data.myRequest} onRequest={() => setRequesting(true)} />
           )}

@@ -1,7 +1,7 @@
 import { Hono, type Context } from "hono";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests } from "../db/schema.js";
-import { eq, and, asc, sql } from "drizzle-orm";
+import { eq, and, asc, inArray, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/geo/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
@@ -23,7 +23,7 @@ import {
 } from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx, releaseApprovedPickup } from "../lib/domain/requestActions.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
-import { createRequestSchema, myRequestsQuerySchema } from "../lib/validation.js";
+import { createRequestSchema, myRequestsQuerySchema, updateRequestSchema } from "../lib/validation.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 import { parseJsonBody, parseQuery, uploadFromForm } from "../lib/http.js";
 import { PAGE_SIZE, afterCursor, matchesSearch, micros, toPage } from "../lib/pagination.js";
@@ -122,7 +122,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
   const parsed = await parseJsonBody(c, createRequestSchema);
   if (!parsed.ok) return parsed.response;
 
-  const { postId, pickerName, selfieUrl, etaMinutes, lat, lng } = parsed.data;
+  const { postId, pickerName, selfieUrl, etaMinutes, lat, lng, sharePhone } = parsed.data;
 
   // Only our own uploads: see isOwnUploadUrl for why.
   if (selfieUrl && !isOwnUploadUrl(selfieUrl, "selfies")) {
@@ -171,6 +171,7 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
     pickerName,
     selfieUrl,
     etaMinutes,
+    pickerSharesPhone: sharePhone,
     isDemo: post.isDemo,
     demoExpiresAt,
   });
@@ -448,6 +449,51 @@ requestRoutes.post("/:id/cancel", async (c) => {
   if (!request.isDemo) broadcastFeedChange();
 
   return c.json({ message: "Request cancelled" });
+});
+
+// --- Share your phone number with the other side, or stop ---
+// Either side's own choice, for this pickup only. The number is shown only
+// while the approved pickup is on (GET /posts/:id), so this can be set
+// while the request waits and while the pickup is on, not after.
+requestRoutes.patch("/:id", async (c) => {
+  const { userId } = c.get("user");
+  const requestId = c.req.param("id");
+
+  if (!isValidUuid(requestId)) {
+    return c.json({ error: "Request not found" }, 404);
+  }
+
+  const parsed = await parseJsonBody(c, updateRequestSchema);
+  if (!parsed.ok) return parsed.response;
+  const { sharePhone } = parsed.data;
+
+  const request = await findRequestById(requestId);
+  const post = request && (await findPostById(request.postId));
+  if (!request || !post) {
+    return c.json({ error: "Request not found" }, 404);
+  }
+
+  const isPicker = request.pickerId === userId;
+  if (!isPicker && post.posterId !== userId) {
+    return c.json({ error: "You can only change your own pickups" }, 403);
+  }
+
+  const live = request.status === "pending" || (request.status === "approved" && post.status === "closed");
+  if (!live) {
+    return c.json({ error: "This pickup has already ended" }, 409);
+  }
+
+  const [updated] = await db
+    .update(pickupRequests)
+    .set(isPicker ? { pickerSharesPhone: sharePhone } : { posterSharesPhone: sharePhone })
+    .where(and(eq(pickupRequests.id, requestId), inArray(pickupRequests.status, ["pending", "approved"])))
+    .returning({ id: pickupRequests.id });
+
+  if (!updated) {
+    return c.json({ error: "This pickup has already ended" }, 409);
+  }
+
+  return c.json({ sharePhone });
 });
 
 // --- Your own requests, paged ---

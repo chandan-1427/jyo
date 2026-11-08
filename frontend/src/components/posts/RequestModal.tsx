@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Camera, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +12,7 @@ import { TextField } from "../ui/TextField";
 import { Button } from "../ui/Button";
 import { Notice } from "../ui/Notice";
 import { PhotoField } from "../ui/PhotoField";
+import { PhoneShareField } from "./PhoneShare";
 
 type Props = {
   postId: string;
@@ -23,6 +25,7 @@ type RequestValues = { pickerName: string; etaMinutes: number; selfie: File };
 export default function RequestModal({ postId, onClose, onSuccess }: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [sharePhone, setSharePhone] = useState(false);
 
   const { register, handleSubmit, setValue, setError, formState: { errors } } = useZodForm(requestSchema, {
     pickerName: user?.name ?? "",
@@ -35,7 +38,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
 
       return apiFetch("/requests", {
         method: "POST",
-        body: JSON.stringify({ postId, pickerName, selfieUrl, etaMinutes, lat: coords.lat, lng: coords.lng }),
+        body: JSON.stringify({ postId, pickerName, selfieUrl, etaMinutes, lat: coords.lat, lng: coords.lng, sharePhone }),
       });
     },
     onSuccess: () => {
@@ -92,6 +95,12 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
           capture="user"
           error={errors.selfie?.message}
           onSelect={(file) => setValue("selfie", file, { shouldValidate: true })}
+        />
+
+        <PhoneShareField
+          checked={sharePhone}
+          onChange={setSharePhone}
+          label="Share my phone number with them if they approve, so they can call or WhatsApp me"
         />
 
         <Button

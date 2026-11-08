@@ -9,6 +9,7 @@ type CreateRequestInput = {
   pickerName: string;
   selfieUrl?: string;
   etaMinutes: number;
+  pickerSharesPhone?: boolean;
   isDemo?: boolean;
   demoExpiresAt?: Date;
 };
@@ -37,6 +38,7 @@ export async function createRequestRow(input: CreateRequestInput) {
         pickerName: input.pickerName,
         selfieUrl: input.selfieUrl,
         etaMinutes: input.etaMinutes,
+        pickerSharesPhone: input.pickerSharesPhone ?? false,
         isDemo: input.isDemo ?? false,
         demoExpiresAt: input.demoExpiresAt ?? null,
       })

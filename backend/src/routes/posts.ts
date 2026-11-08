@@ -281,8 +281,9 @@ postRoutes.get("/:id", async (c) => {
   // approved and how long they said they'd take, so they can judge whether
   // to call it off.
   let approvedPickup = null;
+  let approvedRequest: typeof pickupRequests.$inferSelect | undefined;
   if (post.approvedRequestId) {
-    const [approvedRequest] = await db
+    [approvedRequest] = await db
       .select()
       .from(pickupRequests)
       .where(eq(pickupRequests.id, post.approvedRequestId))
@@ -290,9 +291,11 @@ postRoutes.get("/:id", async (c) => {
     isApprovedPicker = approvedRequest?.pickerId === userId;
     if (isPoster && post.status === "closed" && approvedRequest) {
       approvedPickup = {
+        id: approvedRequest.id,
         pickerName: approvedRequest.pickerName,
         etaMinutes: approvedRequest.etaMinutes,
         approvedAt: approvedRequest.approvedAt,
+        sharePhone: approvedRequest.posterSharesPhone,
       };
     }
   }
@@ -308,6 +311,7 @@ postRoutes.get("/:id", async (c) => {
         etaMinutes: pickupRequests.etaMinutes,
         status: pickupRequests.status,
         createdAt: pickupRequests.createdAt,
+        sharePhone: pickupRequests.posterSharesPhone,
       })
       .from(pickupRequests)
       .where(
@@ -332,17 +336,42 @@ postRoutes.get("/:id", async (c) => {
         status: pickupRequests.status,
         etaMinutes: pickupRequests.etaMinutes,
         createdAt: pickupRequests.createdAt,
+        sharePhone: pickupRequests.pickerSharesPhone,
       })
       .from(pickupRequests)
       .where(and(eq(pickupRequests.postId, postId), eq(pickupRequests.pickerId, userId)))
       .orderBy(desc(pickupRequests.createdAt))
       .limit(1);
     myRequest = mine
-      ? { id: mine.id, status: mine.status, etaMinutes: mine.etaMinutes, answerBy: mine.status === "pending" ? answerBy(mine.createdAt) : null }
+      ? {
+          id: mine.id,
+          status: mine.status,
+          etaMinutes: mine.etaMinutes,
+          answerBy: mine.status === "pending" ? answerBy(mine.createdAt) : null,
+          sharePhone: mine.sharePhone,
+        }
       : null;
   }
 
   const showLocation = (isPoster || isApprovedPicker) && post.status === "closed";
+
+  // The other side's phone number, under the same rule as the location, and
+  // only if they chose to share it for this pickup. Read from their account
+  // now, so a number corrected after opting in is the one shown.
+  let contact = null;
+  if (showLocation && approvedRequest) {
+    const otherId = isPoster
+      ? approvedRequest.pickerSharesPhone && approvedRequest.pickerId
+      : approvedRequest.posterSharesPhone && post.posterId;
+    if (otherId) {
+      const [other] = await db
+        .select({ phone: users.phone })
+        .from(users)
+        .where(and(eq(users.id, otherId), eq(users.isDeleted, false)))
+        .limit(1);
+      contact = other ? { phone: other.phone } : null;
+    }
+  }
 
   // Only what the page shows, listed rather than the whole row, so a column
   // added later isn't sent to everyone by default. Account ids in particular
@@ -365,7 +394,7 @@ postRoutes.get("/:id", async (c) => {
     pickupLng: showLocation ? post.pickupLng : null,
   };
 
-  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest, myRequest, approvedPickup });
+  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest, myRequest, approvedPickup, contact });
 });
 
 postRoutes.post(
