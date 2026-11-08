@@ -28,11 +28,9 @@ describe("matchesDiet", () => {
     for (const p of [veg, egg, nonVeg, unknown]) expect(matchesDiet(p, "all")).toBe(true);
   });
 
-  it("shows only veg under Veg", () => {
+  it("shows only that diet under Veg, Egg or Non-veg", () => {
     expect([veg, egg, nonVeg, unknown].map((p) => matchesDiet(p, "veg"))).toEqual([true, false, false, false]);
-  });
-
-  it("shows veg and egg under Veg & egg", () => {
-    expect([veg, egg, nonVeg, unknown].map((p) => matchesDiet(p, "veg_egg"))).toEqual([true, true, false, false]);
+    expect([veg, egg, nonVeg, unknown].map((p) => matchesDiet(p, "egg"))).toEqual([false, true, false, false]);
+    expect([veg, egg, nonVeg, unknown].map((p) => matchesDiet(p, "non_veg"))).toEqual([false, false, true, false]);
   });
 });

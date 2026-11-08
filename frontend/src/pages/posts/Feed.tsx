@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapPinOff, Plus, Sparkles } from "lucide-react";
+import { ListFilter, MapPinOff, Plus, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { getCurrentLocation, type Coords } from "@/lib/location/location";
 import { isWithinTirupati } from "@/lib/location/geofence";
@@ -15,7 +15,7 @@ import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { SelectMenu } from "@/components/ui/SelectMenu";
 import { DIET_FILTERS, matchesDiet, type DietFilter } from "@/lib/food";
 
 const DIET_FILTER_KEY = "jyo:feed-diet";
@@ -83,6 +83,7 @@ export default function Feed() {
   });
   const posts = data?.posts ?? [];
   const shown = posts.filter((post) => matchesDiet(post, dietFilter));
+  const filterLabel = DIET_FILTERS.find((f) => f.value === dietFilter)?.label ?? "";
 
   const handleStartDemo = async () => {
     setStartingDemo(true);
@@ -155,14 +156,20 @@ export default function Feed() {
     <div className="relative isolate text-fg">
       <FeedIllustration />
       {heading}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <SegmentedControl label="Show" options={DIET_FILTERS} value={dietFilter} onChange={chooseDiet} />
-        <div className="flex flex-wrap items-center gap-2">
-          {demoButton}
-          <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
-            Post food
-          </Button>
-        </div>
+      <div className="mb-6 flex flex-wrap items-center justify-end gap-2">
+        {demoButton}
+        <SelectMenu
+          label="Show food"
+          icon={<ListFilter />}
+          options={DIET_FILTERS.map((f) => ({ ...f, count: posts.filter((post) => matchesDiet(post, f.value)).length }))}
+          value={dietFilter}
+          onChange={chooseDiet}
+          compact
+          className="shrink-0 sm:w-48"
+        />
+        <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
+          Post food
+        </Button>
       </div>
 
       {/* A failed update keeps showing the posts already loaded. */}
@@ -179,7 +186,7 @@ export default function Feed() {
       ) : shown.length === 0 ? (
         <EmptyState
           art={<EmptyPlateIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
-          title={dietFilter === "veg" ? "No veg food near you right now" : "No veg or egg food near you right now"}
+          title={`No ${filterLabel.toLowerCase()} food near you right now`}
           actions={
             <Button variant="secondary" onClick={() => chooseDiet("all")}>
               Show everything

@@ -15,18 +15,15 @@ export function foodSummary(post: Pick<FoodPost, "diet" | "servings">): string |
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// The feed's filter, by what someone eats. Posts from before the form asked
-// have no diet, so they only show under All.
-export type DietFilter = "all" | "veg" | "veg_egg";
+// The feed's filter by diet. Posts from before the form asked have no diet,
+// so they only show under All.
+export type DietFilter = "all" | Diet;
 
 export const DIET_FILTERS: { value: DietFilter; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "veg", label: "Veg" },
-  { value: "veg_egg", label: "Veg & egg" },
+  ...DIETS.map((diet) => ({ value: diet, label: DIET_LABEL[diet] })),
 ];
 
 export function matchesDiet(post: Pick<FoodPost, "diet">, filter: DietFilter): boolean {
-  if (filter === "all") return true;
-  if (filter === "veg") return post.diet === "veg";
-  return post.diet === "veg" || post.diet === "egg";
+  return filter === "all" || post.diet === filter;
 }
