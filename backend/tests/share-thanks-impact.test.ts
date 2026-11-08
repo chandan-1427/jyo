@@ -16,6 +16,7 @@ import { resetImpactCache } from "../src/routes/stats.js";
 import { runAutoComplete, AUTO_COMPLETE_AFTER_MS } from "../src/jobs/expiry.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 
@@ -55,7 +56,7 @@ async function approvedPickup() {
 }
 
 const thankedNotices = async (userId: string) => {
-  await new Promise((r) => setTimeout(r, 100));
+  await backgroundSettled();
   return db.select().from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.type, "pickup_thanked")));
 };
 

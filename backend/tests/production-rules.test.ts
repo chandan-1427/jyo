@@ -18,6 +18,7 @@ vi.mock("../src/lib/mailer.js", () => ({
 import { createApp } from "../src/app.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 
@@ -67,7 +68,7 @@ describe("the service area", () => {
     expect((await postAt(visitor.cookie, CHENNAI)).status).toBe(201);
     // A demo post seeds a request in the background; let it finish before
     // the next test empties the database under it.
-    await new Promise((r) => setTimeout(r, 300));
+    await backgroundSettled();
   });
 });
 

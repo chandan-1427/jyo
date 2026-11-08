@@ -3,10 +3,11 @@ import { notifications, notificationTypeEnum } from "../../db/schema.js";
 import { publish } from "./notificationStream.js";
 import { sendPush } from "./push.js";
 import { logger } from "../logger.js";
+import { inBackground } from "../background.js";
 
 type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
 
-export async function createNotification(
+async function createNotificationNow(
   userId: string,
   message: string,
   postId?: string,
@@ -40,3 +41,4 @@ export async function createNotification(
     );
   }
 }
+export const createNotification = (...args: Parameters<typeof createNotificationNow>) => inBackground(createNotificationNow(...args));

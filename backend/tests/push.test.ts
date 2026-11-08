@@ -31,6 +31,7 @@ import { purgeAccount } from "../src/lib/domain/deleteAccount.js";
 import { MAX_SUBSCRIPTIONS_PER_USER } from "../src/lib/notifications/push.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 
@@ -46,7 +47,7 @@ const keys = { p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg
 const subscribe = (cookie: string, endpoint: string) =>
   authedRequest(app, "/push/subscriptions", cookie, { method: "POST", body: JSON.stringify({ endpoint, keys }) });
 const subsOf = (userId: string) => db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
-const settle = () => new Promise((r) => setTimeout(r, 150));
+const settle = () => backgroundSettled();
 
 async function requestFoodFrom(posterCookie: string, pickerCookie: string) {
   const post = await authedRequest(app, "/posts", posterCookie, {

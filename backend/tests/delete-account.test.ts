@@ -32,6 +32,7 @@ import { sendPasswordResetEmail } from "../src/lib/mailer.js";
 import { runDeletedAccountPurge } from "../src/jobs/deletedAccountPurge.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 const DAY = 24 * 60 * 60 * 1000;
@@ -47,7 +48,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
 });
 
-const settle = () => new Promise((r) => setTimeout(r, 100));
+const settle = () => backgroundSettled();
 const nameOf = (url: string) => url.split("/").pop()!;
 const later = (ms: number) => new Date(Date.now() + ms);
 

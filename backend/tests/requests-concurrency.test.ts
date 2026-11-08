@@ -14,6 +14,7 @@ import { and, eq } from "drizzle-orm";
 import { notifyPicker, notifyPoster } from "../src/lib/mailer.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 
@@ -57,7 +58,7 @@ async function createRequest(cookie: string, postId: string) {
 
 // Notifications are created without being awaited by the route.
 async function notificationsOfType(userId: string, type: "request_approved" | "request_rejected" | "request_cancelled") {
-  await new Promise((r) => setTimeout(r, 100));
+  await backgroundSettled();
   return db.select().from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.type, type)));
 }
 

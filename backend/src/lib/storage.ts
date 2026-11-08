@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { env } from "../env.js";
 import { logger } from "./logger.js";
 import { UploadRejectedError } from "./errors.js";
+import { inBackground } from "./background.js";
 
 export type Bucket = "food-photos" | "selfies" | "avatars";
 
@@ -171,7 +172,7 @@ export async function removeUploads(bucket: Bucket, names: string[]): Promise<vo
 // recovered from it. Failures are logged, not thrown: a stuck storage
 // object is a cheap cleanup job later, but failing the caller's delete
 // over it would leave the DB and storage in a worse mismatch than before.
-export async function deleteFile(
+async function deleteFileNow(
   publicUrl: string,
   bucket: "food-photos" | "selfies" | "avatars"
 ): Promise<void> {
@@ -183,3 +184,5 @@ export async function deleteFile(
     logger.error({ err: error, bucket, filename }, "Failed to delete storage file");
   }
 }
+
+export const deleteFile = (...args: Parameters<typeof deleteFileNow>) => inBackground(deleteFileNow(...args));

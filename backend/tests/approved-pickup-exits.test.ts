@@ -15,6 +15,7 @@ import { notifyPicker, notifyPoster } from "../src/lib/mailer.js";
 import { runAutoComplete, AUTO_COMPLETE_AFTER_MS } from "../src/jobs/expiry.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 const HOUR = 60 * 60 * 1000;
@@ -70,7 +71,7 @@ const requestRow = async (id: string) => (await db.select().from(pickupRequests)
 
 // Notifications are created without being awaited by the route.
 async function notificationsOfType(userId: string, type: "pickup_withdrawn" | "pickup_reopened") {
-  await new Promise((r) => setTimeout(r, 100));
+  await backgroundSettled();
   return db.select().from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.type, type)));
 }
 

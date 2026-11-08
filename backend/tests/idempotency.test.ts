@@ -15,6 +15,7 @@ import { foodPosts, notifications, pickupRequests } from "../src/db/schema.js";
 import { notifyPoster, sendPasswordResetEmail, sendVerificationEmail } from "../src/lib/mailer.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest, verifyEmail } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 
@@ -123,7 +124,7 @@ describe("asking for the same food twice", () => {
     const rows = await db.select().from(pickupRequests).where(eq(pickupRequests.postId, post.id));
     expect(rows).toHaveLength(1);
 
-    await new Promise((r) => setTimeout(r, 100));
+    await backgroundSettled();
     const told = await db
       .select()
       .from(notifications)

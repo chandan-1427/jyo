@@ -27,6 +27,7 @@ vi.mock("@supabase/supabase-js", () => ({
 import { createApp } from "../src/app.js";
 import { resetDb } from "./helpers/db.js";
 import { createVerifiedUser, authedRequest } from "./helpers/auth.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 const app = createApp();
 
@@ -49,7 +50,7 @@ async function upload(path: string, cookie: string) {
 
 const nameOf = (url: string) => url.split("/").pop()!;
 // Post and request cleanups aren't awaited by the route.
-const settle = () => new Promise((r) => setTimeout(r, 50));
+const settle = () => backgroundSettled();
 
 async function newPost(cookie: string, photoUrl?: string) {
   const res = await authedRequest(app, "/posts", cookie, {

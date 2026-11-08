@@ -1,10 +1,11 @@
 import { Resend } from "resend";
 import { env } from "../env.js";
 import { logger } from "./logger.js";
+import { inBackground } from "./background.js";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
-async function sendMail(to: string, subject: string, html: string) {
+async function sendMailNow(to: string, subject: string, html: string) {
   const { error } = await resend.emails.send({
     from: "Jyo <hello@jyo.co.in>",
     replyTo: "hello@jyo.co.in",
@@ -272,3 +273,5 @@ export function sendReportEmail(to: string | undefined, report: ReportEmail) {
     logger.error({ err }, "sendReportEmail failed")
   );
 }
+
+const sendMail = (...args: Parameters<typeof sendMailNow>) => inBackground(sendMailNow(...args));

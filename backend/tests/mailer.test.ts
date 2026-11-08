@@ -12,6 +12,7 @@ vi.mock("resend", () => ({
 import fs from "fs";
 import { env } from "../src/env.js";
 import { notifyPicker, notifyPoster, sendPasswordResetEmail, sendVerificationEmail } from "../src/lib/mailer.js";
+import { backgroundSettled } from "../src/lib/background.js";
 
 beforeEach(() => {
   send.mockReset();
@@ -22,7 +23,7 @@ beforeEach(() => {
 const linksIn = (html: string) => [...html.matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
 
 const lastMessage = () => send.mock.calls.at(-1)![0] as { from: string; to: string; subject: string; html: string };
-const settle = () => new Promise((r) => setTimeout(r, 10));
+const settle = () => backgroundSettled();
 
 function expectComplete(message: { html: string; subject: string }) {
   expect(message.subject.length).toBeGreaterThan(0);
