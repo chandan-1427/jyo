@@ -17,7 +17,7 @@ import {
   findRequestById,
   findOwnActiveRequest,
   findUserEmail,
-  hasCancelledRequestSince,
+  hasEndedRequestSince,
   hasMissedPickup,
   posterNotDeleted,
 } from "../lib/domain/finders.js";
@@ -45,6 +45,7 @@ const ALREADY: Record<string, string> = {
   approved: "This request has already been approved",
   rejected: "This request was already declined",
   missed: "The person sharing has already called off this pickup",
+  timed_out: "This request already closed: the person sharing didn't answer in time",
 };
 
 const ALREADY_COLLECTED = "This food has already been marked as collected";
@@ -93,6 +94,18 @@ async function withdrawApprovedRequest(c: Context, request: PickupRequest) {
 // doing it again. Only an outcome other than the one asked for is a conflict.
 async function requestIsNow(requestId: string, status: string) {
   return (await findRequestById(requestId))?.status === status;
+}
+
+const TIMED_OUT_FOR_POSTER = "This request waited too long without an answer and closed. Your food is back in the feed.";
+
+// For the poster's approve or decline that couldn't change the request:
+// answer as the first call did if it's what they asked for, and explain a
+// timeout rather than a bare conflict.
+async function posterAnswerFromCurrent(c: Context, requestId: string, wanted: "approved" | "rejected", conflict: string) {
+  const status = (await findRequestById(requestId))?.status;
+  if (status === wanted) return c.json({ message: wanted === "approved" ? "Request approved" : "Request rejected" });
+  if (status === "timed_out") return c.json({ error: TIMED_OUT_FOR_POSTER }, 409);
+  return c.json({ error: conflict }, 409);
 }
 
 // A post that isn't open may be held by this picker's own earlier request:
@@ -178,9 +191,9 @@ requestRoutes.post("/", createRequestLimiter, async (c) => {
 
   // Asking, cancelling and asking again would email the poster each time.
   // The notification above still shows every request; the email is skipped
-  // only if this picker cancelled one in the last hour. After the poster
+  // only if this picker cancelled one, or had one time out, in the last hour. After the poster
   // declined, a new request is news to them and is emailed.
-  const churning = await hasCancelledRequestSince(postId, userId, new Date(Date.now() - 60 * 60 * 1000));
+  const churning = await hasEndedRequestSince(postId, userId, new Date(Date.now() - 60 * 60 * 1000));
   if (posterEmail && !isSyntheticEmail(posterEmail) && !churning) notifyPoster(posterEmail, "request_received");
 
   // The post now shows as "Requested" in everyone's feed.
@@ -238,9 +251,7 @@ requestRoutes.post("/:id/approve", async (c) => {
   // the same moment can finish in between, leaving the post no longer
   // waiting. That's still the outcome asked for, not a conflict.
   if (post.status !== "pending_approval") {
-    return (await requestIsNow(requestId, "approved"))
-      ? c.json({ message: "Request approved" })
-      : c.json({ error: "This post is not awaiting approval" }, 409);
+    return posterAnswerFromCurrent(c, requestId, "approved", "This post is not awaiting approval");
   }
 
   // Two concurrent approve calls (e.g. a double-click) could both pass the
@@ -251,9 +262,7 @@ requestRoutes.post("/:id/approve", async (c) => {
   const approved = await approveRequestTx(requestId, request.postId);
 
   if (!approved) {
-    return (await requestIsNow(requestId, "approved"))
-      ? c.json({ message: "Request approved" })
-      : c.json({ error: ALREADY_PROCESSED }, 409);
+    return posterAnswerFromCurrent(c, requestId, "approved", ALREADY_PROCESSED);
   }
 
   const pickerEmail = await findUserEmail(request.pickerId);
@@ -307,9 +316,7 @@ requestRoutes.post("/:id/reject", async (c) => {
   // the same moment can finish in between, leaving the post no longer
   // waiting. That's still the outcome asked for, not a conflict.
   if (post.status !== "pending_approval") {
-    return (await requestIsNow(requestId, "rejected"))
-      ? c.json({ message: "Request rejected" })
-      : c.json({ error: "This post is not awaiting approval" }, 409);
+    return posterAnswerFromCurrent(c, requestId, "rejected", "This post is not awaiting approval");
   }
 
   const rejected = await db
@@ -337,9 +344,7 @@ requestRoutes.post("/:id/reject", async (c) => {
     });
 
   if (!rejected) {
-    return (await requestIsNow(requestId, "rejected"))
-      ? c.json({ message: "Request rejected" })
-      : c.json({ error: ALREADY_PROCESSED }, 409);
+    return posterAnswerFromCurrent(c, requestId, "rejected", ALREADY_PROCESSED);
   }
 
   const pickerEmail = await findUserEmail(request.pickerId);
@@ -454,7 +459,7 @@ const myRequestRank = sql<number>`(case
   when ${pickupRequests.status} = 'approved' and ${foodPosts.status} <> 'completed' then 0
   when ${pickupRequests.status} = 'pending' then 1
   when ${pickupRequests.status} = 'approved' then 2
-  when ${pickupRequests.status} in ('rejected', 'missed') then 3
+  when ${pickupRequests.status} in ('rejected', 'missed', 'timed_out') then 3
   else 4 end)`;
 const myRequestValue = sql<string>`(case when ${myRequestRank} <= 1
   then ${micros(sql`${foodPosts.pickupWindowEnd}`)}

@@ -48,9 +48,9 @@ export async function findOwnActiveRequest(postId: string, pickerId: string) {
   return request ?? null;
 }
 
-// Whether this picker cancelled a request of their own for the post since
-// `since`.
-export async function hasCancelledRequestSince(postId: string, pickerId: string, since: Date) {
+// Whether a request of this picker's for the post was cancelled, or timed
+// out unanswered, since `since`.
+export async function hasEndedRequestSince(postId: string, pickerId: string, since: Date) {
   const [row] = await db
     .select({ id: pickupRequests.id })
     .from(pickupRequests)
@@ -58,7 +58,7 @@ export async function hasCancelledRequestSince(postId: string, pickerId: string,
       and(
         eq(pickupRequests.postId, postId),
         eq(pickupRequests.pickerId, pickerId),
-        eq(pickupRequests.status, "cancelled"),
+        inArray(pickupRequests.status, ["cancelled", "timed_out"]),
         gt(pickupRequests.createdAt, since)
       )
     )

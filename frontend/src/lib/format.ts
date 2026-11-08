@@ -23,7 +23,7 @@ export function formatDate(dateStr: string): string {
 
 const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: IST });
 
-function formatTime(d: Date): string {
+export function formatTime(d: Date): string {
   return d.toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit", hour12: true });
 }
 

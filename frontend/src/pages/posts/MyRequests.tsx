@@ -60,6 +60,7 @@ function describe(r: MyRequest): { group: Group; text: string; attention?: boole
   if (r.status === "cancelled") return { group: "cancelled", text: "You cancelled" };
   if (r.status === "withdrawn") return { group: "cancelled", text: "You couldn't make it" };
   if (r.status === "missed") return { group: "declined", text: "Called off: they said you didn't arrive" };
+  if (r.status === "timed_out") return { group: "declined", text: "No answer in time" };
   // The expiry job also marks a waiting request declined when time runs out;
   // the card says which it was.
   return { group: "declined", text: r.postStatus === "expired" ? "Ran out of time before an answer" : "Declined" };

@@ -57,7 +57,7 @@ const requestStatus = async (id: string) =>
   (await db.select({ s: pickupRequests.status }).from(pickupRequests).where(eq(pickupRequests.id, id)))[0].s;
 
 // Notifications are created without being awaited.
-async function notificationsFor(userId: string, type: "request_rejected") {
+async function notificationsFor(userId: string, type: "request_timed_out") {
   await new Promise((r) => setTimeout(r, 100));
   return db.select().from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.type, type)));
 }
@@ -74,7 +74,7 @@ describe("expiring posts", () => {
     expect(await postStatus(post.id)).toBe("expired");
   });
 
-  it("declines the request left waiting and tells the picker, once", async () => {
+  it("times out the request left waiting and tells the picker, once", async () => {
     const poster = await createVerifiedUser(app, { email: "expiry-poster@example.com" });
     const picker = await createVerifiedUser(app, { email: "expiry-picker@example.com" });
     const post = await newPost(poster.cookie);
@@ -83,16 +83,16 @@ describe("expiring posts", () => {
     const result = await runExpiry(later(2 * HOUR));
 
     expect(await postStatus(post.id)).toBe("expired");
-    expect(await requestStatus(request.id)).toBe("rejected");
+    expect(await requestStatus(request.id)).toBe("timed_out");
     expect(result.declined.map((r) => r.id)).toEqual([request.id]);
-    expect(await notificationsFor(picker.userId, "request_rejected")).toHaveLength(1);
+    expect(await notificationsFor(picker.userId, "request_timed_out")).toHaveLength(1);
     expect(vi.mocked(notifyPicker)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(notifyPicker)).toHaveBeenCalledWith(picker.email, "request_rejected");
+    expect(vi.mocked(notifyPicker)).toHaveBeenCalledWith(picker.email, "request_timed_out");
 
     // Running again finds nothing left to do.
     const again = await runExpiry(later(3 * HOUR));
     expect(again.expired).toHaveLength(0);
-    expect(await notificationsFor(picker.userId, "request_rejected")).toHaveLength(1);
+    expect(await notificationsFor(picker.userId, "request_timed_out")).toHaveLength(1);
     expect(vi.mocked(notifyPicker)).toHaveBeenCalledTimes(1);
   });
 

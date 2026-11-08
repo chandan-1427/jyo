@@ -122,3 +122,7 @@ export async function releaseApprovedPickup(
       throw err;
     });
 }
+
+// How long a request may wait for the poster's answer before it closes
+// (jobs/requestTimeout.ts).
+export const REQUEST_TIMEOUT_MS = 15 * 60 * 1000;
