@@ -1,7 +1,7 @@
 import { Hono, type Context } from "hono";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests } from "../db/schema.js";
-import { eq, and, asc, inArray, sql } from "drizzle-orm";
+import { eq, and, asc, inArray, isNull, sql } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance } from "../lib/geo/haversine.js";
 import { notifyPoster, notifyPicker } from "../lib/mailer.js";
@@ -24,7 +24,7 @@ import {
 import { createRequestRow, approveRequestTx, releaseApprovedPickup } from "../lib/domain/requestActions.js";
 import { blockUser, fileReport, isBlockedBetween } from "../lib/domain/safety.js";
 import { isSyntheticEmail, autoApproveIfDemo } from "../lib/domain/demo.js";
-import { createRequestSchema, myRequestsQuerySchema, reportSchema, updateRequestSchema } from "../lib/validation.js";
+import { createRequestSchema, myRequestsQuerySchema, reportSchema, thanksSchema, updateRequestSchema } from "../lib/validation.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
 import { parseJsonBody, parseQuery, uploadFromForm } from "../lib/http.js";
 import { PAGE_SIZE, afterCursor, matchesSearch, micros, toPage } from "../lib/pagination.js";
@@ -474,6 +474,69 @@ async function requestToActOn(c: Context, userId: string, requestId: string) {
   if (request.isDemo) return { response: c.json({ error: DEMO_NOT_REPORTABLE }, 409) };
   return { request, post };
 }
+
+// --- The picker collected the food, and says thanks ---
+// Marks the food collected if the poster hasn't yet, and records the
+// picker's confirmation and optional note for the poster, once. Guarded like
+// the other state changes: it can't land on a pickup that was just called
+// off, and saying it twice changes nothing.
+requestRoutes.post("/:id/collected", async (c) => {
+  const { userId } = c.get("user");
+  const requestId = c.req.param("id");
+  if (!isValidUuid(requestId)) return c.json({ error: "Request not found" }, 404);
+
+  const parsed = await parseJsonBody(c, thanksSchema);
+  if (!parsed.ok) return parsed.response;
+
+  const request = await findRequestById(requestId);
+  if (!request) return c.json({ error: "Request not found" }, 404);
+  if (request.pickerId !== userId) return c.json({ error: "Only the person picking up can do this" }, 403);
+  if (request.pickedUpAt) return c.json({ message: "Thanks sent" });
+
+  const recorded = await db
+    .transaction(async (tx) => {
+      const [claimed] = await tx
+        .update(pickupRequests)
+        .set({ pickedUpAt: new Date(), thankYouNote: parsed.data.note || null })
+        .where(and(eq(pickupRequests.id, requestId), eq(pickupRequests.status, "approved"), isNull(pickupRequests.pickedUpAt)))
+        .returning({ id: pickupRequests.id });
+      if (!claimed) throw new ConflictError();
+
+      await tx
+        .update(foodPosts)
+        .set({ status: "completed" })
+        .where(and(eq(foodPosts.id, request.postId), eq(foodPosts.status, "closed"), eq(foodPosts.approvedRequestId, requestId)));
+      const [post] = await tx.select({ status: foodPosts.status }).from(foodPosts).where(eq(foodPosts.id, request.postId));
+      if (post?.status !== "completed") throw new ConflictError();
+    })
+    .then(() => true)
+    .catch((err) => {
+      if (err instanceof ConflictError) return false;
+      throw err;
+    });
+
+  if (!recorded) {
+    const now = await findRequestById(requestId);
+    if (now?.pickedUpAt) return c.json({ message: "Thanks sent" });
+    return c.json({ error: (now && ALREADY[now.status]) ?? "This pickup isn't on any more" }, 409);
+  }
+
+  const post = await findPostById(request.postId);
+  if (post) {
+    const demoExpiresAt = request.isDemo ? request.demoExpiresAt ?? undefined : undefined;
+    createNotification(
+      post.posterId,
+      parsed.data.note
+        ? "Your food was picked up, and they left you a thank-you note."
+        : "Your food was picked up. They said thank you!",
+      request.postId,
+      "pickup_thanked",
+      demoExpiresAt
+    ).catch((err) => logger.error({ err, pickupRequestId: requestId }, "Failed to create pickup_thanked notification"));
+  }
+
+  return c.json({ message: "Thanks sent" });
+});
 
 // --- Report the person who asked for your food ---
 requestRoutes.post("/:id/report", reportLimiter, async (c) => {

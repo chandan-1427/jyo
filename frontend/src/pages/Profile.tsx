@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   Ban,
+  HandHeart,
   BellRing,
   Camera,
   Check,
@@ -202,13 +203,14 @@ export default function Profile() {
   // Activity counts, counted on the server: My posts and My requests only
   // load a page at a time, so they can't be counted from those lists.
   // Refetched each time the profile opens.
-  const { data: stats } = useQuery<{ stats: { shared: number; pickedUp: number; requested: number } }>({
+  const { data: stats } = useQuery<{ stats: { shared: number; pickedUp: number; mealsShared: number; requested: number } }>({
     queryKey: ["users", "me", "stats"],
     queryFn: () => apiFetch("/users/me/stats"),
   });
   const sharedCount = stats?.stats.shared;
   const pickedUpCount = stats?.stats.pickedUp;
   const requestedCount = stats?.stats.requested;
+  const mealsCount = stats?.stats.mealsShared;
 
   // ─── Demo mode ────────────────────────────────────────────────────────────
   const [demoActionLoading, setDemoActionLoading] = useState(false);
@@ -542,9 +544,10 @@ export default function Profile() {
             !editing ? (
               <div className="w-full">
                 <h3 className="text-sm font-medium text-fg-muted">Your activity on Jyo</h3>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3 sm:gap-3">
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 sm:gap-3">
                   <Stat icon={<Package />} label="Food shared" value={sharedCount} />
                   <Stat icon={<PackageCheck />} label="Picked up from you" value={pickedUpCount} />
+                  <Stat icon={<HandHeart />} label="Meals you shared" value={mealsCount} />
                   <Stat icon={<PackageOpen />} label="Food you asked for" value={requestedCount} />
                 </div>
               </div>

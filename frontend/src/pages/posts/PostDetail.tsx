@@ -25,6 +25,7 @@ import { Notice } from "@/components/ui/Notice";
 import { ContactButtons, SharePhoneSetting } from "@/components/posts/PhoneShare";
 import { NotificationPrompt } from "@/components/posts/NotificationPrompt";
 import { ReportBlockActions } from "@/components/posts/ReportBlock";
+import { PickedUpButton, ShareButton } from "@/components/posts/ShareAndThanks";
 
 type PostDetailData = {
   post: FoodPost & { pickupLat: number | null; pickupLng: number | null };
@@ -38,6 +39,7 @@ type PostDetailData = {
     etaMinutes: number;
     answerBy: string | null;
     sharePhone: boolean;
+    pickedUp: boolean;
   } | null;
   // Only to the poster, while a pickup they approved is on. approvedAt is
   // null for approvals made before the API recorded it.
@@ -50,6 +52,8 @@ type PostDetailData = {
   } | null;
   // The other side's number while the pickup is on, if they chose to share it.
   contact: { phone: string } | null;
+  // For the poster, once the picker has said they picked it up.
+  thanks: { pickerName: string; note: string | null; pickedUpAt: string } | null;
 };
 
 type Post = PostDetailData["post"];
@@ -217,6 +221,9 @@ function PickerPanel({
     return (
       <Panel>
         <Notice tone="success">You picked this up. Thanks for making sure it didn't go to waste.</Notice>
+        {myRequest && !myRequest.pickedUp && (
+          <PickedUpButton requestId={myRequest.id} postId={post.id} label="Say thanks" />
+        )}
         <FindFoodButton />
       </Panel>
     );
@@ -235,6 +242,7 @@ function PickerPanel({
     <Panel>
       <Notice tone="success">Your request was approved. Head over during the pickup time.</Notice>
       {post.pickupLat != null && post.pickupLng != null && <MapsButton lat={post.pickupLat} lng={post.pickupLng} />}
+      {myRequest && <PickedUpButton requestId={myRequest.id} postId={post.id} label="I picked it up" />}
       {contact && (
         <ContactButtons phone={contact.phone} message={`Hi, I'm picking up "${post.title}" from Jyo.`} />
       )}
@@ -279,11 +287,13 @@ function PosterPanel({
   pendingRequest,
   approvedPickup,
   contact,
+  thanks,
 }: {
   post: Post;
   pendingRequest: PickupRequest | null;
   approvedPickup: PostDetailData["approvedPickup"];
   contact: PostDetailData["contact"];
+  thanks: PostDetailData["thanks"];
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -527,6 +537,16 @@ function PosterPanel({
           ? "The pickup time ended before anyone collected this. If you still have the food, post it again."
           : "Collected. Thanks for sharing. Your pickup spot is hidden again."}
       </Notice>
+      {thanks && (
+        <figure className="rounded-xl bg-lifted px-4 py-3.5">
+          {thanks.note ? (
+            <blockquote className="leading-relaxed text-pretty text-fg">“{thanks.note}”</blockquote>
+          ) : (
+            <p className="text-fg">They said thank you!</p>
+          )}
+          <figcaption className="mt-1.5 text-sm text-fg-subtle">{thanks.pickerName}, who picked it up</figcaption>
+        </figure>
+      )}
       {ended ? (
         <div className="grid grid-cols-2 gap-3">
           <Button to="/create" variant="secondary" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
@@ -693,11 +713,17 @@ export default function PostDetail() {
           </div>
 
           {isPoster ? (
-            <PosterPanel post={post} pendingRequest={pendingRequest} approvedPickup={data.approvedPickup} contact={data.contact} />
+            <PosterPanel post={post} pendingRequest={pendingRequest} approvedPickup={data.approvedPickup} contact={data.contact} thanks={data.thanks} />
           ) : isApprovedPicker ? (
             <PickerPanel post={post} myRequest={data.myRequest} contact={data.contact} />
           ) : (
             <VisitorPanel post={post} myRequest={data.myRequest} onRequest={() => setRequesting(true)} />
+          )}
+
+          {(post.status === "open" || post.status === "pending_approval") && !post.isDemo && (
+            <div>
+              <ShareButton postId={post.id} title={post.title} />
+            </div>
           )}
 
           {!isPoster && !post.isDemo && (

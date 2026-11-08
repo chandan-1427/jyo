@@ -45,6 +45,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "pickup_withdrawn",
   "pickup_reopened",
   "request_timed_out",
+  "pickup_thanked",
 ]);
 
 // --- Users ---
@@ -135,6 +136,10 @@ export const pickupRequests = pgTable("pickup_requests", {
   // while the approved pickup is on (GET /posts/:id).
   pickerSharesPhone: boolean("picker_shares_phone").notNull().default(false),
   posterSharesPhone: boolean("poster_shares_phone").notNull().default(false),
+  // The picker confirming they collected the food, with an optional note of
+  // thanks shown to the poster.
+  pickedUpAt:    timestamp("picked_up_at"),
+  thankYouNote:  text("thank_you_note"),
   isDemo:     boolean("is_demo").notNull().default(false),
   demoExpiresAt: timestamp("demo_expires_at"),
   createdAt:  timestamp("created_at").notNull().defaultNow(),

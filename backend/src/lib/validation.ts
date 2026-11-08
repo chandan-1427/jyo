@@ -36,6 +36,7 @@ export const fields = {
   diet: z.enum(["veg", "egg", "non_veg"], "Choose veg, egg or non-veg"),
   reportReason: z.enum(["unsafe_food", "misleading", "money", "harassment", "other"], "Choose a reason"),
   reportDetails: z.string().trim().max(500, "Keep it under 500 characters"),
+  thanksNote: z.string().trim().max(200, "Keep it under 200 characters"),
   servings: z
     .number({ error: "Enter how many people it serves" })
     .int("Enter a whole number")
@@ -102,6 +103,11 @@ export const createRequestSchema = z.object({
 
 export const updateRequestSchema = z.object({
   sharePhone: z.boolean(),
+});
+
+// ─── Picked up, with thanks ──────────────────────────────────────────────────
+export const thanksSchema = z.object({
+  note: fields.thanksNote.optional(),
 });
 
 // ─── Report ──────────────────────────────────────────────────────────────────

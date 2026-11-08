@@ -353,6 +353,7 @@ postRoutes.get("/:id", async (c) => {
         etaMinutes: pickupRequests.etaMinutes,
         createdAt: pickupRequests.createdAt,
         sharePhone: pickupRequests.pickerSharesPhone,
+        pickedUpAt: pickupRequests.pickedUpAt,
       })
       .from(pickupRequests)
       .where(and(eq(pickupRequests.postId, postId), eq(pickupRequests.pickerId, userId)))
@@ -365,11 +366,19 @@ postRoutes.get("/:id", async (c) => {
           etaMinutes: mine.etaMinutes,
           answerBy: mine.status === "pending" ? answerBy(mine.createdAt) : null,
           sharePhone: mine.sharePhone,
+          pickedUp: !!mine.pickedUpAt,
         }
       : null;
   }
 
   const showLocation = (isPoster || isApprovedPicker) && post.status === "closed";
+
+  // For the poster once the food is collected: the picker's confirmation and
+  // note, if they sent one.
+  const thanks =
+    isPoster && approvedRequest?.pickedUpAt
+      ? { pickerName: approvedRequest.pickerName, note: approvedRequest.thankYouNote, pickedUpAt: approvedRequest.pickedUpAt }
+      : null;
 
   // The other side's phone number, under the same rule as the location, and
   // only if they chose to share it for this pickup. Read from their account
@@ -414,7 +423,7 @@ postRoutes.get("/:id", async (c) => {
     pickupLng: showLocation ? post.pickupLng : null,
   };
 
-  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest, myRequest, approvedPickup, contact });
+  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest, myRequest, approvedPickup, contact, thanks });
 });
 
 postRoutes.post(
