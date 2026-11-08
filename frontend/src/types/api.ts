@@ -23,6 +23,8 @@ export type PickupRequest = {
   status: "pending" | "approved" | "rejected" | "cancelled" | "missed" | "withdrawn" | "timed_out";
   // While pending: when it closes if the poster hasn't answered.
   answerBy?: string;
+  // Whether you, the viewer, chose to share your phone number for this pickup.
+  sharePhone?: boolean;
   isDemo?: boolean;
   createdAt: string;
 };

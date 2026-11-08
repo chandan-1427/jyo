@@ -1,0 +1,2 @@
+ALTER TABLE "pickup_requests" ADD COLUMN "picker_shares_phone" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "pickup_requests" ADD COLUMN "poster_shares_phone" boolean DEFAULT false NOT NULL;

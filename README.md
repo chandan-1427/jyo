@@ -24,7 +24,7 @@ Both sides get in-app notifications and email at each step. A demo mode lets any
 
 The app asks people to share where they live and a photo of their face, so most of the engineering is about not mishandling that.
 
-- **Location stays hidden until it's needed.** The feed only shows distance, and the requests that load it carry coordinates rounded to about 1 km. The exact pickup spot and the poster's name go only to the poster and the one person they approved, and only until the food is collected.
+- **Location stays hidden until it's needed.** The feed only shows distance, and the requests that load it carry coordinates rounded to about 1 km. The exact pickup spot and the poster's name go only to the poster and the one person they approved, and only until the food is collected. Phone numbers follow the same rule, and are shared only by people who choose to, one pickup at a time.
 - **Photos give nothing away.** Every upload is re-encoded on the server before it's stored, which drops the metadata phone cameras embed, including the GPS position a photo was taken at. A picker's selfie is shown to no one but the poster deciding on their request.
 - **Nothing identifies people across posts.** API responses list their fields explicitly, so internal account IDs never reach other users.
 - **Accounts are hard to take over.** Sessions are httpOnly cookies, protected against cross-site requests, and revoked on the server at logout. Passwords use bcrypt. Email-link tokens are stored only as hashes. A password reset signs out every device.
