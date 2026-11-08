@@ -26,6 +26,10 @@ export const requestStatusEnum = pgEnum("request_status", [
   "approved",
   "rejected",
   "cancelled",
+  // After approval: the poster said the picker never came (missed), or the
+  // picker said they can't make it (withdrawn). Either puts the food back.
+  "missed",
+  "withdrawn",
 ]);
 
 export const notificationTypeEnum = pgEnum("notification_type", [
@@ -33,6 +37,8 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "request_cancelled",
   "request_approved",
   "request_rejected",
+  "pickup_withdrawn",
+  "pickup_reopened",
 ]);
 
 // --- Users ---
@@ -83,6 +89,10 @@ export const foodPosts = pgTable("food_posts", {
   isDemo:            boolean("is_demo").notNull().default(false),
   demoExpiresAt:     timestamp("demo_expires_at"),
   clientKey:         uuid("client_key"),                      // from the post form, see below
+  // Marked collected by the expiry job rather than the poster: an approved
+  // pickup nobody closed (jobs/expiry.ts). Kept apart so a count of food
+  // shared can tell a confirmed pickup from an assumed one.
+  autoCompleted:     boolean("auto_completed").notNull().default(false),
   createdAt:         timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   // Feed query (posts.ts) and the expiry cron (jobs/expiry.ts) both filter
@@ -104,6 +114,7 @@ export const pickupRequests = pgTable("pickup_requests", {
   selfieUrl:  text("selfie_url"),
   etaMinutes: integer("eta_minutes").notNull(),
   status:     requestStatusEnum("status").notNull().default("pending"),
+  approvedAt: timestamp("approved_at"),                        // null for approvals made before it existed
   isDemo:     boolean("is_demo").notNull().default(false),
   demoExpiresAt: timestamp("demo_expires_at"),
   createdAt:  timestamp("created_at").notNull().defaultNow(),

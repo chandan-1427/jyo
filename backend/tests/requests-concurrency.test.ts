@@ -172,15 +172,21 @@ describe("concurrent cancel", () => {
     expect((await again.json()).message).toBe("Request cancelled");
   });
 
-  it("cannot cancel a request that's already been approved", async () => {
-    const { poster, picker, request } = await setUpPendingRequest();
+  // Cancelling after approval means "I can't make it": it ends the pickup
+  // rather than being refused (approved-pickup-exits.test.ts covers it).
+  it("ends an approved pickup when the picker cancels it", async () => {
+    const { poster, picker, request, post } = await setUpPendingRequest();
 
     const approveRes = await authedRequest(app, `/requests/${request.id}/approve`, poster.cookie, { method: "POST" });
     expect(approveRes.status).toBe(200);
 
     const cancelRes = await authedRequest(app, `/requests/${request.id}/cancel`, picker.cookie, { method: "POST" });
-    expect(cancelRes.status).toBe(409);
-    expect((await cancelRes.json()).error).toBe("This request has already been approved");
+    expect(cancelRes.status).toBe(200);
+
+    const [finalRequest] = await db.select().from(pickupRequests).where(eq(pickupRequests.id, request.id));
+    expect(finalRequest.status).toBe("withdrawn");
+    const [finalPost] = await db.select().from(foodPosts).where(eq(foodPosts.id, post.id));
+    expect(finalPost.status).toBe("open");
   });
 
   // It used to always say "already been approved", whatever had happened.

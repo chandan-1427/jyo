@@ -61,6 +61,14 @@ export function formatPickupTime(start: string, end: string, now = new Date()): 
   return day === "Today" ? `Until ${formatTime(e)}` : `Until ${formatDayInline(e, now)} ${formatTime(e)}`;
 }
 
+// How long ago something happened, roughly: "just now", "25 min ago", "2 h ago".
+export function formatAgo(date: string, now = new Date()): string {
+  const minutes = Math.floor((now.getTime() - new Date(date).getTime()) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  return `${Math.floor(minutes / 60)} h ago`;
+}
+
 // A date as a <input type="datetime-local"> value ("YYYY-MM-DDTHH:mm"), in
 // the browser's own time zone, which is also how that input reads it back.
 export function toDateTimeInput(date: string | Date): string {

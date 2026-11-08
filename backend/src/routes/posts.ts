@@ -5,11 +5,22 @@ import { eq, or, and, gte, asc, desc, inArray, sql, getTableColumns } from "driz
 import { authMiddleware } from "../middleware/auth.js";
 import { haversineDistance, isWithinTirupati } from "../lib/geo/haversine.js";
 import { deleteFile, isOwnUploadUrl, FOREIGN_UPLOAD_MESSAGE } from "../lib/storage.js";
-import { isValidUuid, findPostById, findPostByClientKey, posterNotDeleted } from "../lib/domain/finders.js";
+import {
+  isValidUuid,
+  findPostById,
+  findPostByClientKey,
+  findRequestById,
+  findUserEmail,
+  hasReleasedPickup,
+  posterNotDeleted,
+} from "../lib/domain/finders.js";
+import { releaseApprovedPickup } from "../lib/domain/requestActions.js";
+import { notifyPicker } from "../lib/mailer.js";
+import { createNotification } from "../lib/notifications/notify.js";
 import { createPostLimiter, uploadLimiter, userLimiter } from "../middleware/limiters.js";
 import { env } from "../env.js";
 import { logger } from "../lib/logger.js";
-import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS } from "../lib/domain/demo.js";
+import { provisionSeededPost, seedRequestOnOwnPost, DEMO_SESSION_MS, isSyntheticEmail } from "../lib/domain/demo.js";
 import { createPostSchema, feedQuerySchema, myPostsQuerySchema, updatePostSchema } from "../lib/validation.js";
 import { ConflictError } from "../lib/errors.js";
 import { broadcastFeedChange } from "../lib/notifications/notificationStream.js";
@@ -264,6 +275,10 @@ postRoutes.get("/:id", async (c) => {
 
   // Check if requester is the approved picker
   let isApprovedPicker = false;
+  // For the poster while a pickup is on: who's coming, when they were
+  // approved and how long they said they'd take, so they can judge whether
+  // to call it off.
+  let approvedPickup = null;
   if (post.approvedRequestId) {
     const [approvedRequest] = await db
       .select()
@@ -271,6 +286,13 @@ postRoutes.get("/:id", async (c) => {
       .where(eq(pickupRequests.id, post.approvedRequestId))
       .limit(1);
     isApprovedPicker = approvedRequest?.pickerId === userId;
+    if (isPoster && post.status === "closed" && approvedRequest) {
+      approvedPickup = {
+        pickerName: approvedRequest.pickerName,
+        etaMinutes: approvedRequest.etaMinutes,
+        approvedAt: approvedRequest.approvedAt,
+      };
+    }
   }
 
   // Fetch pending request if poster is viewing pending_approval post
@@ -334,7 +356,7 @@ postRoutes.get("/:id", async (c) => {
     pickupLng: showLocation ? post.pickupLng : null,
   };
 
-  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest, myRequest });
+  return c.json({ post: safePost, isPoster, isApprovedPicker, pendingRequest, myRequest, approvedPickup });
 });
 
 postRoutes.post(
@@ -391,6 +413,75 @@ postRoutes.post("/:id/complete", async (c) => {
   }
 
   return c.json({ message: "Post marked as completed" });
+});
+
+// --- The approved picker didn't come: offer the food to others ---
+// Allowed at any time: the poster sees when they approved and the picker's
+// ETA, and the picker is told straight away.
+const ALREADY_COLLECTED = "This food has already been marked as collected";
+const PICKUP_CALLED_OFF = "Pickup called off";
+
+postRoutes.post("/:id/reopen", async (c) => {
+  const { userId } = c.get("user");
+  const postId = c.req.param("id");
+
+  if (!isValidUuid(postId)) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  const post = await findPostById(postId);
+
+  if (!post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  if (post.posterId !== userId) {
+    return c.json({ error: NOT_YOUR_POST }, 403);
+  }
+
+  if (post.status === "completed") {
+    return c.json({ error: ALREADY_COLLECTED }, 409);
+  }
+
+  // Not (or no longer) an approved pickup. A repeat, or the picker having
+  // backed out at the same moment, already put the food back: the outcome
+  // asked for.
+  if (post.status !== "closed" || !post.approvedRequestId) {
+    return (await hasReleasedPickup(postId))
+      ? c.json({ message: PICKUP_CALLED_OFF })
+      : c.json({ error: "There's no approved pickup to call off" }, 409);
+  }
+
+  const requestId = post.approvedRequestId;
+  const outcome = await releaseApprovedPickup(requestId, postId, "missed");
+
+  if (!outcome) {
+    if ((await findPostById(postId))?.status === "completed") {
+      return c.json({ error: ALREADY_COLLECTED }, 409);
+    }
+    return (await hasReleasedPickup(postId))
+      ? c.json({ message: PICKUP_CALLED_OFF })
+      : c.json({ error: "This post has already been processed" }, 409);
+  }
+
+  const request = await findRequestById(requestId);
+  if (request) {
+    const demoExpiresAt = request.isDemo ? request.demoExpiresAt ?? undefined : undefined;
+    createNotification(
+      request.pickerId,
+      "The person sharing said you didn't arrive, so they've offered the food to others.",
+      postId,
+      "pickup_reopened",
+      demoExpiresAt
+    ).catch((err) => logger.error({ err, postId }, "Failed to create pickup_reopened notification"));
+
+    const pickerEmail = await findUserEmail(request.pickerId);
+    if (pickerEmail && !isSyntheticEmail(pickerEmail)) notifyPicker(pickerEmail, "pickup_reopened");
+  }
+
+  if (outcome === "open" && !post.isDemo) broadcastFeedChange();
+
+  return c.json({ message: PICKUP_CALLED_OFF });
 });
 
 // Once someone has asked for a post, it's what they asked for: the poster

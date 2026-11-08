@@ -11,8 +11,9 @@ import { logger } from "../lib/logger.js";
 
 // Ends posts whose pickup window has passed while nobody had been approved
 // (open or waiting for an answer), and declines the request left waiting on
-// them, telling its picker. An approved post (closed) is left alone: the
-// pickup was agreed, and the poster marks it collected.
+// them, telling its picker. An approved post (closed) is left alone here:
+// the pickup was agreed, and the poster marks it collected (or, if nobody
+// does, runAutoComplete below does).
 //
 // Both updates are one transaction. Run separately, a restart between them
 // left the post expired and its request "waiting" for good, since the next
@@ -79,12 +80,40 @@ export async function runExpiry(now = new Date()) {
   return { expired, declined };
 }
 
+// How long after its pickup window an approved pickup nobody marked
+// collected is taken as collected.
+export const AUTO_COMPLETE_AFTER_MS = 2 * 60 * 60 * 1000;
+
+// An approved pickup the poster never marked collected. Usually the food was
+// picked up and they forgot to tap; left alone it would stay in their Active
+// list, and the picker would keep the exact pickup spot, for good. Marked
+// collected, flagged as assumed rather than confirmed. The status guard
+// means a poster marking it, or calling it off, at the same moment wins or
+// loses cleanly.
+export async function runAutoComplete(now = new Date()) {
+  const completed = await db
+    .update(foodPosts)
+    .set({ status: "completed", autoCompleted: true })
+    .where(
+      and(
+        eq(foodPosts.status, "closed"),
+        lt(foodPosts.pickupWindowEnd, new Date(now.getTime() - AUTO_COMPLETE_AFTER_MS))
+      )
+    )
+    .returning({ id: foodPosts.id });
+  if (completed.length > 0) {
+    logger.info({ count: completed.length, postIds: completed.map((p) => p.id) }, "Marked approved pickups as collected");
+  }
+  return completed;
+}
+
 export function startExpiryJob() {
   // Runs every 5 minutes — the returned task is stopped during graceful
   // shutdown so a restart can't interrupt one mid-run.
   return cron.schedule("*/5 * * * *", async () => {
     try {
       await runExpiry();
+      await runAutoComplete();
     } catch (err) {
       logger.error({ err }, "Expiry job failed");
       Sentry.captureException(err);
