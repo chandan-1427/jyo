@@ -205,7 +205,7 @@ describe("deleting your account", () => {
 
   it("still allows only one live account per email", async () => {
     await createVerifiedUser(app, { email: "taken@example.com" });
-    const res = await postJson("/auth/register", { name: "Copy Cat", email: "taken@example.com", password: "password123", phone: "9876543210" });
+    const res = await postJson("/auth/register", { name: "Copy Cat", email: "taken@example.com", password: "password123", phone: "9876543210", acceptTerms: true });
     expect(res.status).toBe(409);
   });
 

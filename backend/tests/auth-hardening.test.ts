@@ -35,7 +35,7 @@ function postJson(path: string, body: unknown) {
 }
 
 const signUp = (email: string, password: string) =>
-  postJson("/auth/register", { name: "Ravi Kumar", email, password, phone: "9876543210" });
+  postJson("/auth/register", { name: "Ravi Kumar", email, password, phone: "9876543210", acceptTerms: true });
 
 describe("email-link tokens are stored only as hashes", () => {
   // A copy of the database (a leaked backup) must hold nothing that opens

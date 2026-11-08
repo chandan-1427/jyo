@@ -22,6 +22,7 @@ export async function createVerifiedUser(app: Hono, overrides: Partial<{ name: s
     email: `test-user-${counter}@example.com`,
     password: "password123",
     phone: "9876543210",
+    acceptTerms: true,
     ...overrides,
   };
 

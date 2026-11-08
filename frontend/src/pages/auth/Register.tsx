@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import type { z } from "zod";
 import { Mail } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api/api";
 import { registerSchema } from "@/lib/validation";
@@ -7,6 +8,7 @@ import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { TextField } from "@/components/ui/TextField";
 import { TextLink, textLinkClass } from "@/components/ui/TextLink";
 
@@ -18,7 +20,10 @@ function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
 const EMPTY_FORM = { name: "", email: "", phone: "", password: "" };
 
 export default function Register() {
-  const { register, handleSubmit, reset, setError, formState: { errors } } = useZodForm(registerSchema, EMPTY_FORM);
+  const { register, handleSubmit, reset, setError, formState: { errors } } = useZodForm<
+    z.input<typeof registerSchema>,
+    z.output<typeof registerSchema>
+  >(registerSchema, EMPTY_FORM);
 
   const [error, setErrorMessage] = useState("");
   // The email the link was sent to, shown on the "Check your email" screen.
@@ -30,7 +35,7 @@ export default function Register() {
     onSuccess: (_data, payload) => setSentTo(payload.email),
     onError: (err: unknown) => {
       if (!(err instanceof ApiError)) return;
-      if (!applyServerFieldErrors(err, setError, ["name", "email", "phone", "password"])) {
+      if (!applyServerFieldErrors(err, setError, ["name", "email", "phone", "password", "acceptTerms"])) {
         setErrorMessage(err.message);
       }
     },
@@ -125,6 +130,27 @@ export default function Register() {
           error={errors.password?.message}
           {...register("password")}
         />
+
+        <div>
+          <Checkbox
+            {...register("acceptTerms")}
+            className="items-start font-normal text-fg-muted"
+            aria-invalid={errors.acceptTerms ? true : undefined}
+            aria-describedby={errors.acceptTerms ? "accept-terms-error" : undefined}
+            label={
+              <span>
+                I agree to the{" "}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className={textLinkClass}>Terms</a> and{" "}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className={textLinkClass}>Privacy Policy</a>
+              </span>
+            }
+          />
+          {errors.acceptTerms && (
+            <p id="accept-terms-error" className="mt-1.5 text-[13px] leading-snug text-danger">
+              {errors.acceptTerms.message}
+            </p>
+          )}
+        </div>
 
         <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">
           {loading ? "Creating account…" : "Create account"}

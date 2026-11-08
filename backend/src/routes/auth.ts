@@ -24,6 +24,7 @@ import { endSession, revokeSession, startSession } from "../lib/session.js";
 import { hashLinkToken, newLinkToken } from "../lib/linkTokens.js";
 import { burnTimeForUnknownAccount, hashPassword, needsRehash, verifyPassword } from "../lib/passwords.js";
 import { removeAllSubscriptions } from "../lib/notifications/push.js";
+import { TERMS_VERSION } from "../lib/legal.js";
 
 export const authRoutes = new Hono();
 
@@ -38,6 +39,7 @@ authRoutes.post("/register", registerLimiter, async (c) => {
   if (!parsed.ok) return parsed.response;
 
   const { name, email, password, phone } = parsed.data;
+  const terms = { termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION };
 
   const existing = await findUserByEmail(email);
 
@@ -67,7 +69,7 @@ authRoutes.post("/register", registerLimiter, async (c) => {
     // silently overwriting a now-live account.
     const [updated] = await db
       .update(users)
-      .set({ name, passwordHash, phone, verificationToken, verificationTokenExpiry })
+      .set({ name, passwordHash, phone, verificationToken, verificationTokenExpiry, ...terms })
       .where(
         and(
           eq(users.id, existing.id),
@@ -85,7 +87,7 @@ authRoutes.post("/register", registerLimiter, async (c) => {
     try {
       [newUser] = await db
         .insert(users)
-        .values({ name, email, passwordHash, phone, verificationToken, verificationTokenExpiry })
+        .values({ name, email, passwordHash, phone, verificationToken, verificationTokenExpiry, ...terms })
         .returning({ id: users.id, name: users.name, email: users.email });
     } catch (err: any) {
       // Unique-violation: two concurrent registrations raced past the

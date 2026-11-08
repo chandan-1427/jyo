@@ -14,6 +14,7 @@ import { eq } from "drizzle-orm";
 import { resetDb } from "./helpers/db.js";
 import { verifyEmail } from "./helpers/auth.js";
 import { sendVerificationEmail } from "../src/lib/mailer.js";
+import { TERMS_VERSION } from "../src/lib/legal.js";
 
 const app = createApp();
 
@@ -30,6 +31,7 @@ const validUser = {
   email: "alice@example.com",
   password: "password123",
   phone: "9876543210",
+  acceptTerms: true,
 };
 
 async function registerAndCaptureToken(overrides: Partial<typeof validUser> = {}) {
@@ -281,5 +283,27 @@ describe("input validation", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.details.name).toEqual(["Name must be at least 2 characters"]);
+  });
+});
+
+describe("agreeing to the Terms at sign-up", () => {
+  it("refuses a sign-up that doesn't confirm 18+ and agree to the Terms, and creates nothing", async () => {
+    for (const acceptTerms of [undefined, false, "true"]) {
+      const res = await postJson("/auth/register", { ...validUser, acceptTerms });
+      expect(res.status).toBe(400);
+      expect((await res.json()).details.acceptTerms).toEqual([
+        "Agree to the Terms and Privacy Policy to sign up",
+      ]);
+    }
+    expect(await db.select().from(users)).toHaveLength(0);
+  });
+
+  it("records when the person agreed and to which version", async () => {
+    const before = Date.now();
+    expect((await postJson("/auth/register", validUser)).status).toBe(201);
+
+    const [row] = await db.select().from(users).where(eq(users.email, validUser.email));
+    expect(row.termsVersion).toBe(TERMS_VERSION);
+    expect(row.termsAcceptedAt!.getTime()).toBeGreaterThanOrEqual(before - 1000);
   });
 });

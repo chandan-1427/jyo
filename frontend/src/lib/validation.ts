@@ -6,6 +6,7 @@ import { z } from "zod";
 // fails CI if the two ever disagree. Change a rule here → change it there too.
 // ─────────────────────────────────────────────────────────────────────────────
 export const fields = {
+  acceptTerms: z.literal(true, "Agree to the Terms and Privacy Policy to sign up"),
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Enter a valid 10-digit phone number"),
@@ -34,6 +35,7 @@ export const registerSchema = z.object({
   email: fields.email,
   phone: fields.phone,
   password: fields.newPassword,
+  acceptTerms: fields.acceptTerms,
 });
 
 export const loginSchema = z.object({
