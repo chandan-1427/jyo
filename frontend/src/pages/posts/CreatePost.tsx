@@ -162,7 +162,7 @@ export default function CreatePost() {
           {/* Nothing in the past, nothing more than a week out, and the end
               no earlier than the start. */}
           {/* One grid, so each width can arrange the same fields in its own rows:
-              phones: diet / serves + cooked / start + end; tablets and wide
+              phones: diet / serves + cooked / start / end; tablets and wide
               desktops: diet + serves / cooked + start + end. Between 1024 and
               1279px the photo column leaves too little room for three dates
               side by side, so cooked gets its own row there. */}
@@ -176,7 +176,7 @@ export default function CreatePost() {
             <div className="col-span-8 md:col-span-4 lg:col-span-12 xl:col-span-4">
               <CookedAtField />
             </div>
-            <div className="col-span-6 md:col-span-4 lg:col-span-6 xl:col-span-4">
+            <div className="col-span-12 md:col-span-4 lg:col-span-6 xl:col-span-4">
               <Controller
                 control={control}
                 name="pickupWindowStart"
@@ -193,7 +193,7 @@ export default function CreatePost() {
                 )}
               />
             </div>
-            <div className="col-span-6 md:col-span-4 lg:col-span-6 xl:col-span-4">
+            <div className="col-span-12 md:col-span-4 lg:col-span-6 xl:col-span-4">
               <Controller
                 control={control}
                 name="pickupWindowEnd"
