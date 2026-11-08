@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatAgo } from "./format";
+import { formatAgo, formatDayTime } from "./format";
 
 describe("formatAgo", () => {
   const now = new Date("2026-11-08T12:00:00Z");
@@ -22,5 +22,18 @@ describe("formatAgo", () => {
   // A phone clock running a little behind the server's.
   it("says just now for a time slightly in the future", () => {
     expect(formatAgo(new Date(now.getTime() + 20_000).toISOString(), now)).toBe("just now");
+  });
+});
+
+describe("formatDayTime", () => {
+  const now = new Date("2026-11-08T12:00:00Z");
+
+  it("says today or yesterday, with the time in Indian time", () => {
+    expect(formatDayTime("2026-11-08T10:30:00Z", now)).toBe("Today, 4:00 pm");
+    expect(formatDayTime("2026-11-07T15:00:00Z", now)).toBe("Yesterday, 8:30 pm");
+  });
+
+  it("gives the date for anything older", () => {
+    expect(formatDayTime("2026-11-05T08:00:00Z", now)).toBe("5 Nov, 1:30 pm");
   });
 });

@@ -14,7 +14,7 @@ Households often cook more than they eat, while students and neighbours a few st
 
 ## How it works
 
-1. **Share.** A household posts what they have, with a photo and a pickup time. Their location is taken from their phone.
+1. **Share.** A household posts what they have, with a photo, a pickup time, whether it's veg, egg or non-veg, how many it serves and when it was cooked. Their location is taken from their phone.
 2. **Ask.** People within 20 km see it in their feed. They don't see where it is or who posted it. One person asks for it, with their name, how soon they can get there, and a selfie.
 3. **Meet.** The poster sees who asked and approves or declines. Only after approval does the picker see the pickup spot and the poster's name. The poster marks it collected afterwards, and unclaimed posts expire on their own. If the picker can't make it, or doesn't turn up, either side can call the pickup off and the food goes back in the feed.
 

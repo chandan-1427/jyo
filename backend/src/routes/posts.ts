@@ -46,6 +46,7 @@ postRoutes.post("/", createPostLimiter, async (c) => {
   if (!parsed.ok) return parsed.response;
 
   const { title, description, photoUrl, pickupLat, pickupLng, pickupWindowStart, pickupWindowEnd, clientKey } = parsed.data;
+  const { diet, servings, cookedAt, bringContainer } = parsed.data;
 
   // The same submission again (its first answer was lost on the way): the
   // post it already made, not a second copy in everyone's feed.
@@ -83,6 +84,10 @@ postRoutes.post("/", createPostLimiter, async (c) => {
       pickupLng,
       pickupWindowStart: new Date(pickupWindowStart),
       pickupWindowEnd: new Date(pickupWindowEnd),
+      diet,
+      servings,
+      cookedAt: new Date(cookedAt),
+      bringContainer: bringContainer ?? false,
       isDemo,
       demoExpiresAt,
       clientKey,
@@ -135,6 +140,10 @@ postRoutes.get("/", async (c) => {
       pickupLng: foodPosts.pickupLng,
       pickupWindowStart: foodPosts.pickupWindowStart,
       pickupWindowEnd: foodPosts.pickupWindowEnd,
+      diet: foodPosts.diet,
+      servings: foodPosts.servings,
+      cookedAt: foodPosts.cookedAt,
+      bringContainer: foodPosts.bringContainer,
       status: foodPosts.status,
       isDemo: foodPosts.isDemo,
       createdAt: foodPosts.createdAt,
@@ -386,6 +395,10 @@ postRoutes.get("/:id", async (c) => {
     photoUrl: post.photoUrl,
     pickupWindowStart: post.pickupWindowStart,
     pickupWindowEnd: post.pickupWindowEnd,
+    diet: post.diet,
+    servings: post.servings,
+    cookedAt: post.cookedAt,
+    bringContainer: post.bringContainer,
     status: post.status,
     isDemo: post.isDemo,
     createdAt: post.createdAt,
@@ -555,6 +568,7 @@ postRoutes.patch("/:id", async (c) => {
   }
 
   const { title, description, photoUrl, pickupWindowStart, pickupWindowEnd } = parsed.data;
+  const { diet, servings, cookedAt, bringContainer } = parsed.data;
 
   // Only our own uploads: see isOwnUploadUrl for why.
   if (photoUrl && !isOwnUploadUrl(photoUrl, "food-photos")) {
@@ -572,6 +586,10 @@ postRoutes.patch("/:id", async (c) => {
       photoUrl: photoUrl ?? post.photoUrl,
       pickupWindowStart: new Date(pickupWindowStart),
       pickupWindowEnd: new Date(pickupWindowEnd),
+      diet: diet ?? post.diet,
+      servings: servings ?? post.servings,
+      cookedAt: cookedAt ? new Date(cookedAt) : post.cookedAt,
+      bringContainer: bringContainer ?? post.bringContainer,
     })
     .where(and(eq(foodPosts.id, postId), eq(foodPosts.status, "open")))
     .returning();

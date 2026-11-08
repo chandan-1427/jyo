@@ -32,6 +32,7 @@ async function createPostAt(cookie: string, coords: { lat: number; lng: number }
       pickupLng: coords.lng,
       pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
       pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+      diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
     }),
   });
   expect(res.status).toBe(201);
@@ -123,6 +124,7 @@ describe("GET /posts (feed)", () => {
           pickupLng: TIRUPATI.lng,
           pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
           pickupWindowEnd: new Date(Date.now() + endsInHours * HOUR).toISOString(),
+          diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
         }),
       });
       expect(res.status).toBe(201);
@@ -195,6 +197,7 @@ describe("photo and selfie addresses", () => {
         pickupLng: TIRUPATI.lng,
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
 
@@ -224,6 +227,7 @@ describe("photo and selfie addresses", () => {
         photoUrl: "https://tracker.example.com/pixel.jpg",
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     expect(res.status).toBe(400);
@@ -270,6 +274,7 @@ describe("pickup time limit", () => {
         pickupLng: TIRUPATI.lng,
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + endsInDays * DAY).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
 
@@ -293,6 +298,7 @@ describe("pickup time limit", () => {
         title: "Rice and dal for 2",
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + 10 * DAY).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     expect(res.status).toBe(400);
@@ -309,6 +315,7 @@ describe("PATCH /posts/:id (edit)", () => {
         description: "Made this afternoon",
         pickupWindowStart: new Date(Date.now() + HOUR).toISOString(),
         pickupWindowEnd: new Date(Date.now() + 3 * HOUR).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
         ...changes,
       }),
     });
@@ -325,6 +332,7 @@ describe("PATCH /posts/:id (edit)", () => {
         pickupLng: TIRUPATI.lng,
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     const { post } = await created.json();
@@ -379,6 +387,7 @@ describe("PATCH /posts/:id (edit)", () => {
     const res = await edit(poster.cookie, post.id, {
       pickupWindowStart: new Date(Date.now() + 3 * HOUR).toISOString(),
       pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+      diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
     });
     expect(res.status).toBe(400);
   });

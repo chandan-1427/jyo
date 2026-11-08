@@ -61,6 +61,15 @@ export function formatPickupTime(start: string, end: string, now = new Date()): 
   return day === "Today" ? `Until ${formatTime(e)}` : `Until ${formatDayInline(e, now)} ${formatTime(e)}`;
 }
 
+// One moment, in Indian time: "Today, 7:15 pm", "Yesterday, 9:00 pm", "6 Nov, 1:30 pm".
+export function formatDayTime(date: string, now = new Date()): string {
+  const d = new Date(date);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const day = dayKey(d) === dayKey(yesterday) ? "Yesterday" : formatDay(d, now);
+  return `${day}, ${formatTime(d)}`;
+}
+
 // How long ago something happened, roughly: "just now", "25 min ago", "2 h ago".
 export function formatAgo(date: string, now = new Date()): string {
   const minutes = Math.floor((now.getTime() - new Date(date).getTime()) / 60_000);

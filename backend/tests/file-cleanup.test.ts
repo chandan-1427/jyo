@@ -61,6 +61,7 @@ async function newPost(cookie: string, photoUrl?: string) {
       pickupLng: 79.42,
       pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
       pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+      diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
     }),
   });
   return (await res.json()).post as { id: string };
@@ -113,6 +114,7 @@ describe("post photos and selfies", () => {
         photoUrl: newPhoto,
         pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
         pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+        diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       }),
     });
     expect(res.status).toBe(200);

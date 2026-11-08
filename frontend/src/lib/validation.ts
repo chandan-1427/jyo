@@ -27,6 +27,12 @@ export const fields = {
     .max(180, "It must be 180 minutes or less"),
   title: z.string().trim().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
   description: z.string().trim().max(500, "Description is too long"),
+  diet: z.enum(["veg", "egg", "non_veg"], "Choose veg, egg or non-veg"),
+  servings: z
+    .number({ error: "Enter how many people it serves" })
+    .int("Enter a whole number")
+    .min(1, "Enter at least 1")
+    .max(50, "It must be 50 or less"),
 };
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -83,6 +89,14 @@ const WITHIN_LIMIT = { message: `Pickup has to end within ${MAX_PICKUP_DAYS_AHEA
 
 // The pickup times are the form's local "YYYY-MM-DDTHH:mm" strings; the page
 // converts them to ISO before sending. `photo` is uploaded first, like `selfie`.
+// When the food was cooked, as the API checks it: not in the future (a few
+// minutes' slack for a fast clock) and not more than a day ago.
+const cookedField = z
+  .string()
+  .min(1, "Choose when it was cooked")
+  .refine((v) => new Date(v).getTime() <= Date.now() + 10 * 60_000, "That time hasn't happened yet")
+  .refine((v) => new Date(v).getTime() >= Date.now() - 24 * 3_600_000, "Food cooked more than a day ago can't be shared");
+
 export const createPostSchema = z
   .object({
     title: fields.title,
@@ -90,6 +104,10 @@ export const createPostSchema = z
     photo: z.instanceof(File, { error: "Add a photo of the food" }),
     pickupWindowStart: z.string().min(1, "Choose when pickup starts"),
     pickupWindowEnd: z.string().min(1, "Choose when pickup ends"),
+    diet: fields.diet,
+    servings: fields.servings,
+    cookedAt: cookedField,
+    bringContainer: z.boolean(),
   })
   .refine((d) => !d.pickupWindowEnd || new Date(d.pickupWindowEnd) > new Date(d.pickupWindowStart), {
     message: "End time must be after start time",
@@ -111,6 +129,10 @@ export const editPostSchema = z
     photo: z.instanceof(File).optional(),
     pickupWindowStart: z.string().min(1, "Choose when pickup starts"),
     pickupWindowEnd: z.string().min(1, "Choose when pickup ends"),
+    diet: fields.diet,
+    servings: fields.servings,
+    cookedAt: cookedField,
+    bringContainer: z.boolean(),
   })
   .refine((d) => !d.pickupWindowEnd || new Date(d.pickupWindowEnd) > new Date(d.pickupWindowStart), {
     message: "End time must be after start time",

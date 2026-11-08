@@ -141,6 +141,13 @@
       "when": 1794144913792,
       "tag": "0019_terms_acceptance",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794160650342,
+      "tag": "0020_food_details",
+      "breakpoints": true
     }
   ]
 }

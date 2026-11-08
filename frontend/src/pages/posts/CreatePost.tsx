@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Controller } from "react-hook-form";
-import { Loader2, MapPin, MapPinOff, Send, ShieldCheck } from "lucide-react";
+import { Controller, FormProvider } from "react-hook-form";
+import { Loader2, MapPin, MapPinOff, Send } from "lucide-react";
 import { apiFetch } from "@/lib/api/api";
 import { createPostSchema, MAX_PICKUP_DAYS_AHEAD } from "@/lib/validation";
 import { applyServerFieldErrors, useZodForm } from "@/lib/forms";
@@ -18,11 +18,11 @@ import { Button } from "@/components/ui/Button";
 import { DateTimeField } from "@/components/ui/DateTimeField";
 import { ImagePickerField } from "@/components/ui/ImagePickerField";
 import { Notice } from "@/components/ui/Notice";
-import { FOOD_SAFETY_RULES } from "@/lib/legal";
+import { ContainerCheckbox, FoodDetailsFields, type FoodDetailsValues } from "@/components/posts/FoodDetails";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TextAreaField, TextField } from "@/components/ui/TextField";
 
-type PostValues = {
+type PostValues = FoodDetailsValues & {
   title: string;
   description: string;
   photo: File;
@@ -51,12 +51,15 @@ export default function CreatePost() {
     latest: toDateTimeInput(new Date(Date.now() + MAX_PICKUP_DAYS_AHEAD * 24 * HOUR)),
   }));
 
-  const { register, control, handleSubmit, setValue, watch, setError, formState: { errors } } = useZodForm(createPostSchema, {
+  const form = useZodForm(createPostSchema, {
     title: "",
     description: "",
     pickupWindowStart: start,
     pickupWindowEnd: end,
+    cookedAt: toDateTimeInput(new Date()),
+    bringContainer: false,
   });
+  const { register, control, handleSubmit, setValue, watch, setError, formState: { errors } } = form;
   const pickupStart = watch("pickupWindowStart");
 
   // The pickup spot is wherever the poster is now.
@@ -93,6 +96,10 @@ export default function CreatePost() {
           pickupLng: coords!.lng,
           pickupWindowStart: new Date(values.pickupWindowStart).toISOString(),
           pickupWindowEnd: new Date(values.pickupWindowEnd).toISOString(),
+          diet: values.diet,
+          servings: values.servings,
+          cookedAt: new Date(values.cookedAt).toISOString(),
+          bringContainer: values.bringContainer,
           clientKey,
         }),
       });
@@ -102,7 +109,7 @@ export default function CreatePost() {
       navigate("/my-posts");
     },
     onError: (err) => {
-      applyServerFieldErrors(err, setError, ["title", "description", "pickupWindowEnd"]);
+      applyServerFieldErrors(err, setError, ["title", "description", "pickupWindowEnd", "diet", "servings", "cookedAt"]);
     },
   });
 
@@ -131,6 +138,7 @@ export default function CreatePost() {
 
       {error && <Notice tone="error" className="mb-6">{error}</Notice>}
 
+      <FormProvider {...form}>
       <form onSubmit={onSubmit} noValidate className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12">
         <ImagePickerField
           label="Photo"
@@ -145,7 +153,7 @@ export default function CreatePost() {
           <TextAreaField
             label="Description"
             labelAside={<span className="text-sm text-fg-subtle">Optional</span>}
-            placeholder="How much there is, when it was made, anything to know (spicy, contains nuts…)"
+            placeholder="Anything to know: spicy, contains nuts, how it's packed…"
             rows={4}
             error={errors.description?.message}
             {...register("description")}
@@ -153,6 +161,8 @@ export default function CreatePost() {
 
           {/* Nothing in the past, nothing more than a week out, and the end
               no earlier than the start. */}
+          <FoodDetailsFields />
+
           <div className="grid gap-5 sm:grid-cols-2">
             <Controller
               control={control}
@@ -186,15 +196,7 @@ export default function CreatePost() {
             />
           </div>
 
-          <div className="flex flex-col gap-3 rounded-xl bg-raised px-4 py-4 ring-1 ring-inset ring-fg/[0.06]">
-            <p className="flex items-center gap-2 text-sm font-medium text-fg">
-              <ShieldCheck className="size-4 shrink-0 text-leaf" aria-hidden="true" />
-              Before you share
-            </p>
-            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm leading-relaxed text-fg-muted">
-              {FOOD_SAFETY_RULES.map((rule) => <li key={rule}>{rule}</li>)}
-            </ul>
-          </div>
+          <ContainerCheckbox />
 
           {/* Where it's picked up from, and who gets to see that. */}
           {locating ? (
@@ -238,6 +240,7 @@ export default function CreatePost() {
           </Button>
         </div>
       </form>
+      </FormProvider>
     </div>
   );
 }

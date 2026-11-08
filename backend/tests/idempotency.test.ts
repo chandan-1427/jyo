@@ -40,6 +40,7 @@ function newPost(cookie: string, extra: Record<string, unknown> = {}) {
       pickupLng: 79.42,
       pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
       pickupWindowEnd: new Date(Date.now() + 3_600_000).toISOString(),
+      diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
       ...extra,
     }),
   });

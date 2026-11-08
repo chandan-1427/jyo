@@ -44,6 +44,7 @@ async function createPost(cookie: string, title: string) {
       pickupLng: TIRUPATI.lng,
       pickupWindowStart: new Date(Date.now() + 60_000).toISOString(),
       pickupWindowEnd: new Date(Date.now() + HOUR).toISOString(),
+      diet: "veg", servings: 2, cookedAt: new Date().toISOString(),
     }),
   });
   expect(res.status).toBe(201);

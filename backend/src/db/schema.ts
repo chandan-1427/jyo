@@ -35,6 +35,8 @@ export const requestStatusEnum = pgEnum("request_status", [
   "timed_out",
 ]);
 
+export const foodDietEnum = pgEnum("food_diet", ["veg", "egg", "non_veg"]);
+
 export const notificationTypeEnum = pgEnum("notification_type", [
   "request_received",
   "request_cancelled",
@@ -102,6 +104,11 @@ export const foodPosts = pgTable("food_posts", {
   // pickup nobody closed (jobs/expiry.ts). Kept apart so a count of food
   // shared can tell a confirmed pickup from an assumed one.
   autoCompleted:     boolean("auto_completed").notNull().default(false),
+  // Asked on the post form from November 2026, so null on older posts.
+  diet:              foodDietEnum("diet"),
+  servings:          integer("servings"),
+  cookedAt:          timestamp("cooked_at"),
+  bringContainer:    boolean("bring_container").notNull().default(false),
   createdAt:         timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   // Feed query (posts.ts) and the expiry cron (jobs/expiry.ts) both filter
