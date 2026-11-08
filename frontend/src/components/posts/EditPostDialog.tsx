@@ -14,7 +14,7 @@ import { Button } from "../ui/Button";
 import { Notice } from "../ui/Notice";
 import { PhotoField } from "../ui/PhotoField";
 import { DateTimeField } from "../ui/DateTimeField";
-import { FoodDetailsFields, type FoodDetailsValues } from "./FoodDetails";
+import { ContainerCheckbox, FoodDetailsFields, type FoodDetailsValues } from "./FoodDetails";
 
 type EditValues = FoodDetailsValues & {
   title: string;
@@ -134,6 +134,8 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
             )}
           />
         </div>
+
+        <ContainerCheckbox />
 
         <p className="text-sm text-fg-subtle">The pickup spot can't be changed. To move it, delete this post and post again.</p>
 

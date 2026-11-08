@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { DateTimeField } from "@/components/ui/DateTimeField";
 import { ImagePickerField } from "@/components/ui/ImagePickerField";
 import { Notice } from "@/components/ui/Notice";
-import { FoodDetailsFields, type FoodDetailsValues } from "@/components/posts/FoodDetails";
+import { ContainerCheckbox, FoodDetailsFields, type FoodDetailsValues } from "@/components/posts/FoodDetails";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TextAreaField, TextField } from "@/components/ui/TextField";
 
@@ -224,6 +224,8 @@ export default function CreatePost() {
               {locationError} Your location is the pickup spot, so it's needed to post.
             </Notice>
           )}
+
+          <ContainerCheckbox />
 
           <Button
             type="submit"

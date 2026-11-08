@@ -44,12 +44,12 @@ export function FoodDetailsFields() {
     <>
       <fieldset aria-describedby={errors.diet ? "diet-error" : undefined}>
         <legend className="text-sm font-medium text-fg">Veg or non-veg?</legend>
-        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        <div className="mt-2 grid grid-cols-3 gap-2">
           {DIETS.map((diet) => (
             <label
               key={diet}
               className={cn(
-                "flex h-11 cursor-pointer items-center gap-2.5 rounded-xl bg-raised px-3.5 text-sm sm:justify-center sm:px-2 font-medium text-fg-muted ring-1 ring-inset ring-fg/[0.08] transition-colors",
+                "flex h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-raised px-2 text-[13px] font-medium text-fg-muted ring-1 ring-inset ring-fg/[0.08] transition-colors sm:gap-2 sm:text-sm",
                 "hover:text-fg has-[:checked]:bg-lifted has-[:checked]:text-fg has-[:checked]:ring-2 has-[:checked]:ring-leaf",
                 "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf"
               )}
@@ -59,8 +59,9 @@ export function FoodDetailsFields() {
                 aria-hidden="true"
                 className="grid size-4 shrink-0 place-items-center rounded-full ring-[1.5px] ring-inset ring-fg/30 peer-checked:ring-leaf after:size-2 after:scale-0 after:rounded-full after:bg-leaf after:transition-transform after:duration-150 after:content-[''] peer-checked:after:scale-100 motion-reduce:after:transition-none"
               />
-              <DietMark diet={diet} />
-              {DIET_LABEL[diet]}
+              {/* Room for the mark only from tablet width; cards show it everywhere. */}
+              <DietMark diet={diet} className="hidden sm:block" />
+              <span className="truncate">{DIET_LABEL[diet]}</span>
             </label>
           ))}
         </div>
@@ -71,9 +72,9 @@ export function FoodDetailsFields() {
         )}
       </fieldset>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-5">
         <TextField
-          label="Serves how many?"
+          label="Serves"
           type="number"
           inputMode="numeric"
           min={1}
@@ -87,7 +88,7 @@ export function FoodDetailsFields() {
           name="cookedAt"
           render={({ field }) => (
             <DateTimeField
-              label="When was it cooked?"
+              label="Cooked at"
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
@@ -98,8 +99,12 @@ export function FoodDetailsFields() {
           )}
         />
       </div>
-
-      <Checkbox {...register("bringContainer")} label="Ask them to bring their own container" />
     </>
   );
+}
+
+// Asked last on the form, just before it's sent.
+export function ContainerCheckbox() {
+  const { register } = useFormContext<FoodDetailsValues>();
+  return <Checkbox {...register("bringContainer")} label="Ask them to bring their own container" />;
 }

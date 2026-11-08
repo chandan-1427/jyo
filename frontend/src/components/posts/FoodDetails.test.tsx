@@ -4,7 +4,7 @@ import { FormProvider } from "react-hook-form";
 import { z } from "zod";
 import { fields } from "@/lib/validation";
 import { useZodForm } from "@/lib/forms";
-import { FoodDetailsFields, type FoodDetailsValues } from "./FoodDetails";
+import { ContainerCheckbox, FoodDetailsFields, type FoodDetailsValues } from "./FoodDetails";
 
 const schema = z.object({
   diet: fields.diet,
@@ -21,6 +21,7 @@ function Harness() {
     <FormProvider {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <FoodDetailsFields />
+        <ContainerCheckbox />
         <button type="submit">Post</button>
       </form>
     </FormProvider>
@@ -47,7 +48,7 @@ describe("FoodDetailsFields", () => {
     expect(screen.getAllByRole("radio").map((r) => (r as HTMLInputElement).value)).toEqual(["veg", "egg", "non_veg"]);
 
     fireEvent.click(screen.getByLabelText("Egg"));
-    fireEvent.change(screen.getByLabelText("Serves how many?"), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("Serves"), { target: { value: "3" } });
     fireEvent.click(screen.getByLabelText("Ask them to bring their own container"));
     fireEvent.click(screen.getByRole("button", { name: "Post" }));
 
