@@ -12,6 +12,8 @@ import { deleteAccount, PICKUP_IN_PROGRESS } from "../lib/domain/deleteAccount.j
 import { broadcastFeedChange, closeUserStreams } from "../lib/notifications/notificationStream.js";
 import { logger } from "../lib/logger.js";
 import { parseJsonBody, uploadFromForm } from "../lib/http.js";
+import { listBlocks, unblock } from "../lib/domain/safety.js";
+import { isValidUuid } from "../lib/domain/finders.js";
 
 export const userRoutes = new Hono();
 
@@ -177,6 +179,21 @@ userRoutes.delete("/me/avatar", async (c) => {
 // left open on someone else's phone mustn't be enough), and wrong guesses are
 // rate-limited. Every session ends at once: the middleware refuses a deleted
 // account.
+// --- People you've blocked ---
+userRoutes.get("/me/blocks", async (c) => {
+  const { userId } = c.get("user");
+  return c.json({ blocks: await listBlocks(userId) });
+});
+
+// Only your own block. Already gone answers as if just removed.
+userRoutes.delete("/me/blocks/:id", async (c) => {
+  const { userId } = c.get("user");
+  const blockId = c.req.param("id");
+  if (!isValidUuid(blockId)) return c.json({ error: "Block not found" }, 404);
+  await unblock(userId, blockId);
+  return c.json({ message: "Unblocked" });
+});
+
 userRoutes.delete("/me", deleteAccountLimiter, async (c) => {
   const { userId } = c.get("user");
   const parsed = await parseJsonBody(c, deleteAccountSchema);

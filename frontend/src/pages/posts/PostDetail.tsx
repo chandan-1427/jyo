@@ -24,6 +24,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
 import { ContactButtons, SharePhoneSetting } from "@/components/posts/PhoneShare";
 import { NotificationPrompt } from "@/components/posts/NotificationPrompt";
+import { ReportBlockActions } from "@/components/posts/ReportBlock";
 
 type PostDetailData = {
   post: FoodPost & { pickupLat: number | null; pickupLng: number | null };
@@ -429,6 +430,10 @@ function PosterPanel({
           </Button>
         </div>
 
+        {!post.isDemo && (
+          <ReportBlockActions target={{ kind: "request", id: pendingRequest.id, name: pendingRequest.pickerName }} onBlocked={refresh} />
+        )}
+
         {viewingSelfie && pendingRequest.selfieUrl && (
           <Dialog title={pendingRequest.pickerName} onClose={() => setViewingSelfie(false)}>
             {/* Portrait, since selfies usually are; on the page colour so the
@@ -490,6 +495,9 @@ function PosterPanel({
         <Button variant="outline" fullWidth onClick={() => setCallingOff(true)} disabled={busy}>
           They didn't come
         </Button>
+        {approvedPickup && !post.isDemo && (
+          <ReportBlockActions target={{ kind: "request", id: approvedPickup.id, name: approvedPickup.pickerName }} onBlocked={refresh} />
+        )}
         {callingOff && (
           <ConfirmDialog
             title="Call off this pickup?"
@@ -690,6 +698,10 @@ export default function PostDetail() {
             <PickerPanel post={post} myRequest={data.myRequest} contact={data.contact} />
           ) : (
             <VisitorPanel post={post} myRequest={data.myRequest} onRequest={() => setRequesting(true)} />
+          )}
+
+          {!isPoster && !post.isDemo && (
+            <ReportBlockActions target={{ kind: "post", id: post.id }} onBlocked={() => navigate("/feed", { replace: true })} />
           )}
 
           {isPoster && (post.status === "open" || post.status === "pending_approval") && !post.isDemo && (

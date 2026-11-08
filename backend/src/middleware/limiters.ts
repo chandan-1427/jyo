@@ -127,6 +127,13 @@ export const uploadLimiter = limiter({
   message: "Too many photos uploaded in the last hour. Please try again later.",
 });
 
+export const reportLimiter = limiter({
+  windowMs: HOUR,
+  limit: 20,
+  key: byUser,
+  message: "You've sent a lot of reports in the last hour. Please try again later.",
+});
+
 export const createRequestLimiter = limiter({
   windowMs: 10 * MINUTE,
   limit: 5,

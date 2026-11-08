@@ -228,3 +228,47 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     })
   );
 }
+// --- Reports, to whoever runs Jyo ---
+
+const escapeHtml = (text: string) =>
+  text.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
+
+const REPORT_REASONS: Record<string, string> = {
+  unsafe_food: "Unsafe or spoiled food",
+  misleading: "Fake or misleading",
+  money: "Asked for or offered money",
+  harassment: "Harassment or inappropriate behaviour",
+  other: "Something else",
+};
+
+export type ReportEmail = {
+  reason: string;
+  details?: string;
+  postTitle: string;
+  postId: string;
+  reporterId: string;
+  reportedUserId: string;
+  about: "post" | "picker";
+};
+
+// Fire and forget. Off when REPORTS_EMAIL isn't set; the report is stored
+// either way. Account ids are fine here: this goes only to the operator, who
+// needs them to look the people up.
+export function sendReportEmail(to: string | undefined, report: ReportEmail) {
+  if (!to) return;
+  const rows = [
+    ["Reason", REPORT_REASONS[report.reason] ?? report.reason],
+    ["About", report.about === "post" ? "A post and the person who shared it" : "The person who asked for food"],
+    ["Post", `${report.postTitle} (${report.postId})`],
+    ["Reported account", report.reportedUserId],
+    ["Reported by", report.reporterId],
+    ["Details", report.details || "None given"],
+  ];
+  const html =
+    "<p>A report was made on Jyo.</p><table>" +
+    rows.map(([k, v]) => `<tr><td><b>${escapeHtml(k)}</b></td><td>${escapeHtml(v)}</td></tr>`).join("") +
+    "</table>";
+  sendMail(to, `Jyo report: ${REPORT_REASONS[report.reason] ?? report.reason}`, html).catch((err) =>
+    logger.error({ err }, "sendReportEmail failed")
+  );
+}

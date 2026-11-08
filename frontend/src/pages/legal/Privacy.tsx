@@ -34,6 +34,7 @@ export default function Privacy() {
         <p><strong>When you ask for food:</strong> the name you give, a selfie, how soon you can get there, and your location at that moment (to check you're within 20 km; it isn't stored).</p>
         <p><strong>When you browse the feed:</strong> your location, rounded to about 1 km, to find food near you. It isn't stored.</p>
         <p><strong>If you choose to:</strong> whether you share your phone number for a pickup, and, if you turn on notifications, an address your browser gives us for delivering them.</p>
+        <p><strong>If you report or block someone:</strong> the report (the reason, any note you add, and the post's title) or the block. A report goes to the Jyo team only; the person reported isn't told who reported them, and isn't told when they're blocked.</p>
         <p><strong>Automatically:</strong> your IP address, and records of the requests your device makes (with your account ID), used to keep Jyo secure and working; and the notifications we've shown you.</p>
       </Section>
 
@@ -73,6 +74,7 @@ export default function Privacy() {
           <li><strong>Deleted accounts:</strong> hidden at once, with all your photos and selfies deleted straight away; everything else is erased 30 days later.</li>
           <li><strong>Sign-ups never confirmed by email:</strong> deleted soon after the confirmation link expires (24 hours).</li>
           <li><strong>Notifications:</strong> 14 days.</li>
+          <li><strong>Reports and blocks:</strong> until either account involved is erased, or until you unblock.</li>
           <li><strong>Photos that were uploaded but never used</strong> (for example from a form you didn't finish): about 2 days.</li>
           <li><strong>Server logs:</strong> kept by our hosting provider for a limited period.</li>
           <li><strong>Backups:</strong> encrypted nightly copies, each kept for 30 days. Deleted data can remain in a backup until that backup expires.</li>

@@ -15,6 +15,20 @@ import { PostGrid, PostGridSkeleton } from "@/components/posts/PostGrid";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { DIET_FILTERS, matchesDiet, type DietFilter } from "@/lib/food";
+
+const DIET_FILTER_KEY = "jyo:feed-diet";
+
+// Remembered per device, so a vegetarian doesn't have to choose every visit.
+function storedDietFilter(): DietFilter {
+  try {
+    const value = localStorage.getItem(DIET_FILTER_KEY);
+    return DIET_FILTERS.some((f) => f.value === value) ? (value as DietFilter) : "all";
+  } catch {
+    return "all";
+  }
+}
 
 export default function Feed() {
   useV2Theme();
@@ -24,6 +38,15 @@ export default function Feed() {
   const [locationError, setLocationError] = useState("");
   const [startingDemo, setStartingDemo] = useState(false);
   const [demoError, setDemoError] = useState("");
+  const [dietFilter, setDietFilter] = useState<DietFilter>(storedDietFilter);
+  const chooseDiet = (value: DietFilter) => {
+    setDietFilter(value);
+    try {
+      localStorage.setItem(DIET_FILTER_KEY, value);
+    } catch {
+      // Private browsing: the choice just isn't remembered.
+    }
+  };
 
   useEffect(() => {
     getCurrentLocation()
@@ -59,6 +82,7 @@ export default function Feed() {
     refetchInterval: 5 * 60_000,
   });
   const posts = data?.posts ?? [];
+  const shown = posts.filter((post) => matchesDiet(post, dietFilter));
 
   const handleStartDemo = async () => {
     setStartingDemo(true);
@@ -131,11 +155,14 @@ export default function Feed() {
     <div className="relative isolate text-fg">
       <FeedIllustration />
       {heading}
-      <div className="mb-6 flex flex-wrap items-center justify-end gap-2">
-        {demoButton}
-        <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
-          Post food
-        </Button>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <SegmentedControl label="Show" options={DIET_FILTERS} value={dietFilter} onChange={chooseDiet} />
+        <div className="flex flex-wrap items-center gap-2">
+          {demoButton}
+          <Button to="/create" iconLeft={<Plus className="size-4" aria-hidden="true" />}>
+            Post food
+          </Button>
+        </div>
       </div>
 
       {/* A failed update keeps showing the posts already loaded. */}
@@ -149,9 +176,21 @@ export default function Feed() {
         >
           <p>New posts show up here on their own. You can also share food yourself.</p>
         </EmptyState>
+      ) : shown.length === 0 ? (
+        <EmptyState
+          art={<EmptyPlateIllustration className="-mt-2 mb-1 w-36 sm:w-44" />}
+          title={dietFilter === "veg" ? "No veg food near you right now" : "No veg or egg food near you right now"}
+          actions={
+            <Button variant="secondary" onClick={() => chooseDiet("all")}>
+              Show everything
+            </Button>
+          }
+        >
+          <p>There's other food nearby. New posts show up here on their own.</p>
+        </EmptyState>
       ) : (
         <PostGrid>
-          {posts.map((post) => (
+          {shown.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
         </PostGrid>
