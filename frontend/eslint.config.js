@@ -19,4 +19,14 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // shadcn's components, as its CLI writes them: they export style
+    // variants beside components, and the sidebar's loading placeholder
+    // picks a random width. Kept as generated so they can be updated.
+    files: ['src/admin/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      'react-hooks/purity': 'off',
+    },
+  },
 ])

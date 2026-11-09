@@ -185,3 +185,31 @@ describe("people and overview", () => {
     expect(overview).toMatchObject({ people: 3, activePosts: 1, openReports: 0, suspended: 0 });
   });
 });
+
+describe("activity and trends", () => {
+  it("counts each day's posts and requests, oldest first, with empty days as zero", async () => {
+    const admin = await createVerifiedUser(app, { email: ADMIN });
+    const poster = await createVerifiedUser(app);
+    const picker = await createVerifiedUser(app);
+    const postId = await share(poster.cookie);
+    await post(picker.cookie, "/requests", { postId, pickerName: "Picker", etaMinutes: 10, lat: 13.63, lng: 79.42 });
+
+    const { days } = await (await get(admin.cookie, "/admin/activity?days=7")).json();
+    expect(days).toHaveLength(7);
+    expect(days.map((d: { date: string }) => d.date)).toEqual([...days.map((d: { date: string }) => d.date)].sort());
+    expect(days.at(-1)).toMatchObject({ posts: 1, requests: 1 });
+    expect(days.slice(0, -1).every((d: { posts: number }) => d.posts === 0)).toBe(true);
+
+    expect((await get(admin.cookie, "/admin/activity?days=5")).status).toBe(400);
+  });
+
+  it("compares the last 30 days with the 30 before", async () => {
+    const admin = await createVerifiedUser(app, { email: ADMIN });
+    const poster = await createVerifiedUser(app);
+    await share(poster.cookie);
+
+    const { last30Days } = await (await get(admin.cookie, "/admin/overview")).json();
+    expect(last30Days.posts).toEqual({ now: 1, before: 0 });
+    expect(last30Days.people).toEqual({ now: 2, before: 0 });
+  });
+});

@@ -1,9 +1,13 @@
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Layout from "./components/layout/Layout";
 import SplashScreen from "./components/layout/SplashScreen";
 import { returnPath } from "./lib/returnPath";
+
+// Its own bundle, with its own stylesheet and libraries: nobody but an admin
+// downloads any of it.
+const Admin = lazy(() => import("./pages/Admin"));
 
 import Home from "./pages/Home";
 import Login from "./pages/auth/Login";
@@ -17,7 +21,6 @@ import MyRequests from "./pages/posts/MyRequests";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
 import Terms from "./pages/legal/Terms";
-import Admin from "./pages/Admin";
 import VerifyEmail from "./pages/auth/VerifyEmail";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -56,6 +59,7 @@ export default function App() {
 
           {/* Protected */}
           <Route element={<AuthGuard />}>
+            <Route path="/admin" element={<Admin />} />
             <Route element={<Layout />}>
               <Route path="/feed"        element={<Feed />} />
               <Route path="/posts/:id"   element={<PostDetail />} />
@@ -63,7 +67,6 @@ export default function App() {
               <Route path="/my-posts"    element={<MyPosts />} />
               <Route path="/my-requests" element={<MyRequests />} />
               <Route path="/profile"     element={<Profile />} />
-              <Route path="/admin"       element={<Admin />} />
             </Route>
           </Route>
 

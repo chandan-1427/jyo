@@ -1,0 +1,94 @@
+/* The admin portal's own Tailwind build, loaded only with /admin. Every class
+   is prefixed "ad:" so none collide with the rest of Jyo's, whose theme uses
+   some of the same colour names (background, border, muted, accent) with
+   other meanings. shadcn's colour slots are filled with Jyo's dark palette. */
+/* No preflight (reset): Jyo's own stylesheet already applies it, and a
+   second copy loaded later could undo some of Jyo's base styles. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme) prefix(ad);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(ad);
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.75rem;
+  --background: #0c0e0d;
+  --foreground: #e8eeea;
+  --card: #141716;
+  --card-foreground: #e8eeea;
+  --popover: #1d2120;
+  --popover-foreground: #e8eeea;
+  --primary: #5cc791;
+  --primary-foreground: #0c0e0d;
+  --secondary: #1d2120;
+  --secondary-foreground: #e8eeea;
+  --muted: #1d2120;
+  --muted-foreground: #a3afa9;
+  --accent: #1d2120;
+  --accent-foreground: #e8eeea;
+  --destructive: #ef7c8e;
+  --border: rgb(232 238 234 / 0.08);
+  --input: rgb(232 238 234 / 0.12);
+  --ring: #5cc791;
+  --chart-1: #5cc791;
+  --chart-2: #6fa8dc;
+  --chart-3: #a3afa9;
+  --chart-4: #3dbb6e;
+  --chart-5: #ef7c8e;
+  --sidebar: #101312;
+  --sidebar-foreground: #e8eeea;
+  --sidebar-primary: #5cc791;
+  --sidebar-primary-foreground: #0c0e0d;
+  --sidebar-accent: #1d2120;
+  --sidebar-accent-foreground: #e8eeea;
+  --sidebar-border: rgb(232 238 234 / 0.08);
+  --sidebar-ring: #5cc791;
+}
+
+@theme inline {
+  --font-sans: "Geist Variable", "Inter Variable", system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* shadcn's base styles, limited to the portal (and the menus and drawers it
+   opens, which render at the end of the page) instead of the whole site. */
+.jyo-admin,
+.jyo-admin *,
+[data-radix-popper-content-wrapper] * {
+  border-color: var(--border);
+  outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+}
