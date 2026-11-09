@@ -29,7 +29,7 @@ const notDemoAccount = notLike(users.email, "%@jyo.internal");
 const reporter = aliasedTable(users, "reporter");
 const reported = aliasedTable(users, "reported");
 
-const reportsAgainst = sql<number>`(select count(*)::int from ${reports} where ${reports.reportedUserId} = ${users.id})`;
+const reportsAgainst = sql<number>`(select count(*)::int from ${reports} r where r.reported_user_id = "users"."id")`;
 
 // --- Overview ---
 adminRoutes.get("/overview", async (c) => {
@@ -124,8 +124,8 @@ adminRoutes.get("/users", async (c) => {
       suspendedAt: users.suspendedAt,
       suspendedReason: users.suspendedReason,
       createdAt: users.createdAt,
-      posts: sql<number>`(select count(*)::int from ${foodPosts} where ${foodPosts.posterId} = ${users.id} and not ${foodPosts.isDemo})`,
-      requests: sql<number>`(select count(*)::int from ${pickupRequests} where ${pickupRequests.pickerId} = ${users.id} and not ${pickupRequests.isDemo})`,
+      posts: sql<number>`(select count(*)::int from ${foodPosts} fp where fp.poster_id = "users"."id" and not fp.is_demo)`,
+      requests: sql<number>`(select count(*)::int from ${pickupRequests} pr where pr.picker_id = "users"."id" and not pr.is_demo)`,
       reportsAgainst,
     })
     .from(users)

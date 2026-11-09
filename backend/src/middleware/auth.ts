@@ -78,14 +78,14 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     .where(eq(users.id, userId))
     .limit(1);
 
+  if (account && !account.isDeleted && account.suspendedAt) {
+    endSession(c);
+    return c.json({ error: SUSPENDED_MESSAGE }, 403);
+  }
+
   if (!account || account.isDeleted || account.tokenVersion !== version || account.revoked) {
     endSession(c);
     return c.json({ error: "Your session has ended. Please log in again." }, 401);
-  }
-
-  if (account.suspendedAt) {
-    endSession(c);
-    return c.json({ error: SUSPENDED_MESSAGE }, 403);
   }
 
   const demoLive = account.isDemo && (!account.demoExpiresAt || account.demoExpiresAt > new Date());

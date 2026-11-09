@@ -103,7 +103,7 @@ describe("suspending", () => {
     const admin = await createVerifiedUser(app, { email: ADMIN });
     const bad = await createVerifiedUser(app);
     const viewer = await createVerifiedUser(app);
-    await share(bad.cookie, "Bad post");
+    const badPost = await share(bad.cookie, "Bad post");
     await db.insert(pushSubscriptions).values({ userId: bad.userId, endpoint: "https://fcm.googleapis.com/fcm/send/x", p256dh: "p", auth: "a" });
 
     const res = await post(admin.cookie, `/admin/users/${bad.userId}/suspend`, { reason: "Selling food" });
@@ -114,6 +114,7 @@ describe("suspending", () => {
     expect((await session.json()).error).toMatch(/suspended/);
     expect((await login(bad.email)).status).toBe(403);
     expect(await feedTitles(viewer.cookie)).not.toContain("Bad post");
+    expect((await get(viewer.cookie, `/posts/${badPost}`)).status).toBe(404);
     expect(await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, bad.userId))).toHaveLength(0);
     const [row] = await db.select().from(users).where(eq(users.id, bad.userId));
     expect(row.suspendedReason).toBe("Selling food");

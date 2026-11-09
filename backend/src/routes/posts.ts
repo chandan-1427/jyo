@@ -270,7 +270,7 @@ postRoutes.get("/:id", async (c) => {
     })
     .from(foodPosts)
     .innerJoin(users, eq(foodPosts.posterId, users.id))
-    .where(and(eq(foodPosts.id, postId), eq(users.isDeleted, false)))
+    .where(and(eq(foodPosts.id, postId), postIsVisible))
     .limit(1);
 
   if (!result) {
