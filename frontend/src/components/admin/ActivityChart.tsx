@@ -117,7 +117,10 @@ export function ActivityChart({ days }: { days: ActivityDay[] }) {
             )}
             {SERIES.map((s) => (
               <path
-                key={s.key}
+                key={`${s.key}-${days.length}-${days[0]?.date}`}
+                pathLength={1}
+                strokeDasharray="1 1"
+                className="motion-safe:animate-draw"
                 d={days.map((d, i) => `${i ? "L" : "M"}${x(i)},${y(d[s.key])}`).join(" ")}
                 fill="none"
                 stroke={s.color}
@@ -144,7 +147,7 @@ export function ActivityChart({ days }: { days: ActivityDay[] }) {
 
         {day && (
           <div
-            className="pointer-events-none absolute top-0 w-40 rounded-xl bg-lifted px-3 py-2.5 text-sm shadow-lift ring-1 ring-inset ring-fg/[0.08]"
+            className="pointer-events-none absolute top-0 w-40 motion-safe:animate-fade-in rounded-xl bg-lifted px-3 py-2.5 text-sm shadow-lift ring-1 ring-inset ring-fg/[0.08]"
             style={{ left: tipLeft }}
           >
             <p className="font-medium text-fg">{dayLabel(day.date)}</p>
@@ -159,7 +162,10 @@ export function ActivityChart({ days }: { days: ActivityDay[] }) {
         )}
       </div>
 
-      <table className="sr-only">
+      {/* A table ignores the 1px box sr-only gives it, so its 90 rows made the
+          page scroll past the end; the wrapping div keeps it contained. */}
+      <div className="sr-only">
+      <table>
         <caption>Posts and requests per day</caption>
         <thead>
           <tr>
@@ -178,6 +184,7 @@ export function ActivityChart({ days }: { days: ActivityDay[] }) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

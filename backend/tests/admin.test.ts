@@ -141,7 +141,14 @@ describe("suspending", () => {
     await share(person.cookie, "Curd rice");
     await post(admin.cookie, `/admin/users/${person.userId}/suspend`, { reason: "Mistake" });
 
+    const ids = async (status: string) =>
+      (await (await get(admin.cookie, `/admin/users?status=${status}`)).json()).users.map((u: { id: string }) => u.id);
+    expect(await ids("active")).not.toContain(person.userId);
+    expect(await ids("suspended")).toEqual([person.userId]);
+
     expect((await post(admin.cookie, `/admin/users/${person.userId}/unsuspend`)).status).toBe(200);
+    expect(await ids("active")).toContain(person.userId);
+    expect(await ids("suspended")).toEqual([]);
     expect((await login(person.email)).status).toBe(200);
     expect(await feedTitles(viewer.cookie)).toContain("Curd rice");
   });
@@ -211,5 +218,27 @@ describe("activity and trends", () => {
     const { last30Days } = await (await get(admin.cookie, "/admin/overview")).json();
     expect(last30Days.posts).toEqual({ now: 1, before: 0 });
     expect(last30Days.people).toEqual({ now: 2, before: 0 });
+  });
+});
+
+describe("people, page by page", () => {
+  it("returns 20 at a time, newest first, with the total for the pager, leaving admins out", async () => {
+    const admin = await createVerifiedUser(app, { email: ADMIN });
+    for (let i = 1; i <= 22; i++) await createVerifiedUser(app, { name: `Person ${String(i).padStart(2, "0")}` });
+
+    const first = await (await get(admin.cookie, "/admin/users")).json();
+    expect(first).toMatchObject({ page: 1, pageSize: 20, total: 22 });
+    expect(first.users).toHaveLength(20);
+    expect(first.users[0].name).toBe("Person 22");
+
+    const second = await (await get(admin.cookie, "/admin/users?page=2")).json();
+    expect(second.users.map((u: { name: string }) => u.name)).toEqual(["Person 02", "Person 01"]);
+    const ids = new Set([...first.users, ...second.users].map((u: { id: string }) => u.id));
+    expect(ids.size).toBe(22);
+    expect(ids.has(admin.userId)).toBe(false);
+
+    expect((await (await get(admin.cookie, "/admin/users?search=person 0&page=1")).json()).total).toBe(9);
+    expect((await get(admin.cookie, "/admin/users?page=0")).status).toBe(400);
+    expect((await get(admin.cookie, "/admin/users?status=banned")).status).toBe(400);
   });
 });

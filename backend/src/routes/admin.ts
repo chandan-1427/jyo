@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { aliasedTable, and, desc, eq, ilike, isNull, isNotNull, notLike, or, sql } from "drizzle-orm";
+import { aliasedTable, and, desc, eq, ilike, isNull, isNotNull, notInArray, notLike, or, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, reports, users } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -158,12 +158,29 @@ adminRoutes.post("/reports/:id/resolve", async (c) => {
 });
 
 // --- People ---
-const usersQuery = z.object({ search: z.string().trim().max(100).optional() });
+// Numbered pages, newest first: an admin table is read by page ("21–40 of
+// 42"), and the people list barely changes while it's being read.
+export const PEOPLE_PAGE_SIZE = 20;
+const usersQuery = z.object({
+  search: z.string().trim().max(100).optional(),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  status: z.enum(["active", "suspended"]).default("active"),
+});
 
 adminRoutes.get("/users", async (c) => {
   const query = parseQuery(c, usersQuery);
   if (!query.ok) return query.response;
   const term = query.data.search ? `%${query.data.search.replace(/[%_\\]/g, (ch) => `\\${ch}`)}%` : null;
+  const { page, status } = query.data;
+  const suspended = status === "suspended";
+  // Admins aren't moderated from here (they can't be suspended), so they're
+  // left out like demo samples.
+  const matching = and(
+    notDemoAccount,
+    env.ADMIN_EMAILS.length ? notInArray(sql`lower(${users.email})`, env.ADMIN_EMAILS) : undefined,
+    suspended ? isNotNull(users.suspendedAt) : isNull(users.suspendedAt),
+    term ? or(ilike(users.name, term), ilike(users.email, term)) : undefined
+  );
 
   const rows = await db
     .select({
@@ -181,11 +198,18 @@ adminRoutes.get("/users", async (c) => {
       reportsAgainst,
     })
     .from(users)
-    .where(and(notDemoAccount, term ? or(ilike(users.name, term), ilike(users.email, term)) : undefined))
-    .orderBy(desc(users.createdAt))
-    .limit(50);
+    .where(matching)
+    .orderBy(desc(suspended ? users.suspendedAt : users.createdAt), desc(users.id))
+    .limit(PEOPLE_PAGE_SIZE)
+    .offset((page - 1) * PEOPLE_PAGE_SIZE);
+  const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(users).where(matching);
 
-  return c.json({ users: rows.map((u) => ({ ...u, isAdmin: env.ADMIN_EMAILS.includes(u.email.toLowerCase()) })) });
+  return c.json({
+    users: rows.map((u) => ({ ...u, isAdmin: env.ADMIN_EMAILS.includes(u.email.toLowerCase()) })),
+    page,
+    pageSize: PEOPLE_PAGE_SIZE,
+    total,
+  });
 });
 
 const suspendSchema = z.object({

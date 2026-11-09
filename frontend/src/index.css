@@ -51,6 +51,12 @@
      below, only lighter, so the blend can't drift in hue. */
   --color-cta-top:    oklch(0.55 0.115 158);
   --color-lifted-top: oklch(0.26 0.006 165);
+  /* The admin portal's two surfaces: the shell behind the sidebar, lighter
+     at the top, and the page panel on it, which stays darker than the cards
+     it holds. Both blend in oklab, which keeps to the palette's green-grey
+     hue instead of going muddy halfway. */
+  --admin-shell: linear-gradient(to bottom in oklab, oklch(0.24 0.012 165), oklch(0.18 0.006 165));
+  --admin-panel: linear-gradient(160deg in oklab, oklch(0.17 0.01 165), oklch(0.13 0.004 165) 60%);
   --color-danger:    #EF7C8E; /*  7.4:1, destructive actions only */
   /* Solid destructive buttons (Delete post): a deeper red than danger, which
      reads pink as a fill. White text on it is 5.1:1. */
@@ -63,12 +69,23 @@
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 24px -10px rgb(0 0 0 / 0.55);
 
   --animate-enter: enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* A chart line drawing itself in, on a path with pathLength="1". */
+  --animate-draw: draw 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Quick appearance for things that follow the pointer, like a tooltip. */
+  --animate-fade-in: fade-in 120ms ease-out both;
   --animate-beacon: beacon 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
   /* One ring of the notifications bell: swings that shrink to rest. */
   --animate-bell-ring: bell-ring 600ms ease-in-out;
 
   @keyframes enter {
     from { opacity: 0; transform: translateY(10px); }
+  }
+  @keyframes draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
   }
   @keyframes bell-ring {
     0%, 100% { rotate: 0deg; }
