@@ -12,7 +12,7 @@ import {
   findRequestById,
   findUserEmail,
   hasReleasedPickup,
-  posterNotDeleted,
+  postIsVisible,
 } from "../lib/domain/finders.js";
 import { releaseApprovedPickup, REQUEST_TIMEOUT_MS } from "../lib/domain/requestActions.js";
 import { notifyPicker } from "../lib/mailer.js";
@@ -163,7 +163,7 @@ postRoutes.get("/", async (c) => {
         isDemo
           ? or(eq(foodPosts.isDemo, false), eq(foodPosts.seededForUserId, userId))
           : eq(foodPosts.isDemo, false),
-        posterNotDeleted,
+        postIsVisible,
         notBlockedWith(userId)
       )
     )

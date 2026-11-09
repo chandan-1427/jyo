@@ -49,4 +49,11 @@ export const env = {
   // Optional: where reports of posts and people are emailed. Reports are
   // stored either way.
   REPORTS_EMAIL: process.env.REPORTS_EMAIL,
+  // Who can open the admin portal: comma-separated emails. An account is an
+  // admin only while its verified email is listed here, checked on every
+  // request, so removing an address takes effect at once.
+  ADMIN_EMAILS: (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
 };

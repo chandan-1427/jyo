@@ -22,6 +22,7 @@ import {
   Save,
   ScrollText,
   Settings,
+  ShieldCheck,
   Shield,
   Trash2,
   UserRound,
@@ -704,7 +705,13 @@ export default function Profile() {
               </Button>
             </div>
           }
-        />
+        >
+          {profile?.isAdmin && (
+            <Button to="/admin" variant="secondary" className="mt-4" iconLeft={<ShieldCheck className="size-4" aria-hidden="true" />}>
+              Open admin portal
+            </Button>
+          )}
+        </Card>
         {deletingAccount && <DeleteAccountDialog onClose={() => setDeletingAccount(false)} />}
       </div>
     </div>

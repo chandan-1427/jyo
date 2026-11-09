@@ -9,7 +9,7 @@ import {
 } from "../lib/mailer.js";
 import { logger } from "../lib/logger.js";
 import { findUserByEmail } from "../lib/domain/finders.js";
-import { authMiddleware } from "../middleware/auth.js";
+import { authMiddleware, SUSPENDED_MESSAGE } from "../middleware/auth.js";
 import { DEMO_SESSION_MS } from "../lib/domain/demo.js";
 import {
   registerSchema,
@@ -139,6 +139,12 @@ authRoutes.post("/login", loginLimiter, async (c) => {
 
   if (!user.emailVerified) {
     return c.json({ error: "Please verify your email before logging in. Check your inbox for the verification link." }, 403);
+  }
+
+  // Only after the right password, so suspension isn't revealed to someone
+  // guessing at an email address.
+  if (user.suspendedAt) {
+    return c.json({ error: SUSPENDED_MESSAGE }, 403);
   }
 
   // A hash from before the cost went up is redone now, while the password

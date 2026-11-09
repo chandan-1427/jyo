@@ -77,6 +77,11 @@ export const users = pgTable("users", {
   // then erases it); see lib/domain/deleteAccount.ts.
   isDeleted:    boolean("is_deleted").notNull().default(false),
   deletedAt:    timestamp("deleted_at"),
+  // Suspended by an admin: can't log in, every session ends, and their posts
+  // are hidden like a deleted account's (postIsVisible). The reason is the
+  // admin's own note, never shown to anyone else.
+  suspendedAt:     timestamp("suspended_at"),
+  suspendedReason: text("suspended_reason"),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   // One live account per email. A deleted account keeps its email, so the
@@ -110,6 +115,8 @@ export const foodPosts = pgTable("food_posts", {
   servings:          integer("servings"),
   cookedAt:          timestamp("cooked_at"),
   bringContainer:    boolean("bring_container").notNull().default(false),
+  // Taken down by an admin: hidden everywhere, like a deleted account's posts.
+  removedAt:         timestamp("removed_at"),
   createdAt:         timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   // Feed query (posts.ts) and the expiry cron (jobs/expiry.ts) both filter
@@ -207,6 +214,7 @@ export const reports = pgTable("reports", {
   postTitle:      text("post_title").notNull(),
   reason:         reportReasonEnum("reason").notNull(),
   details:        text("details"),
+  resolvedAt:     timestamp("resolved_at"),                     // an admin dealt with it
   createdAt:      timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("reports_reporter_reported_post_idx").on(table.reporterId, table.reportedUserId, table.postId),

@@ -13,7 +13,7 @@ export const DELETED_ACCOUNT_RETENTION_DAYS = 30;
 //
 // 1. Now (deleteAccount): the account is marked deleted and kept, hidden from
 //    everyone. It can't log in, every session ends, its posts vanish from the
-//    feed, their pages and everyone's history (posterNotDeleted), and its
+//    feed, their pages and everyone's history (postIsVisible), and its
 //    email is free for a new sign-up, which starts a fresh account. Its photos
 //    (profile, posts, selfies) are deleted from storage at once: faces and
 //    pictures of someone's home are the most sensitive part, and nothing needs

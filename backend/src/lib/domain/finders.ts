@@ -7,13 +7,14 @@ export function isValidUuid(value: string): boolean {
   return z.uuid().safeParse(value).success;
 }
 
-// A deleted account's posts are kept for 30 days but shown to nobody: as if
-// they weren't there, in the feed, on their page, in anyone's history, and
-// to every action on them. Used wherever posts are listed or looked up.
-export const posterNotDeleted = sql<boolean>`not exists (select 1 from ${users} where ${users.id} = ${foodPosts.posterId} and ${users.isDeleted})`;
+// Posts shown to nobody, as if they weren't there (in the feed, on their
+// page, in anyone's history, and to every action on them): a deleted
+// account's, which are kept for 30 days; a suspended account's; and posts an
+// admin removed. Used wherever posts are listed or looked up.
+export const postIsVisible = sql<boolean>`(${foodPosts.removedAt} is null and not exists (select 1 from ${users} where ${users.id} = ${foodPosts.posterId} and (${users.isDeleted} or ${users.suspendedAt} is not null)))`;
 
 export async function findPostById(postId: string) {
-  const [post] = await db.select().from(foodPosts).where(and(eq(foodPosts.id, postId), posterNotDeleted)).limit(1);
+  const [post] = await db.select().from(foodPosts).where(and(eq(foodPosts.id, postId), postIsVisible)).limit(1);
   return post ?? null;
 }
 

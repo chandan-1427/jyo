@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { foodPosts } from "../db/schema.js";
-import { posterNotDeleted } from "../lib/domain/finders.js";
+import { postIsVisible } from "../lib/domain/finders.js";
 
 export const statsRoutes = new Hono();
 
@@ -26,7 +26,7 @@ export async function countImpact() {
         eq(foodPosts.status, "completed"),
         eq(foodPosts.autoCompleted, false),
         eq(foodPosts.isDemo, false),
-        posterNotDeleted
+        postIsVisible
       )
     );
   return row;

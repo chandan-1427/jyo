@@ -6,11 +6,16 @@ import { db } from "../db/index.js";
 import { revokedSessions, users } from "../db/schema.js";
 import { SESSION_SECRET, endSession } from "../lib/session.js";
 import { isValidUuid } from "../lib/domain/finders.js";
+import { env } from "../env.js";
 
 type AuthUser = {
   userId: string;
   isDemo: boolean;
+  isAdmin: boolean;
 };
+
+export const SUSPENDED_MESSAGE =
+  "This account has been suspended for breaking Jyo's Terms. If you think this is a mistake, write to jyofoodsharing@gmail.com.";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -62,6 +67,9 @@ export const authMiddleware = createMiddleware(async (c, next) => {
       isDemo: users.isDemo,
       demoExpiresAt: users.demoExpiresAt,
       isDeleted: users.isDeleted,
+      suspendedAt: users.suspendedAt,
+      email: users.email,
+      emailVerified: users.emailVerified,
       revoked: jti
         ? sql<boolean>`exists (select 1 from ${revokedSessions} where ${revokedSessions.jti} = ${jti})`
         : sql<boolean>`false`,
@@ -75,8 +83,14 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     return c.json({ error: "Your session has ended. Please log in again." }, 401);
   }
 
+  if (account.suspendedAt) {
+    endSession(c);
+    return c.json({ error: SUSPENDED_MESSAGE }, 403);
+  }
+
   const demoLive = account.isDemo && (!account.demoExpiresAt || account.demoExpiresAt > new Date());
-  c.set("user", { userId, isDemo: demoLive });
+  const isAdmin = account.emailVerified && env.ADMIN_EMAILS.includes(account.email.toLowerCase());
+  c.set("user", { userId, isDemo: demoLive, isAdmin });
 
   await next();
 });

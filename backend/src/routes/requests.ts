@@ -19,7 +19,7 @@ import {
   findUserEmail,
   hasEndedRequestSince,
   hasMissedPickup,
-  posterNotDeleted,
+  postIsVisible,
 } from "../lib/domain/finders.js";
 import { createRequestRow, approveRequestTx, releaseApprovedPickup } from "../lib/domain/requestActions.js";
 import { blockUser, fileReport, isBlockedBetween } from "../lib/domain/safety.js";
@@ -640,7 +640,7 @@ requestRoutes.get("/mine", async (c) => {
   const mine = and(
     eq(pickupRequests.pickerId, userId),
     isDemo ? undefined : eq(pickupRequests.isDemo, false),
-    posterNotDeleted
+    postIsVisible
   );
   const matching = matchesSearch(sql`(${foodPosts.title} || ' ' || coalesce(${foodPosts.description}, ''))`, search);
   const inGroup = (group: keyof typeof MY_REQUEST_GROUPS) => sql`${myRequestRank} = ${MY_REQUEST_GROUPS[group]}`;

@@ -162,6 +162,13 @@
       "when": 1794164898827,
       "tag": "0022_pickup_thanks",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794205371802,
+      "tag": "0023_admin_portal",
+      "breakpoints": true
     }
   ]
 }
