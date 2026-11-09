@@ -18,6 +18,7 @@ import { notificationRoutes } from "./routes/notifications.js";
 import { pushRoutes } from "./routes/push.js";
 import { shareRoutes } from "./routes/share.js";
 import { statsRoutes } from "./routes/stats.js";
+import { adminRoutes } from "./routes/admin.js";
 
 // The local dev server only outside production: allowed on the live API, any
 // page served on someone's machine at that address (Vite's default port, so
@@ -108,6 +109,7 @@ export function createApp() {
   app.route("/push", pushRoutes);
   app.route("/share", shareRoutes);
   app.route("/stats", statsRoutes);
+  app.route("/admin", adminRoutes);
 
   return app;
 }

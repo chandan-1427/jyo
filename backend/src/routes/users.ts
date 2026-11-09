@@ -37,7 +37,7 @@ userRoutes.use("*", authMiddleware, userLimiter);
 
 // --- Get own profile ---
 userRoutes.get("/me", async (c) => {
-  const { userId } = c.get("user");
+  const { userId, isAdmin } = c.get("user");
 
   const [user] = await db
     .select(profileColumns)
@@ -49,7 +49,7 @@ userRoutes.get("/me", async (c) => {
     return c.json({ error: "User not found" }, 404);
   }
 
-  return c.json({ user });
+  return c.json({ user: { ...user, isAdmin } });
 });
 
 const userGone = (c: Context) => c.json({ error: "User not found" }, 404);

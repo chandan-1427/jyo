@@ -17,6 +17,7 @@ import MyRequests from "./pages/posts/MyRequests";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
 import Terms from "./pages/legal/Terms";
+import Admin from "./pages/Admin";
 import VerifyEmail from "./pages/auth/VerifyEmail";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="/my-posts"    element={<MyPosts />} />
               <Route path="/my-requests" element={<MyRequests />} />
               <Route path="/profile"     element={<Profile />} />
+              <Route path="/admin"       element={<Admin />} />
             </Route>
           </Route>
 

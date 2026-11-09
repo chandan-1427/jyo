@@ -45,6 +45,7 @@ export default function Privacy() {
           <li><strong>Anyone a post's link is shared with</strong> (for example in a WhatsApp group) sees a preview with the food's photo, title, whether it's veg, how many it serves and the pickup time. Never where it is or who shared it, and only while the food is still on offer.</li>
           <li><strong>The person you approve</strong> sees the exact pickup spot and your name, from approval until the food is collected or the pickup is called off. They see your phone number only if you chose to share it.</li>
           <li><strong>A person sharing food</strong> sees the name, selfie and arrival time you send with a request, so they can decide and recognise you. They see your phone number only if you chose to share it.</li>
+          <li><strong>The Jyo team</strong> can see your account details (name, email, phone number, when you joined and how much you've shared or asked for) to deal with reports and keep Jyo safe. They can remove a post or suspend an account that breaks the Terms; a suspended account can't log in and its posts are hidden.</li>
           <li><strong>No one else</strong> sees your email, phone number, exact location or account details. Your account ID is never shown to other people, so your posts can't be linked together.</li>
         </ul>
         <p>Every uploaded photo is re-encoded before it's stored, which removes hidden metadata such as the GPS position a phone camera records.</p>

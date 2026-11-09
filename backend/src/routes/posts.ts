@@ -12,7 +12,7 @@ import {
   findRequestById,
   findUserEmail,
   hasReleasedPickup,
-  posterNotDeleted,
+  postIsVisible,
 } from "../lib/domain/finders.js";
 import { releaseApprovedPickup, REQUEST_TIMEOUT_MS } from "../lib/domain/requestActions.js";
 import { notifyPicker } from "../lib/mailer.js";
@@ -163,7 +163,7 @@ postRoutes.get("/", async (c) => {
         isDemo
           ? or(eq(foodPosts.isDemo, false), eq(foodPosts.seededForUserId, userId))
           : eq(foodPosts.isDemo, false),
-        posterNotDeleted,
+        postIsVisible,
         notBlockedWith(userId)
       )
     )
@@ -270,7 +270,7 @@ postRoutes.get("/:id", async (c) => {
     })
     .from(foodPosts)
     .innerJoin(users, eq(foodPosts.posterId, users.id))
-    .where(and(eq(foodPosts.id, postId), eq(users.isDeleted, false)))
+    .where(and(eq(foodPosts.id, postId), postIsVisible))
     .limit(1);
 
   if (!result) {

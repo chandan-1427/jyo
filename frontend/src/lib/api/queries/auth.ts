@@ -9,6 +9,7 @@ export type Profile = {
   description?: string | null;
   avatarUrl?: string | null;
   isDemo?: boolean;
+  isAdmin?: boolean;
   demoExpiresAt?: string | null;
   createdAt?: string;
 };
