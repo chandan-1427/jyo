@@ -13,10 +13,13 @@ const EDGE = 8;
 // there, nudged to stay fully on screen, and re-placed on any scroll
 // (including inside a dialog) or resize while open. `onToggle` runs on each
 // open and close, e.g. to reset the panel's contents or mark a field touched.
+// `align` lines the panel up with the trigger's left edge ("start") or its
+// right edge ("end", for a trigger at the end of a row, like a ⋮ menu).
 export function useAnchoredPopover(
   anchorRef: RefObject<HTMLElement | null>,
   panelRef: RefObject<HTMLElement | null>,
-  onToggle?: (open: boolean) => void
+  onToggle?: (open: boolean) => void,
+  align: "start" | "end" = "start"
 ) {
   const [open, setOpen] = useState(false);
   const [placement, setPlacement] = useState<"below" | "above">("below");
@@ -37,12 +40,13 @@ export function useAnchoredPopover(
     const below = spaceBelow >= h || spaceBelow >= spaceAbove;
 
     const top = Math.min(Math.max(below ? anchor.bottom + GAP : anchor.top - GAP - h, EDGE), vh - h - EDGE);
-    const left = Math.min(Math.max(anchor.left, EDGE), vw - w - EDGE);
+    const start = align === "end" ? anchor.right - w : anchor.left;
+    const left = Math.min(Math.max(start, EDGE), vw - w - EDGE);
 
     panel.style.top = `${top}px`;
     panel.style.left = `${left}px`;
     setPlacement(below ? "below" : "above");
-  }, [anchorRef, panelRef]);
+  }, [anchorRef, panelRef, align]);
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -53,7 +57,7 @@ export function useAnchoredPopover(
       const anchor = anchorRef.current?.getBoundingClientRect();
       if ((e as ToggleEvent).newState !== "open" || !anchor) return;
       panel.style.top = `${anchor.bottom + GAP}px`;
-      panel.style.left = `${Math.max(anchor.left, EDGE)}px`;
+      panel.style.left = `${Math.max(align === "end" ? anchor.right - panel.offsetWidth : anchor.left, EDGE)}px`;
     };
     const onToggleEvent = (e: Event) => {
       const isOpen = (e as ToggleEvent).newState === "open";
@@ -66,7 +70,7 @@ export function useAnchoredPopover(
       panel.removeEventListener("beforetoggle", onBeforeToggle);
       panel.removeEventListener("toggle", onToggleEvent);
     };
-  }, [anchorRef, panelRef]);
+  }, [anchorRef, panelRef, align]);
 
   useLayoutEffect(() => {
     if (!open) return;

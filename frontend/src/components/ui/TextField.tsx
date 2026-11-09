@@ -160,15 +160,18 @@ interface SearchFieldProps extends Omit<ComponentProps<"input">, "className" | "
   // Read by screen readers; the placeholder says it visually.
   label: string;
   className?: string;
+  // 14px text beside 14px controls (a table's toolbar). Phones keep 16px,
+  // so iOS Safari doesn't zoom in when it's focused.
+  compact?: boolean;
 }
 
 // A search box in the same style as the other fields: a search icon, and a
 // clear button once something's typed. Escape clears it too. The browser's
 // own clear "x" is hidden so there's only one.
-export function SearchField({ value, onChange, label, className, placeholder = "Search", ...input }: SearchFieldProps) {
+export function SearchField({ value, onChange, label, className, compact, placeholder = "Search", ...input }: SearchFieldProps) {
   return (
     <div role="search" className={cn("relative flex items-center", className)}>
-      <span className={ICON} aria-hidden="true">
+      <span className={cn(ICON, compact && "sm:[&>svg]:size-4")} aria-hidden="true">
         <Search />
       </span>
       <input
@@ -183,7 +186,7 @@ export function SearchField({ value, onChange, label, className, placeholder = "
         }}
         aria-label={label}
         placeholder={placeholder}
-        className={cn(CONTROL, "h-11 pr-11 pl-11 [&::-webkit-search-cancel-button]:appearance-none")}
+        className={cn(CONTROL, "h-11 pr-11 pl-11 [&::-webkit-search-cancel-button]:appearance-none", compact && "sm:pl-10 sm:text-sm")}
         {...input}
       />
       {value && (

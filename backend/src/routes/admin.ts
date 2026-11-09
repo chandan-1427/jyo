@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { aliasedTable, and, desc, eq, ilike, isNull, isNotNull, notLike, or, sql } from "drizzle-orm";
+import { aliasedTable, and, desc, eq, ilike, isNull, isNotNull, notInArray, notLike, or, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { foodPosts, pickupRequests, reports, users } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -53,7 +53,59 @@ adminRoutes.get("/overview", async (c) => {
   const [open] = await db.select({ openReports: sql<number>`count(*)::int` }).from(reports).where(isNull(reports.resolvedAt));
   const impact = await countImpact();
 
-  return c.json({ ...people, ...posts, ...open, ...impact });
+  // The last 30 days against the 30 before, for the trend on each card.
+  const [trends] = await db.execute<{
+    people_now: number;
+    people_before: number;
+    posts_now: number;
+    posts_before: number;
+    requests_now: number;
+    requests_before: number;
+  }>(sql`
+    select
+      (select count(*)::int from ${users} u where not u.is_demo and u.email not like '%@jyo.internal' and u.created_at >= now() - interval '30 days') as people_now,
+      (select count(*)::int from ${users} u where not u.is_demo and u.email not like '%@jyo.internal' and u.created_at >= now() - interval '60 days' and u.created_at < now() - interval '30 days') as people_before,
+      (select count(*)::int from ${foodPosts} fp where not fp.is_demo and fp.created_at >= now() - interval '30 days') as posts_now,
+      (select count(*)::int from ${foodPosts} fp where not fp.is_demo and fp.created_at >= now() - interval '60 days' and fp.created_at < now() - interval '30 days') as posts_before,
+      (select count(*)::int from ${pickupRequests} pr where not pr.is_demo and pr.created_at >= now() - interval '30 days') as requests_now,
+      (select count(*)::int from ${pickupRequests} pr where not pr.is_demo and pr.created_at >= now() - interval '60 days' and pr.created_at < now() - interval '30 days') as requests_before
+  `);
+
+  return c.json({
+    ...people,
+    ...posts,
+    ...open,
+    ...impact,
+    last30Days: {
+      people: { now: trends.people_now, before: trends.people_before },
+      posts: { now: trends.posts_now, before: trends.posts_before },
+      requests: { now: trends.requests_now, before: trends.requests_before },
+    },
+  });
+});
+
+// --- Activity per day, for the chart ---
+// Days in Indian time (timestamps are stored in UTC), oldest first, with
+// days that had nothing as zeros. Demo content is left out.
+const activityQuery = z.object({ days: z.enum(["7", "30", "90"]).default("90") });
+
+adminRoutes.get("/activity", async (c) => {
+  const query = parseQuery(c, activityQuery);
+  if (!query.ok) return query.response;
+  const days = Number(query.data.days);
+
+  const rows = await db.execute<{ date: string; posts: number; requests: number }>(sql`
+    with ist as (select (now() at time zone 'UTC' + interval '5 hours 30 minutes')::date as today)
+    select to_char(d, 'YYYY-MM-DD') as date,
+      (select count(*)::int from ${foodPosts} fp
+        where not fp.is_demo and (fp.created_at + interval '5 hours 30 minutes')::date = d) as posts,
+      (select count(*)::int from ${pickupRequests} pr
+        where not pr.is_demo and (pr.created_at + interval '5 hours 30 minutes')::date = d) as requests
+    from ist, generate_series((ist.today - ${days - 1}::int)::timestamp, ist.today::timestamp, interval '1 day') as g(ts), lateral (select g.ts::date as d) x
+    order by d
+  `);
+
+  return c.json({ days: rows });
 });
 
 // --- Reports ---
@@ -106,12 +158,29 @@ adminRoutes.post("/reports/:id/resolve", async (c) => {
 });
 
 // --- People ---
-const usersQuery = z.object({ search: z.string().trim().max(100).optional() });
+// Numbered pages, newest first: an admin table is read by page ("21–40 of
+// 42"), and the people list barely changes while it's being read.
+export const PEOPLE_PAGE_SIZE = 20;
+const usersQuery = z.object({
+  search: z.string().trim().max(100).optional(),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  status: z.enum(["active", "suspended"]).default("active"),
+});
 
 adminRoutes.get("/users", async (c) => {
   const query = parseQuery(c, usersQuery);
   if (!query.ok) return query.response;
   const term = query.data.search ? `%${query.data.search.replace(/[%_\\]/g, (ch) => `\\${ch}`)}%` : null;
+  const { page, status } = query.data;
+  const suspended = status === "suspended";
+  // Admins aren't moderated from here (they can't be suspended), so they're
+  // left out like demo samples.
+  const matching = and(
+    notDemoAccount,
+    env.ADMIN_EMAILS.length ? notInArray(sql`lower(${users.email})`, env.ADMIN_EMAILS) : undefined,
+    suspended ? isNotNull(users.suspendedAt) : isNull(users.suspendedAt),
+    term ? or(ilike(users.name, term), ilike(users.email, term)) : undefined
+  );
 
   const rows = await db
     .select({
@@ -129,11 +198,18 @@ adminRoutes.get("/users", async (c) => {
       reportsAgainst,
     })
     .from(users)
-    .where(and(notDemoAccount, term ? or(ilike(users.name, term), ilike(users.email, term)) : undefined))
-    .orderBy(desc(users.createdAt))
-    .limit(50);
+    .where(matching)
+    .orderBy(desc(suspended ? users.suspendedAt : users.createdAt), desc(users.id))
+    .limit(PEOPLE_PAGE_SIZE)
+    .offset((page - 1) * PEOPLE_PAGE_SIZE);
+  const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(users).where(matching);
 
-  return c.json({ users: rows.map((u) => ({ ...u, isAdmin: env.ADMIN_EMAILS.includes(u.email.toLowerCase()) })) });
+  return c.json({
+    users: rows.map((u) => ({ ...u, isAdmin: env.ADMIN_EMAILS.includes(u.email.toLowerCase()) })),
+    page,
+    pageSize: PEOPLE_PAGE_SIZE,
+    total,
+  });
 });
 
 const suspendSchema = z.object({
