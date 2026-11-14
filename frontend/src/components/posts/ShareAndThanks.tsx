@@ -87,8 +87,8 @@ export function PickedUpButton({
               <Button variant="outline" onClick={() => setOpen(false)} disabled={send.isPending}>
                 Cancel
               </Button>
-              <Button type="submit" loading={send.isPending}>
-                {send.isPending ? "Sending…" : "Send"}
+              <Button loadingLabel="Sending…" type="submit" loading={send.isPending}>
+                Send
               </Button>
             </div>
           </form>

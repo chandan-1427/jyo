@@ -10,6 +10,7 @@ import { SmoothScroll } from "./components/layout/SmoothScroll.tsx";
 import { ScrollbarAutoHide } from "./components/layout/ScrollbarAutoHide.tsx";
 import { initSentry } from "./lib/sentry.ts";
 import "@fontsource-variable/geist/index.css";
+import "@fontsource-variable/geist-mono/index.css";
 import "@fontsource-variable/inter/index.css";
 import "@fontsource-variable/anek-telugu/index.css";
 

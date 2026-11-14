@@ -244,6 +244,7 @@ export default function CreatePost() {
           )}
 
           <Button
+            loadingLabel="Posting…"
             type="submit"
             size="lg"
             fullWidth
@@ -252,7 +253,7 @@ export default function CreatePost() {
             iconLeft={<Send className="size-4" aria-hidden="true" />}
             className="mt-1"
           >
-            {create.isPending ? "Posting…" : "Post food"}
+            Post food
           </Button>
         </div>
       </form>

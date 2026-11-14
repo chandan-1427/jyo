@@ -66,11 +66,6 @@ function toFormValues(user: {
   };
 }
 
-function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
-  const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
-  if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
-}
-
 // Same three destinations as Home.tsx's footer — that page redirects logged-in
 // users straight to /feed, so this is the only place they can reach them.
 const HELP_LINKS = [
@@ -602,7 +597,6 @@ export default function Profile() {
                   inputMode="numeric"
                   maxLength={10}
                   autoComplete="tel"
-                  onKeyDown={allowOnlyDigits}
                   error={errors.phone?.message}
                   {...register("phone")}
                 />

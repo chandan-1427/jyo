@@ -65,12 +65,13 @@ export function DeletePostDialog({ postIds, onClose, onDeleted, description }: D
           Keep {many ? "them" : "it"}
         </Button>
         <Button
+          loadingLabel="Deleting…"
           variant="dangerSolid"
           onClick={() => remove.mutate()}
           loading={remove.isPending}
           iconLeft={<Trash2 className="size-4" aria-hidden="true" />}
         >
-          {remove.isPending ? "Deleting…" : label}
+          {label}
         </Button>
       </div>
     </Dialog>

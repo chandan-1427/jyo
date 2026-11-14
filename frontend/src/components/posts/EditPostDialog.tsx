@@ -139,8 +139,8 @@ export function EditPostDialog({ post, onClose }: { post: FoodPost; onClose: () 
 
         <p className="text-sm text-fg-subtle">The pickup spot can't be changed. To move it, delete this post and post again.</p>
 
-        <Button type="submit" size="lg" fullWidth loading={save.isPending} disabled={!isDirty}>
-          {save.isPending ? "Saving…" : "Save changes"}
+        <Button loadingLabel="Saving…" type="submit" size="lg" fullWidth loading={save.isPending} disabled={!isDirty}>
+          Save changes
         </Button>
       </form>
       </FormProvider>

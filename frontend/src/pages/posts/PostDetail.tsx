@@ -422,21 +422,23 @@ function PosterPanel({
 
         <div className="grid grid-cols-2 gap-3">
           <Button
+            loadingLabel="Approving…"
             onClick={() => approve.mutate(pendingRequest.id)}
             loading={approve.isPending}
             disabled={busy}
             iconLeft={<Check className="size-4" aria-hidden="true" />}
           >
-            {approve.isPending ? "Approving…" : "Approve"}
+            Approve
           </Button>
           <Button
+            loadingLabel="Declining…"
             variant="outline"
             onClick={() => decline.mutate(pendingRequest.id)}
             loading={decline.isPending}
             disabled={busy}
             iconLeft={<X className="size-4" aria-hidden="true" />}
           >
-            {decline.isPending ? "Declining…" : "Decline"}
+            Decline
           </Button>
         </div>
 
@@ -493,6 +495,7 @@ function PosterPanel({
         </p>
         {errorNotice}
         <Button
+          loadingLabel="Saving…"
           size="lg"
           fullWidth
           onClick={() => complete.mutate()}
@@ -500,7 +503,7 @@ function PosterPanel({
           disabled={busy}
           iconLeft={<CheckCircle2 className="size-4" aria-hidden="true" />}
         >
-          {complete.isPending ? "Saving…" : "Mark as collected"}
+          Mark as collected
         </Button>
         <Button variant="outline" fullWidth onClick={() => setCallingOff(true)} disabled={busy}>
           They didn't come

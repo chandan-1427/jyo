@@ -5,6 +5,7 @@ import { DIET_LABEL, DIETS, type Diet } from "@/lib/food";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "../ui/Checkbox";
 import { DateTimeField } from "../ui/DateTimeField";
+import { Radio } from "../ui/Radio";
 import { TextField } from "../ui/TextField";
 
 // The marks people in India already read on food packets: green for veg,
@@ -54,11 +55,7 @@ export function DietField() {
               "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf"
             )}
           >
-            <input type="radio" value={diet} className="peer sr-only" {...register("diet")} />
-            <span
-              aria-hidden="true"
-              className="grid size-4 shrink-0 place-items-center rounded-full ring-[1.5px] ring-inset ring-fg/30 peer-checked:ring-leaf after:size-2 after:scale-0 after:rounded-full after:bg-leaf after:transition-transform after:duration-150 after:content-[''] peer-checked:after:scale-100 motion-reduce:after:transition-none"
-            />
+            <Radio value={diet} {...register("diet")} />
             {/* Room for the mark only from tablet width; cards show it everywhere. */}
             <DietMark diet={diet} className="hidden sm:block" />
             <span className="truncate">{DIET_LABEL[diet]}</span>

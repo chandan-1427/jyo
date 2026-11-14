@@ -3,6 +3,7 @@
 @theme {
   --font-geist: "Geist Variable", sans-serif;
   --font-inter: "Inter Variable", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
 
   /* ── Legacy colour names ────────────────────────────────────────────────
      The pages not yet redesigned (feed, posts, requests) still use these
@@ -76,6 +77,12 @@
   --animate-beacon: beacon 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
   /* One ring of the notifications bell: swings that shrink to rest. */
   --animate-bell-ring: bell-ring 600ms ease-in-out;
+  /* Typing is the most repeated thing anyone does, so this stays short. */
+  --animate-glyph-in: glyph-in 140ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-glyph-fade: glyph-fade 140ms ease-out both;
+  /* flip-in's 100ms delay waits for flip-out (FLIP_HALF_MS in LiveText). */
+  --animate-flip-out: flip-out 100ms cubic-bezier(0.55, 0, 1, 0.45) both;
+  --animate-flip-in: flip-in 120ms cubic-bezier(0, 0.55, 0.45, 1) 100ms both;
 
   @keyframes enter {
     from { opacity: 0; transform: translateY(10px); }
@@ -93,6 +100,18 @@
     40% { rotate: -10deg; }
     60% { rotate: 6deg; }
     80% { rotate: -3deg; }
+  }
+  @keyframes glyph-in {
+    from { opacity: 0; transform: translateY(0.25em); filter: blur(2px); }
+  }
+  @keyframes glyph-fade {
+    from { opacity: 0; filter: blur(2px); }
+  }
+  @keyframes flip-out {
+    to { rotate: x 90deg; visibility: hidden; }
+  }
+  @keyframes flip-in {
+    from { rotate: x -90deg; }
   }
   @keyframes beacon {
     0% { transform: scale(1); opacity: 0.55; }
@@ -271,4 +290,38 @@
     background: var(--color-leaf);
     color: var(--color-canvas);
   }
+}
+/* Unlayered, so it wins over the `text-fg` utility. */
+.live-input {
+  color: transparent;
+  caret-color: transparent;
+  font-kerning: none;
+  font-variant-ligatures: none;
+  animation: autofill-off 1ms;
+}
+.live-input::selection {
+  background: transparent;
+  color: transparent;
+}
+/* Chrome hides autofilled text from the page until the person interacts,
+   so the input shows its own. The animations exist only to tell LiveText
+   when autofill starts and stops. */
+.live-input:-webkit-autofill {
+  color: var(--color-fg);
+  -webkit-text-fill-color: var(--color-fg);
+  caret-color: var(--color-fg);
+  animation: autofill-on 1ms;
+}
+@keyframes autofill-on { from { opacity: 1; } }
+@keyframes autofill-off { from { opacity: 1; } }
+
+.live-caret {
+  animation: caret-blink 1.1s step-end 0.5s infinite;
+}
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-caret { animation: none; }
 }

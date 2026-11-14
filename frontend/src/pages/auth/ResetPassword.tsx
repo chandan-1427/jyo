@@ -87,8 +87,8 @@ export default function ResetPassword() {
           {...register("password")}
         />
 
-        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">
-          {loading ? "Saving…" : "Save new password"}
+        <Button loadingLabel="Saving…" type="submit" size="lg" fullWidth loading={loading} className="mt-1">
+          Save new password
         </Button>
       </form>
     </AuthLayout>

@@ -1,6 +1,9 @@
-import { useId, useState, type ComponentProps, type ReactNode } from "react";
+import { useId, useRef, useState, type ComponentProps, type ReactNode, type Ref } from "react";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { playTypingSound } from "@/lib/typingSounds";
+import { useInputFormat, type InputFormat } from "@/lib/inputFormat";
+import { LiveText } from "./LiveText";
 
 interface FieldProps {
   label: string;
@@ -68,6 +71,31 @@ export function FieldFrame({
   );
 }
 
+// LiveText needs the cursor and selection, which browsers don't expose for
+// type="email" or type="number" (selectionStart is null), so those render
+// as text inputs that keep their type's keyboard and typing behaviour.
+const AS_TEXT: Partial<Record<string, ComponentProps<"input">>> = {
+  email: { inputMode: "email", autoCapitalize: "none", autoCorrect: "off", spellCheck: false },
+  number: { inputMode: "numeric" },
+};
+
+// The app's number fields are all whole numbers.
+const FORMATS: Partial<Record<string, InputFormat>> = { number: "digits", tel: "phone", email: "email" };
+
+function useFieldRef<T>(ref: Ref<T> | undefined) {
+  const own = useRef<T>(null);
+  const attach = (node: T | null) => {
+    own.current = node;
+    setRef(ref, node);
+  };
+  return [own, attach] as const;
+}
+
+function setRef<T>(ref: Ref<T> | undefined, node: T | null) {
+  if (typeof ref === "function") ref(node);
+  else if (ref) ref.current = node;
+}
+
 type TextFieldProps = FieldProps &
   Omit<ComponentProps<"input">, "className" | "size"> & {
     // md (44px) fits the compact auth forms; lg (48px) is for roomier pages.
@@ -84,28 +112,53 @@ export function TextField({
   className,
   type = "text",
   id,
+  ref,
+  maxLength,
   ...input
 }: TextFieldProps) {
   const ids = useFieldIds(id, Boolean(error ?? hint));
   const isPassword = type === "password";
+  const asText = AS_TEXT[type];
+  const format = FORMATS[type];
   const [visible, setVisible] = useState(false);
+  const [inputRef, attachRef] = useFieldRef(ref);
+  // Applied by useInputFormat after cleaning, not as the input's maxLength.
+  const limit =
+    maxLength ??
+    (type === "number" && input.max != null ? String(input.max).length : format === "phone" ? 10 : undefined);
+  useInputFormat(inputRef, format, limit);
+  const padding = cn("px-4", icon && "pl-11", isPassword && "pr-20");
+  const mono = isPassword && "font-mono placeholder:font-inter";
 
   return (
     <FieldFrame {...{ label, error, hint, labelAside, className }} controlId={ids.controlId} messageId={ids.messageId}>
       <div className="relative flex items-center">
         {icon && <span className={ICON} aria-hidden="true">{icon}</span>}
         <input
+          ref={attachRef}
           id={ids.controlId}
-          type={isPassword && visible ? "text" : type}
+          type={(isPassword && visible) || asText ? "text" : type}
+          {...asText}
+          maxLength={format ? undefined : maxLength}
           aria-invalid={error ? true : undefined}
           aria-describedby={ids.describedBy}
-          className={cn(CONTROL, size === "lg" ? "h-12" : "h-11", icon && "pl-11", isPassword && "pr-20")}
+          className={cn(CONTROL, "live-input", size === "lg" ? "h-12" : "h-11", padding, mono)}
           {...input}
+        />
+        <LiveText
+          fieldRef={inputRef}
+          password={isPassword}
+          masked={isPassword && !visible}
+          padding={padding}
+          className={cn("text-base", mono)}
         />
         {isPassword && (
           <button
             type="button"
-            onClick={() => setVisible((v) => !v)}
+            onClick={() => {
+              setVisible(!visible);
+              playTypingSound(visible ? "conceal" : "reveal");
+            }}
             className="absolute inset-y-0 right-0 flex cursor-pointer select-none items-center rounded-r-xl px-4 text-sm font-medium text-fg-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-leaf"
           >
             {visible ? "Hide" : "Show"}
@@ -129,8 +182,11 @@ const TEXTAREA_FRAME =
   "focus-within:ring-2 focus-within:ring-leaf " +
   "has-[[aria-invalid=true]]:ring-danger/70 has-[[aria-invalid=true]]:focus-within:ring-danger";
 
-export function TextAreaField({ label, error, hint, labelAside, icon, className, id, rows = 4, ...textarea }: TextAreaFieldProps) {
+export function TextAreaField({ label, error, hint, labelAside, icon, className, id, rows = 4, ref, ...textarea }: TextAreaFieldProps) {
   const ids = useFieldIds(id, Boolean(error ?? hint));
+  const [textareaRef, attachRef] = useFieldRef(ref);
+  // Padding is 2px less than an input's, making up for the frame's.
+  const padding = cn("px-3.5 py-2.5", icon && "pl-[42px]");
 
   return (
     <FieldFrame {...{ label, error, hint, labelAside, className }} controlId={ids.controlId} messageId={ids.messageId}>
@@ -138,17 +194,18 @@ export function TextAreaField({ label, error, hint, labelAside, icon, className,
         {/* Pinned to the first line of text rather than centred. */}
         {icon && <span className={cn(ICON, "top-3.5")} aria-hidden="true">{icon}</span>}
         <textarea
+          ref={attachRef}
           id={ids.controlId}
           rows={rows}
           aria-invalid={error ? true : undefined}
           aria-describedby={ids.describedBy}
-          // Padding is 2px less than an input's, making up for the frame's.
           className={cn(
-            "block w-full resize-none rounded-[10px] bg-transparent px-3.5 py-2.5 text-base leading-relaxed text-fg outline-none placeholder:text-fg-subtle",
-            icon && "pl-[42px]"
+            "live-input block w-full resize-none rounded-[10px] bg-transparent text-base leading-relaxed text-fg outline-none placeholder:text-fg-subtle",
+            padding
           )}
           {...textarea}
         />
+        <LiveText fieldRef={textareaRef} multiline padding={padding} className="text-base leading-relaxed" />
       </div>
     </FieldFrame>
   );
@@ -168,13 +225,18 @@ interface SearchFieldProps extends Omit<ComponentProps<"input">, "className" | "
 // A search box in the same style as the other fields: a search icon, and a
 // clear button once something's typed. Escape clears it too. The browser's
 // own clear "x" is hidden so there's only one.
-export function SearchField({ value, onChange, label, className, compact, placeholder = "Search", ...input }: SearchFieldProps) {
+export function SearchField({ value, onChange, label, className, compact, placeholder = "Search", ref, ...input }: SearchFieldProps) {
+  const [inputRef, attachRef] = useFieldRef(ref);
+  const padding = cn("pr-11 pl-11", compact && "sm:pl-10");
+  const font = cn("text-base", compact && "sm:text-sm");
+
   return (
     <div role="search" className={cn("relative flex items-center", className)}>
       <span className={cn(ICON, compact && "sm:[&>svg]:size-4")} aria-hidden="true">
         <Search />
       </span>
       <input
+        ref={attachRef}
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -186,9 +248,10 @@ export function SearchField({ value, onChange, label, className, compact, placeh
         }}
         aria-label={label}
         placeholder={placeholder}
-        className={cn(CONTROL, "h-11 pr-11 pl-11 [&::-webkit-search-cancel-button]:appearance-none", compact && "sm:pl-10 sm:text-sm")}
+        className={cn(CONTROL, "live-input h-11 [&::-webkit-search-cancel-button]:appearance-none", padding, font)}
         {...input}
       />
+      <LiveText fieldRef={inputRef} padding={padding} className={font} />
       {value && (
         <button
           type="button"

@@ -47,11 +47,12 @@ export function NotificationPrompt({ reason }: { reason: string }) {
         <p className="text-sm leading-relaxed text-fg-muted">{reason}</p>
         {enable.error && <Notice tone="error">{enable.error.message}</Notice>}
         <Button
+          loadingLabel="Turning on…"
           onClick={() => enable.mutate()}
           loading={enable.isPending}
           iconLeft={<BellRing className="size-4" aria-hidden="true" />}
         >
-          {enable.isPending ? "Turning on…" : "Turn on notifications"}
+          Turn on notifications
         </Button>
       </>
     );

@@ -82,13 +82,14 @@ export default function Login() {
               <p className="font-medium text-leaf">{resendMessage}</p>
             ) : (
               <Button
+                loadingLabel="Sending…"
                 variant="secondary"
                 size="sm"
                 onClick={handleResendVerification}
                 loading={resendMutation.isPending}
                 className="w-fit"
               >
-                {resendMutation.isPending ? "Sending…" : "Send the link again"}
+                Send the link again
               </Button>
             )
           }
@@ -121,8 +122,8 @@ export default function Login() {
           {...register("password")}
         />
 
-        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">
-          {loading ? "Logging in…" : "Log in"}
+        <Button loadingLabel="Logging in…" type="submit" size="lg" fullWidth loading={loading} className="mt-1">
+          Log in
         </Button>
       </form>
     </AuthLayout>

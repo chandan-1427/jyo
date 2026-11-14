@@ -104,6 +104,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
         />
 
         <Button
+          loadingLabel="Sending…"
           type="submit"
           size="lg"
           fullWidth
@@ -111,7 +112,7 @@ export default function RequestModal({ postId, onClose, onSuccess }: Props) {
           iconLeft={<Send className="size-4" aria-hidden="true" />}
           className="mt-1"
         >
-          {loading ? "Sending…" : "Send request"}
+          Send request
         </Button>
       </form>
     </Dialog>

@@ -78,12 +78,13 @@ export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
             Keep my account
           </Button>
           <Button
+            loadingLabel="Deleting…"
             type="submit"
             variant="dangerSolid"
             loading={remove.isPending}
             iconLeft={<Trash2 className="size-4" aria-hidden="true" />}
           >
-            {remove.isPending ? "Deleting…" : "Delete account"}
+            Delete account
           </Button>
         </div>
       </form>
