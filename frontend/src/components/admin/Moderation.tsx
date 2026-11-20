@@ -113,8 +113,8 @@ function SuspendDialog({ person, onClose }: { person: Person; onClose: () => voi
           <Button variant="outline" onClick={onClose} disabled={suspend.isPending}>
             Cancel
           </Button>
-          <Button variant="dangerSolid" onClick={() => suspend.mutate()} loading={suspend.isPending}>
-            {suspend.isPending ? "Suspending…" : "Suspend"}
+          <Button loadingLabel="Suspending…" variant="dangerSolid" onClick={() => suspend.mutate()} loading={suspend.isPending}>
+            Suspend
           </Button>
         </div>
       </div>

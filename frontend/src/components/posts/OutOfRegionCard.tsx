@@ -32,11 +32,12 @@ export default function OutOfRegionCard() {
       title="You're outside Tirupati"
       actions={
         <Button
+          loadingLabel="Starting…"
           onClick={handleStart}
           loading={loading}
           iconLeft={<Sparkles className="size-4" aria-hidden="true" />}
         >
-          {loading ? "Starting…" : "Try the demo"}
+          Try the demo
         </Button>
       }
     >

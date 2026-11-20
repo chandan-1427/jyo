@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { Check, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { playTypingSound } from "@/lib/typingSounds";
 
 const MARK =
   "pointer-events-none size-3.5 scale-50 text-canvas opacity-0 transition-[opacity,scale] duration-150 ease-out motion-reduce:transition-none";
@@ -15,7 +16,7 @@ interface CheckboxProps extends Omit<ComponentProps<"input">, "type"> {
 
 // A native checkbox drawn in the app's style: the real input stays (so
 // keyboard, forms and screen readers work as usual) with its look replaced.
-export function Checkbox({ label, indeterminate = false, className, ...input }: CheckboxProps) {
+export function Checkbox({ label, indeterminate = false, className, onChange, ...input }: CheckboxProps) {
   const ref = useRef<HTMLInputElement>(null);
 
   // There's no HTML attribute for this state; it can only be set from script.
@@ -33,6 +34,10 @@ export function Checkbox({ label, indeterminate = false, className, ...input }: 
           "checked:bg-leaf checked:ring-leaf indeterminate:bg-leaf indeterminate:ring-leaf",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
         )}
+        onChange={(event) => {
+          playTypingSound(event.target.checked ? "check" : "uncheck");
+          onChange?.(event);
+        }}
         {...input}
       />
       <Check strokeWidth={3} className={cn(MARK, "relative peer-checked:scale-100 peer-checked:opacity-100")} aria-hidden="true" />

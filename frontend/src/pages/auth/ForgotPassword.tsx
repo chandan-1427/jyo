@@ -83,8 +83,8 @@ export default function ForgotPassword() {
           {...register("email")}
         />
 
-        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">
-          {loading ? "Sending…" : "Send link"}
+        <Button loadingLabel="Sending…" type="submit" size="lg" fullWidth loading={loading} className="mt-1">
+          Send link
         </Button>
       </form>
     </AuthLayout>

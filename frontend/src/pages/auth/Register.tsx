@@ -12,11 +12,6 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { TextField } from "@/components/ui/TextField";
 import { TextLink, textLinkClass } from "@/components/ui/TextLink";
 
-function allowOnlyDigits(e: React.KeyboardEvent<HTMLInputElement>) {
-  const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
-  if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
-}
-
 const EMPTY_FORM = { name: "", email: "", phone: "", password: "" };
 
 export default function Register() {
@@ -116,7 +111,6 @@ export default function Register() {
           maxLength={10}
           placeholder="10-digit mobile number"
           autoComplete="tel"
-          onKeyDown={allowOnlyDigits}
           error={errors.phone?.message}
           {...register("phone")}
         />
@@ -152,8 +146,8 @@ export default function Register() {
           )}
         </div>
 
-        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">
-          {loading ? "Creating account…" : "Create account"}
+        <Button type="submit" size="lg" fullWidth loading={loading} loadingLabel="Creating account…" className="mt-1">
+          Create account
         </Button>
       </form>
     </AuthLayout>

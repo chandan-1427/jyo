@@ -86,8 +86,8 @@ function OwnNumber() {
         <Button type="button" variant="outline" onClick={() => setEditing(false)} disabled={save.isPending}>
           Cancel
         </Button>
-        <Button type="button" onClick={submit} loading={save.isPending}>
-          {save.isPending ? "Saving…" : "Save"}
+        <Button loadingLabel="Saving…" type="button" onClick={submit} loading={save.isPending}>
+          Save
         </Button>
       </div>
     </div>

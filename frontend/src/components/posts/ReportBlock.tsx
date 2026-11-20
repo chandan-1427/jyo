@@ -11,6 +11,7 @@ import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Button } from "../ui/Button";
 import { Checkbox } from "../ui/Checkbox";
 import { Notice } from "../ui/Notice";
+import { Radio } from "../ui/Radio";
 import { TextAreaField } from "../ui/TextField";
 
 const who = (target: SafetyTarget) => (target.kind === "post" ? "the person sharing this" : target.name);
@@ -69,11 +70,7 @@ function ReportDialog({ target, onClose, onBlocked }: { target: SafetyTarget; on
                   "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf"
                 )}
               >
-                <input type="radio" value={r.value} className="peer sr-only" {...register("reason")} />
-                <span
-                  aria-hidden="true"
-                  className="grid size-4 shrink-0 place-items-center rounded-full ring-[1.5px] ring-inset ring-fg/30 peer-checked:ring-leaf after:size-2 after:scale-0 after:rounded-full after:bg-leaf after:transition-transform after:duration-150 after:content-[''] peer-checked:after:scale-100 motion-reduce:after:transition-none"
-                />
+                <Radio value={r.value} {...register("reason")} />
                 {r.label}
               </label>
             ))}
@@ -104,8 +101,8 @@ function ReportDialog({ target, onClose, onBlocked }: { target: SafetyTarget; on
           <Button variant="outline" onClick={onClose} disabled={send.isPending}>
             Cancel
           </Button>
-          <Button type="submit" loading={send.isPending}>
-            {send.isPending ? "Sending…" : "Send report"}
+          <Button loadingLabel="Sending…" type="submit" loading={send.isPending}>
+            Send report
           </Button>
         </div>
       </form>
