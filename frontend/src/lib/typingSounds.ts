@@ -1,11 +1,13 @@
-// Synthesised with Web Audio, so there are no sound files to download. Only
-// on devices with a mouse or trackpad: phone keyboards already click and
-// buzz on every key.
+// Synthesised with Web Audio, so there are no sound files to download. On
+// touch devices only buttons and the password flip sound: phone keyboards
+// already click on every key, and the smaller controls were too much.
 
 export type TypingSound =
   | "key" | "digit" | "digit-delete" | "space" | "delete" | "reveal" | "conceal" | "check" | "uncheck" | "radio" | "button";
 
-const supported = () =>
+const PLAYS_ON_TOUCH = new Set<TypingSound>(["button", "reveal", "conceal"]);
+
+const hasMouse = () =>
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
   window.matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -51,7 +53,7 @@ function audio() {
 }
 
 export function playTypingSound(kind: TypingSound) {
-  if (!supported()) return;
+  if (!PLAYS_ON_TOUCH.has(kind) && !hasMouse()) return;
   const now = performance.now();
   if (now - lastPlayed < MIN_GAP_MS) return;
   lastPlayed = now;
